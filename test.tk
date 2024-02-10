@@ -1,0 +1,10 @@
+
+struct s_a
+{
+	int a,
+}
+
+struct s_b
+{
+	s_a a,
+}
