@@ -4,7 +4,12 @@ func void type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* a
 {
 	s_type_check* data = (s_type_check*)arena->alloc_zero(sizeof(s_type_check));
 
-	data->types.add({.name = "int", .size_in_bytes = 4});
+	{
+		s_node node = zero;
+		node.basic_type.name = "int";
+		node.basic_type.size_in_bytes = 4;
+		data->types.add(alloc_node(node, arena));
+	}
 
 	while(true) {
 		b8 successfully_typechecked_something = false;
@@ -84,7 +89,10 @@ func b8 type_check_struct(s_node* node, s_error_reporter* reporter, s_type_check
 		}
 	}
 	node->type_checked = result;
-	data->structs.add(node);
+	if(result) {
+		printf("Added struct '%s'\n", node->token.str());
+		data->structs.add(node);
+	}
 	return result;
 }
 
@@ -98,7 +106,7 @@ func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_report
 
 	// @TODO(tkap, 10/02/2024): Handle a member of type current_struct*
 	// @TODO(tkap, 10/02/2024): check that array size makes sense
-	s_type* type = node_to_s_type(member->var_decl.type, data);
+	s_node* type = node_to_basic_type(member->var_decl.type, data);
 	if(!type) {
 		result = false;
 		reporter->recoverable_error(member->var_decl.type->token.file, member->var_decl.type->token.line, "Struct member '%s' has unknown type '%s'", member->var_decl.name.str(), node_to_str(member->var_decl.type));
@@ -106,7 +114,7 @@ func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_report
 
 	member->type_checked = result;
 	if(result) {
-		member->var_type = member->var_decl.type;
+		member->var_type = type;
 		printf("type checked %s %s\n", node_to_str(member->var_decl.type), member->var_decl.name.str());
 	}
 	return result;
@@ -123,37 +131,36 @@ func s_node* get_struct_by_name(s_type_check* data, char* str)
 	return null;
 }
 
-func s_node* type_to_node(s_type type, s_lin_arena* arena)
-{
-	s_node node = zero;
-	node.type = e_node_type;
-	node.actual_type = type;
-	return alloc_node(node, arena);
-}
 
 // func b8 compare_s_type(s_type a, s_type b)
 // {
 // 	return strcmp(a.name, b.name) == 0;
 // }
 
-func s_type* node_to_s_type(s_node* node, s_type_check* data)
+func s_node* node_to_basic_type(s_node* node, s_type_check* data)
 {
 	switch(node->type) {
 		case e_node_type: {
-			foreach_ptr(type_i, type, data->types) {
-				if(node->token.equals(type->name)) {
+			foreach_val(type_i, type, data->types) {
+				if(node->token.equals(type->basic_type.name)) {
 					return type;
+				}
+			}
+			foreach_val(nstruct_i, nstruct, data->structs) {
+				// @TODO(tkap, 10/02/2024): is node->token always fine? seems sus
+				if(node->token.equals(nstruct->token)) {
+					return nstruct;
 				}
 			}
 		} break;
 
 		case e_node_array: {
-			return node_to_s_type(node->left, data);
+			return node_to_basic_type(node->left, data);
 		} break;
 
 		invalid_default_case;
 	}
-	return zero;
+	return null;
 }
 
 func char* node_to_str(s_node* node)

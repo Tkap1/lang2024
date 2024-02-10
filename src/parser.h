@@ -11,12 +11,7 @@ enum e_node
 	e_node_type,
 	e_node_integer,
 	e_node_array,
-};
-
-struct s_type
-{
-	char* name;
-	int size_in_bytes;
+	e_node_basic_type,
 };
 
 struct s_node
@@ -28,7 +23,6 @@ struct s_node
 	s_node* left;
 	s_node* next;
 	s_node* var_type;
-	s_type actual_type;
 
 	union
 	{
@@ -48,6 +42,12 @@ struct s_node
 		{
 			s_node* size_expr;
 		} array;
+
+		struct
+		{
+			int size_in_bytes;
+			char* name;
+		} basic_type;
 	};
 };
 
