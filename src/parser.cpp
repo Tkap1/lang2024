@@ -53,6 +53,7 @@ func s_parse_result parse_struct(s_tokenizer tokenizer, s_error_reporter* report
 				reporter->fatal(tokenizer.file, tokenizer.line, "Expected a name after struct member type");
 			}
 			s_node member = zero;
+			member.type = e_node_var_decl;
 			member.var_decl.name = token;
 			member.var_decl.type = alloc_node(pr.node, arena);
 			curr_struct_member = advance_node(curr_struct_member, member, arena);
@@ -188,6 +189,7 @@ func s_parse_result parse_operator(s_tokenizer tokenizer, s_error_reporter* repo
 				// @TODO(tkap, 10/02/2024): do we want to set node.type to something?
 				result.node.token = token;
 				result.node.type = data.node_type;
+				result.operator_data = data;
 				break;
 			}
 		}
@@ -206,15 +208,67 @@ func s_parse_result parse_sub_expression(s_tokenizer tokenizer, s_error_reporter
 	s_parse_result result = zero;
 	s_token token = zero;
 
-	breakable_block {
 
-		if(!tokenizer.consume_token(e_token_integer, &token, reporter)) { break; }
+	if(tokenizer.consume_token(e_token_open_paren, reporter)) {
+
+		s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
+		if(!pr.success) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression");
+		}
+		tokenizer = pr.tokenizer;
+		result.node = pr.node;
+
+		if(!tokenizer.consume_token(e_token_close_paren, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ')'");
+		}
+		goto success;
+	}
+
+	if(tokenizer.consume_token(e_token_integer, &token, reporter)) {
 		result.node.type = e_node_integer;
 		result.node.token = token;
-
-		result.success = true;
-		result.tokenizer = tokenizer;
+		goto success;
 	}
+	if(tokenizer.consume_token(e_token_identifier, &token, reporter)) {
+		result.node.type = e_node_identifier;
+		result.node.token = token;
+		goto success;
+	}
+	if(tokenizer.consume_token(e_token_string, &token, reporter)) {
+		result.node.type = e_node_string;
+		result.node.token = token;
+		goto success;
+	}
+
+	s_parse_result pr = parse_operator(tokenizer, reporter, arena);
+	if(pr.success) {
+		e_node node_type = e_node_invalid;
+		// @TODO(tkap, 10/02/2024): we can make this into a for loop. this is cringe
+		if(pr.operator_data.node_type == e_node_logic_not) {
+			node_type = e_node_logic_not;
+		}
+		else if(pr.operator_data.node_type == e_node_subtract) {
+			node_type = e_node_unary_minus;
+		}
+		else {
+			goto end;
+		}
+		tokenizer = pr.tokenizer;
+		pr = parse_expression(tokenizer, reporter, pr.operator_data.precedence, arena);
+		if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression"); }
+		tokenizer = pr.tokenizer;
+		result.node.type = node_type;
+		result.node.left = alloc_node(pr.node, arena);
+		goto success;
+	}
+
+	goto end;
+
+	success:
+	result.success = true;
+	result.tokenizer = tokenizer;
+
+	end:
 
 	return result;
 }
@@ -234,16 +288,37 @@ func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* re
 		while(true) {
 			s_parse_result operator_pr = parse_operator(tokenizer, reporter, arena);
 			if(!operator_pr.success) { break; }
-			int level = get_operator_precedence(operator_pr.node.token.type);
+			int level = operator_pr.operator_data.precedence;
 			if(level <= in_operator_level) { break; }
-
 			tokenizer = operator_pr.tokenizer;
-			pr = parse_expression(tokenizer, reporter, level, arena);
-			if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression"); }
-			tokenizer = pr.tokenizer;
-			operator_pr.node.left = alloc_node(result.node, arena);
-			operator_pr.node.right = alloc_node(pr.node, arena);
-			result.node = operator_pr.node;
+
+			if(operator_pr.operator_data.node_type == e_node_func_call) {
+				s_node node = zero;
+				node.type = e_node_func_call;
+				node.left = alloc_node(result.node, arena);
+				result.node = node;
+
+				s_node** curr_arg = &result.node.func_call.arguments;
+				while(true) {
+					pr = parse_expression(tokenizer, reporter, 0, arena);
+					if(!pr.success) { break; }
+					tokenizer = pr.tokenizer;
+					curr_arg = advance_node(curr_arg, pr.node, arena);
+
+					if(!tokenizer.consume_token(e_token_comma, reporter)) { break; }
+				}
+
+				if(!tokenizer.consume_token(e_token_close_paren, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ')'"); }
+
+			}
+			else {
+				pr = parse_expression(tokenizer, reporter, level, arena);
+				if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression"); }
+				tokenizer = pr.tokenizer;
+				operator_pr.node.left = alloc_node(result.node, arena);
+				operator_pr.node.right = alloc_node(pr.node, arena);
+				result.node = operator_pr.node;
+			}
 		}
 
 		result.success = true;
@@ -257,7 +332,6 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 {
 	s_parse_result result = zero;
 	s_token token = zero;
-
 
 	if(tokenizer.consume_token(e_token_open_brace, reporter)) {
 
@@ -274,10 +348,11 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 		if(!tokenizer.consume_token(e_token_close_brace, reporter)) {
 			reporter->fatal(tokenizer.file, tokenizer.line, "Expected '}'");
 		}
-		result.success = true;
+
+		goto success;
 	}
 
-	else if(tokenizer.consume_token("return", reporter)) {
+	if(tokenizer.consume_token("return", reporter)) {
 
 		result.node.type = e_node_return;
 		s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
@@ -290,10 +365,102 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'");
 		}
 
-		result.success = true;
+		goto success;
 	}
 
+	if(tokenizer.consume_token("while", reporter)) {
+
+		result.node.type = e_node_while;
+		s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
+		if(pr.success) {
+			result.node.nwhile.condition = alloc_node(pr.node, arena);
+			tokenizer = pr.tokenizer;
+		}
+
+		pr = parse_statement(tokenizer, reporter, arena);
+		if(!pr.success || pr.node.type != e_node_compound) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected '{' after 'while'");
+		}
+		tokenizer = pr.tokenizer;
+		result.node.nwhile.body = alloc_node(pr.node, arena);
+
+		goto success;
+	}
+
+	if(tokenizer.consume_token("if", reporter)) {
+
+		result.node.type = e_node_if;
+		s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
+		if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after 'if'"); }
+		result.node.nif.condition = alloc_node(pr.node, arena);
+		tokenizer = pr.tokenizer;
+
+		pr = parse_statement(tokenizer, reporter, arena);
+		if(!pr.success || pr.node.type != e_node_compound) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected '{' after 'if'");
+		}
+		tokenizer = pr.tokenizer;
+		result.node.nif.body = alloc_node(pr.node, arena);
+
+		goto success;
+	}
+
+	s_parse_result pr = parse_type(tokenizer, reporter, arena);
+	if(pr.success) {
+		if(pr.tokenizer.consume_token(e_token_identifier, &token, reporter)) {
+			tokenizer = pr.tokenizer;
+			result.node.type = e_node_var_decl;
+			result.node.var_decl.type = alloc_node(pr.node, arena);
+			result.node.var_decl.name = token;
+
+			if(tokenizer.consume_token(e_token_assign, reporter)) {
+				pr = parse_expression(tokenizer, reporter, 0, arena);
+				if(!pr.success) {
+					reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after '='");
+				}
+				tokenizer = pr.tokenizer;
+				result.node.var_decl.value = alloc_node(pr.node, arena);
+			}
+
+			if(!tokenizer.consume_token(e_token_semicolon, reporter)) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'");
+			}
+
+			goto success;
+		}
+	}
+
+	pr = parse_expression(tokenizer, reporter, 0, arena);
+	if(pr.success) {
+		tokenizer = pr.tokenizer;
+		result.node = pr.node;
+
+		if(tokenizer.consume_token(e_token_assign, reporter)) {
+			s_node node = zero;
+			node.type = e_node_assign;
+			node.left = alloc_node(pr.node, arena);
+
+			pr = parse_expression(tokenizer, reporter, 0, arena);
+			if(!pr.success) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after '='");
+			}
+			tokenizer = pr.tokenizer;
+			node.right = alloc_node(pr.node, arena);
+			result.node = node;
+		}
+		if(!tokenizer.consume_token(e_token_semicolon, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'");
+		}
+		goto success;
+	}
+
+	goto end;
+
+	success:
 	result.tokenizer = tokenizer;
+	result.success = true;
+
+	end:
 
 	return result;
 }
@@ -317,19 +484,6 @@ func b8 is_keyword(s_token token)
 {
 	// @TODO(tkap, 10/02/2024):
 	return token.equals("if");
-}
-
-func int get_operator_precedence(e_token type)
-{
-	// @TODO(tkap, 10/02/2024): Cringe that we set up the array every call. Unless the compiler is smart...
-	int arr[e_token_count] = zero;
-	arr[e_token_plus] = 12;
-	arr[e_token_minus] = 12;
-	arr[e_token_asterisk] = 13;
-	arr[e_token_forward_slash] = 13;
-	arr[e_token_percent] = 13;
-
-	return arr[type];
 }
 
 func void print_expression(s_node* node)

@@ -1,7 +1,44 @@
 
 
+struct s_player
+{
+	int x,
+	int y,
+	int vel_x,
+	int vel_y,
+}
 
 func int main()
 {
+	SetTraceLogLevel(LOG_WARNING);
+	SetTargetFPS(60);
+	InitWindow(800, 600, "AZEN");
 
+	s_player player;
+	player.vel_x = 4;
+
+	while !WindowShouldClose() {
+		BeginDrawing();
+		ClearBackground(BLACK);
+
+		player.vel_y = player.vel_y + 2;
+		player.x = player.x + player.vel_x;
+		player.y = player.y + player.vel_y;
+
+		if player.y > 600 {
+			player.y = 600;
+			player.vel_y = player.vel_y * -1;
+		}
+		if player.x > 800 {
+			player.vel_x = player.vel_x * -1;
+		}
+		if 0 > player.x {
+			player.vel_x = player.vel_x * -1;
+		}
+
+
+		DrawRectangle(player.x, player.y, 32, 32, RED);
+
+		EndDrawing();
+	}
 }

@@ -20,7 +20,17 @@ enum e_node
 	e_node_compound,
 	e_node_func_decl,
 	e_node_return,
+	e_node_identifier,
+	e_node_func_call,
+	e_node_string,
+	e_node_while,
+	e_node_logic_not,
 	e_node_var_decl,
+	e_node_member_access,
+	e_node_assign,
+	e_node_if,
+	e_node_greater_than,
+	e_node_unary_minus,
 };
 
 struct s_operator_data
@@ -36,6 +46,10 @@ global constexpr s_operator_data c_operator_data[] = {
 	{e_token_asterisk, e_node_multiply, 13},
 	{e_token_forward_slash, e_node_divide, 13},
 	{e_token_percent, e_node_modulo, 13},
+	{e_token_open_paren, e_node_func_call, 16},
+	{e_token_logic_not, e_node_logic_not, 15},
+	{e_token_dot, e_node_member_access, 16},
+	{e_token_greater_than, e_node_greater_than, 9},
 };
 
 struct s_node
@@ -63,6 +77,7 @@ struct s_node
 		struct
 		{
 			s_node* type;
+			s_node* value;
 			s_token name;
 		} var_decl;
 
@@ -95,6 +110,23 @@ struct s_node
 		{
 			s_node* expression;
 		} nreturn;
+
+		struct
+		{
+			s_node* arguments;
+		} func_call;
+
+		struct
+		{
+			s_node* condition;
+			s_node* body;
+		} nwhile;
+
+		struct
+		{
+			s_node* condition;
+			s_node* body;
+		} nif;
 	};
 };
 
@@ -104,6 +136,9 @@ struct s_parse_result
 	b8 success;
 	s_tokenizer tokenizer;
 	s_node node;
+
+	// @Note(tkap, 10/02/2024): Used by parse_operator
+	s_operator_data operator_data;
 };
 
 func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
@@ -114,7 +149,6 @@ func b8 is_keyword(s_token token);
 func s_parse_result parse_type(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_array(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* reporter, int in_operator_level, s_lin_arena* arena);
-func int get_operator_precedence(e_token type);
 func void print_expression(s_node* node);
 func s_parse_result parse_function(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);

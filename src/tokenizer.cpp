@@ -76,6 +76,19 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 		token.len = ptrs_to_int(start, at);
 	}
 
+	else if(*at == '"') {
+		at += 1;
+		char* start = at;
+		while(!(*at == '"' && at[-1] != '\\')) {
+			at += 1;
+		}
+
+		token.type = e_token_string;
+		token.at = start;
+		token.len = ptrs_to_int(start, at);
+		at += 1;
+	}
+
 	else if(*at == '{') {
 		token.type = e_token_open_brace;
 		token.at = at;
@@ -132,8 +145,29 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 		at += 1;
 	}
 
+	else if(*at == '!') {
+		token.type = e_token_logic_not;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
 	else if(*at == '+') {
 		token.type = e_token_plus;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
+	else if(*at == '.') {
+		token.type = e_token_dot;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
+	else if(*at == '=') {
+		token.type = e_token_assign;
 		token.at = at;
 		token.len = 1;
 		at += 1;
@@ -162,6 +196,13 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 
 	else if(*at == '%') {
 		token.type = e_token_percent;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
+	else if(*at == '>') {
+		token.type = e_token_greater_than;
 		token.at = at;
 		token.len = 1;
 		at += 1;

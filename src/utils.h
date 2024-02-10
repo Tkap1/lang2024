@@ -33,10 +33,12 @@ struct s_str_builder
 	int scope;
 
 	void add(char* str, ...);
+	void add_tabs(char* str, ...);
 	void add_line(char* str, ...);
+	void add_line_tabs(char* str, ...);
 	void push_scope();
-	void pop_scope();
-	void add_(char* str, b8 add_newline, va_list args);
+	void pop_scope(char* str = "");
+	void add_(char* str, b8 add_newline, b8 add_tabs, va_list args);
 };
 
 func char* read_file(char* path, s_lin_arena* arena);

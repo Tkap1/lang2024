@@ -11,6 +11,13 @@ func void type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* a
 		data->types.add(alloc_node(node, arena));
 	}
 
+	{
+		s_node node = zero;
+		node.basic_type.name = "float";
+		node.basic_type.size_in_bytes = 4;
+		data->types.add(alloc_node(node, arena));
+	}
+
 	while(true) {
 		b8 successfully_typechecked_something = false;
 		int not_type_checked_count = 0;
@@ -71,6 +78,108 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, s_type_check* 
 			return type_check_func_decl(node, reporter, data, arena);
 		} break;
 
+		case e_node_compound: {
+			for_node(statement, node->compound.statements) {
+				if(!type_check_node(statement, reporter, data, arena)) {
+					return false;
+				}
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_func_call: {
+			if(!node->left->type_checked && !type_check_node(node->left, reporter, data, arena)) {
+				return false;
+			}
+			for_node(arg, node->func_call.arguments) {
+				if(!arg->type_checked && !type_check_node(arg, reporter, data, arena)) {
+					return false;
+				}
+			}
+			// @TODO(tkap, 10/02/2024): check that function exists
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_integer: {
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_string: {
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_identifier: {
+			// @TODO(tkap, 10/02/2024): we have to check that this is a variable or function
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_logic_not: {
+			// @TODO(tkap, 10/02/2024):
+			if(!node->left->type_checked && !type_check_node(node->left, reporter, data, arena)) {
+				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_while: {
+			// @TODO(tkap, 10/02/2024):
+			if(node->nwhile.condition && !node->nwhile.condition->type_checked && !type_check_node(node->nwhile.condition, reporter, data, arena)) {
+				return false;
+			}
+			if(!node->nwhile.body->type_checked && !type_check_node(node->nwhile.body, reporter, data, arena)) {
+				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_if: {
+			// @TODO(tkap, 10/02/2024):
+			if(!node->nif.condition->type_checked && !type_check_node(node->nif.condition, reporter, data, arena)) {
+				return false;
+			}
+			if(!node->nif.body->type_checked && !type_check_node(node->nif.body, reporter, data, arena)) {
+				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_greater_than: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_var_decl: {
+			// @TODO(tkap, 10/02/2024): check that variable name doesnt already exist in scope
+			s_node* type = node_to_basic_type(node->var_decl.type, data);
+			if(!type) {
+				reporter->recoverable_error(node->var_decl.type->token.file, node->var_decl.type->token.line, "Variable '%s' has unknown type '%s'", node->var_decl.name.str(), node_to_str(node->var_decl.type));
+				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_member_access: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_assign: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
 		invalid_default_case;
 	}
 	return false;
@@ -94,7 +203,7 @@ func b8 type_check_struct(s_node* node, s_error_reporter* reporter, s_type_check
 	}
 	node->type_checked = result;
 	if(result) {
-		printf("Added struct '%s'\n", node->token.str());
+		// printf("Added struct '%s'\n", node->token.str());
 		data->structs.add(node);
 	}
 	return result;
@@ -122,9 +231,13 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, s_type_ch
 		}
 	}
 
+	if(!node->func_decl.body->type_checked && !type_check_node(node->func_decl.body, reporter, data, arena)) {
+		return false;
+	}
+
 	node->type_checked = true;
 
-	printf("Added function '%s'\n", node->func_decl.name.str());
+	// printf("Added function '%s'\n", node->func_decl.name.str());
 	data->funcs.add(node);
 	return true;
 }
@@ -148,7 +261,7 @@ func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_report
 	member->type_checked = result;
 	if(result) {
 		member->var_type = type;
-		printf("type checked %s %s\n", node_to_str(member->var_decl.type), member->var_decl.name.str());
+		// printf("type checked %s %s\n", node_to_str(member->var_decl.type), member->var_decl.name.str());
 	}
 	return result;
 }

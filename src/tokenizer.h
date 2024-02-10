@@ -18,7 +18,11 @@ enum e_token
 	e_token_asterisk,
 	e_token_forward_slash,
 	e_token_percent,
-	e_token_count,
+	e_token_string,
+	e_token_logic_not,
+	e_token_dot,
+	e_token_assign,
+	e_token_greater_than,
 };
 
 struct s_token

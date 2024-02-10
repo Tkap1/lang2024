@@ -57,11 +57,13 @@ func char* format_str(char* str, ...)
 }
 
 template <int n>
-void s_str_builder<n>::add_(char* str, b8 add_newline, va_list args)
+void s_str_builder<n>::add_(char* str, b8 add_newline, b8 add_tabs, va_list args)
 {
-	for(int i = 0; i < scope; i++) {
-		data[len++] = '\t';
-		assert(len < n);
+	if(add_tabs) {
+		for(int i = 0; i < scope; i++) {
+			data[len++] = '\t';
+			assert(len < n);
+		}
 	}
 	char* where_to_write = &data[len];
 	int written = vsnprintf(where_to_write, n - len, str, args);
@@ -81,7 +83,16 @@ void s_str_builder<n>::add(char* str, ...)
 {
 	va_list args;
 	va_start(args, str);
-	add_(str, false, args);
+	add_(str, false, false, args);
+	va_end(args);
+}
+
+template <int n>
+void s_str_builder<n>::add_tabs(char* str, ...)
+{
+	va_list args;
+	va_start(args, str);
+	add_(str, false, true, args);
 	va_end(args);
 }
 
@@ -90,20 +101,29 @@ void s_str_builder<n>::add_line(char* str, ...)
 {
 	va_list args;
 	va_start(args, str);
-	add_(str, true, args);
+	add_(str, true, false, args);
+	va_end(args);
+}
+
+template <int n>
+void s_str_builder<n>::add_line_tabs(char* str, ...)
+{
+	va_list args;
+	va_start(args, str);
+	add_(str, true, true, args);
 	va_end(args);
 }
 
 template <int n>
 void s_str_builder<n>::push_scope()
 {
-	add_line("{");
+	add_line_tabs("{");
 	scope += 1;
 }
 
 template <int n>
-void s_str_builder<n>::pop_scope()
+void s_str_builder<n>::pop_scope(char* str)
 {
 	scope -= 1;
-	add_line("}");
+	add_line_tabs("}%s", str);
 }
