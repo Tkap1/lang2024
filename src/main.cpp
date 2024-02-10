@@ -47,6 +47,8 @@ int main(int argc, char** argv)
 		reporter.fatal(null, 0, "An empty program is not valid");
 	}
 	type_check_ast(ast, &reporter, &arena);
+
+	generate_code(ast, &arena);
 	printf("Success!\n");
 
 }

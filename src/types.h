@@ -15,6 +15,8 @@ global constexpr u64 c_mb = 1024 * c_kb;
 
 #define assert(condition) if(!(condition)) { on_failed_assert(#condition, __FILE__, __LINE__); }
 
+#define array_count(arr) (sizeof((arr)) / sizeof((arr)[0]))
+
 func void on_failed_assert(char* condition, char* file, int line)
 {
 	printf("failed assert %s at %s(%i)\n", condition, file, line);

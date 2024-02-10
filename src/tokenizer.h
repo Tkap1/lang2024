@@ -11,6 +11,14 @@ enum e_token
 	e_token_comma,
 	e_token_open_bracket,
 	e_token_close_bracket,
+	e_token_open_paren,
+	e_token_close_paren,
+	e_token_plus,
+	e_token_minus,
+	e_token_asterisk,
+	e_token_forward_slash,
+	e_token_percent,
+	e_token_count,
 };
 
 struct s_token

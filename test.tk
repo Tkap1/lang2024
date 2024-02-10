@@ -1,5 +1,7 @@
 
-struct s_a
+
+
+func int main()
 {
-	int a,
+
 }

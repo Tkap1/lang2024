@@ -12,7 +12,7 @@
 #define foreach_val_(a, index_name, element_name, array) foreach_val__(a, index_name, element_name, array)
 #define foreach_val(index_name, element_name, array) foreach_val_(__LINE__, index_name, element_name, array)
 
-#define invalid_default_case default: assert(false);
+#define invalid_default_case default: assert(!"Invalid default case");
 
 
 template <typename t, int n>
@@ -23,6 +23,20 @@ struct s_sarray
 
 	void add(t new_element);
 	t& operator[](int index);
+};
+
+template <int n>
+struct s_str_builder
+{
+	char data[n];
+	int len;
+	int scope;
+
+	void add(char* str, ...);
+	void add_line(char* str, ...);
+	void push_scope();
+	void pop_scope();
+	void add_(char* str, b8 add_newline, va_list args);
 };
 
 func char* read_file(char* path, s_lin_arena* arena);

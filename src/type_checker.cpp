@@ -67,6 +67,10 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, s_type_check* 
 			return type_check_struct(node, reporter, data, arena);
 		} break;
 
+		case e_node_func_decl: {
+			return type_check_func_decl(node, reporter, data, arena);
+		} break;
+
 		invalid_default_case;
 	}
 	return false;
@@ -94,6 +98,35 @@ func b8 type_check_struct(s_node* node, s_error_reporter* reporter, s_type_check
 		data->structs.add(node);
 	}
 	return result;
+}
+
+func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, s_type_check* data, s_lin_arena* arena)
+{
+	assert(!node->type_checked);
+
+	s_node* type = node_to_basic_type(node->func_decl.return_type, data);
+	if(!type) {
+		reporter->recoverable_error(node->func_decl.name.file, node->func_decl.name.line, "Function '%s' has unknown return type '%s'", node->func_decl.name.str(), node_to_str(node->func_decl.return_type));
+		return false;
+	}
+
+	for_node(arg, node->func_decl.arguments) {
+		if(arg->type_checked) { continue; }
+		type = node_to_basic_type(arg->var_decl.type, data);
+		if(type) {
+			arg->type_checked = true;
+		}
+		else {
+			reporter->recoverable_error(arg->var_decl.name.file, arg->var_decl.name.line, "Function argument '%s' has unknown type '%s'", arg->var_decl.name.str(), node_to_str(arg->var_decl.type));
+			return false;
+		}
+	}
+
+	node->type_checked = true;
+
+	printf("Added function '%s'\n", node->func_decl.name.str());
+	data->funcs.add(node);
+	return true;
 }
 
 func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_reporter* reporter, s_type_check* data, s_lin_arena* arena)

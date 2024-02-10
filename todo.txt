@@ -1,2 +1,4 @@
 
 change how we handle struct members. we probably want a var_decl node which contains type and name.
+
+prevent duplicate arguments

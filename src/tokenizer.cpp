@@ -104,6 +104,20 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 		at += 1;
 	}
 
+	else if(*at == '(') {
+		token.type = e_token_open_paren;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
+	else if(*at == ')') {
+		token.type = e_token_close_paren;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
 	else if(*at == ';') {
 		token.type = e_token_semicolon;
 		token.at = at;
@@ -118,8 +132,43 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 		at += 1;
 	}
 
+	else if(*at == '+') {
+		token.type = e_token_plus;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
+	else if(*at == '-') {
+		token.type = e_token_minus;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
+	else if(*at == '*') {
+		token.type = e_token_asterisk;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
+	else if(*at == '/') {
+		token.type = e_token_forward_slash;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
+	else if(*at == '%') {
+		token.type = e_token_percent;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
 	if(token.type == e_token_invalid) {
-		reporter->fatal(file, token.line, "Bad token");
+		reporter->fatal(file, token.line, "Bad token: %c", *at);
 	}
 	return token;
 }
