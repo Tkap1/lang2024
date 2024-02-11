@@ -229,6 +229,11 @@ func s_parse_result parse_sub_expression(s_tokenizer tokenizer, s_error_reporter
 		result.node.token = token;
 		goto success;
 	}
+	if(tokenizer.consume_token(e_token_float, &token, reporter)) {
+		result.node.type = e_node_float;
+		result.node.token = token;
+		goto success;
+	}
 	if(tokenizer.consume_token(e_token_identifier, &token, reporter)) {
 		result.node.type = e_node_identifier;
 		result.node.token = token;
@@ -319,6 +324,43 @@ func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* re
 				operator_pr.node.right = alloc_node(pr.node, arena);
 				result.node = operator_pr.node;
 			}
+		}
+
+		result.success = true;
+		result.tokenizer = tokenizer;
+	}
+
+	return result;
+}
+
+func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* reporter, b8 allow_assignment, s_lin_arena* arena)
+{
+	s_parse_result result = zero;
+	s_token token = zero;
+
+	breakable_block {
+
+		s_parse_result pr = parse_type(tokenizer, reporter, arena);
+		if(!pr.success) { break; }
+		tokenizer = pr.tokenizer;
+		if(tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
+
+		result.node.type = e_node_var_decl;
+		result.node.var_decl.type = alloc_node(pr.node, arena);
+		result.node.var_decl.name = token;
+
+		if(tokenizer.peek_token(e_token_assign, reporter)) {
+			if(!allow_assignment) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "Unexpected '='");
+			}
+			tokenizer.next_token(reporter);
+
+			pr = parse_expression(tokenizer, reporter, 0, arena);
+			if(!pr.success) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after '='");
+			}
+			tokenizer = pr.tokenizer;
+			result.node.var_decl.value = alloc_node(pr.node, arena);
 		}
 
 		result.success = true;
@@ -448,6 +490,43 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 			node.right = alloc_node(pr.node, arena);
 			result.node = node;
 		}
+		else {
+
+			struct s_temp
+			{
+				e_token token_type;
+				e_node node_type;
+			};
+			constexpr s_temp c_assignments[] = {
+				{e_token_times_equals, e_node_multiply},
+			};
+
+			// @Note(tkap, 11/02/2024): We are turning "a *= b" into "a = a * (b)"
+			for(int assign_i = 0; assign_i < array_count(c_assignments); assign_i++) {
+				s_temp data = c_assignments[assign_i];
+				if(tokenizer.consume_token(data.token_type, reporter)) {
+					s_node node = zero;
+					node.type = e_node_assign;
+					node.left = alloc_node(pr.node, arena);
+
+					s_node right = zero;
+					right.type = data.node_type;
+					right.left = alloc_node(pr.node, arena);
+
+					pr = parse_expression(tokenizer, reporter, 0, arena);
+					if(!pr.success) {
+						reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after");
+					}
+					tokenizer = pr.tokenizer;
+
+					right.right = alloc_node(pr.node, arena);
+					node.right = alloc_node(right, arena);
+					result.node = node;
+					break;
+				}
+			}
+		}
+
 		if(!tokenizer.consume_token(e_token_semicolon, reporter)) {
 			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'");
 		}

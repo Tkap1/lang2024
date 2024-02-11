@@ -65,13 +65,27 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 	}
 
 	else if(is_number(*at)) {
+		e_token token_type = e_token_integer;
+		b8 found_dot = false;
 		char* start = at;
 		at += 1;
-		while(is_number(*at)) {
-			at += 1;
+		while(true) {
+			while(is_number(*at)) {
+				at += 1;
+			}
+			if(*at == '.') {
+				if(found_dot) {
+					reporter->fatal(file, line, "Bad number");
+				}
+				found_dot = true;
+				token_type = e_token_float;
+				at += 1;
+				continue;
+			}
+			break;
 		}
 
-		token.type = e_token_integer;
+		token.type = token_type;
 		token.at = start;
 		token.len = ptrs_to_int(start, at);
 	}
@@ -87,6 +101,27 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 		token.at = start;
 		token.len = ptrs_to_int(start, at);
 		at += 1;
+	}
+
+	else if(*at == '|' && at[1] == '|') {
+		token.type = e_token_logic_or;
+		token.at = at;
+		token.len = 2;
+		at += 2;
+	}
+
+	else if(*at == '&' && at[1] == '&') {
+		token.type = e_token_logic_and;
+		token.at = at;
+		token.len = 2;
+		at += 2;
+	}
+
+	else if(*at == '*' && at[1] == '=') {
+		token.type = e_token_times_equals;
+		token.at = at;
+		token.len = 2;
+		at += 2;
 	}
 
 	else if(*at == '{') {
@@ -208,6 +243,13 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 		at += 1;
 	}
 
+	else if(*at == '<') {
+		token.type = e_token_less_than;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
 	if(token.type == e_token_invalid) {
 		reporter->fatal(file, token.line, "Bad token: %c", *at);
 	}
@@ -255,6 +297,14 @@ b8 s_tokenizer::consume_token(e_token type, s_error_reporter* reporter)
 		*this = copy;
 		return true;
 	}
+	return false;
+}
+
+b8 s_tokenizer::peek_token(e_token type, s_error_reporter* reporter)
+{
+	assert(type > e_token_invalid);
+	s_token token = peek(reporter);
+	if(token.type == type) { return true; }
 	return false;
 }
 

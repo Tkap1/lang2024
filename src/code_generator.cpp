@@ -3,6 +3,15 @@
 func void generate_code(s_node* ast, s_lin_arena* arena)
 {
 	t_code_builder* builder = (t_code_builder*)arena->alloc_zero(sizeof(t_code_builder));
+	builder->add_line("#include <stdint.h>");
+	builder->add_line("typedef int8_t s8;");
+	builder->add_line("typedef int16_t s16;");
+	builder->add_line("typedef int32_t s32;");
+	builder->add_line("typedef int64_t s64;");
+	builder->add_line("typedef uint8_t u8;");
+	builder->add_line("typedef uint16_t u16;");
+	builder->add_line("typedef uint32_t u32;");
+	builder->add_line("typedef uint64_t u64;");
 	builder->add_line("#include \"raylib.h\"\n");
 	for_node(node, ast) {
 		generate_node(node, builder);
@@ -98,7 +107,7 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 		} break;
 
 		case e_node_if: {
-			builder->add_tabs("if(%s)", node_to_c_str(node->nwhile.condition));
+			builder->add_line_tabs("if(%s)", node_to_c_str(node->nwhile.condition));
 			generate_node(node->nif.body, builder);
 		} break;
 
@@ -125,6 +134,10 @@ func char* node_to_c_str(s_node* node)
 
 		case e_node_integer: {
 			return node->token.str();
+		} break;
+
+		case e_node_float: {
+			return format_str("%sf", node->token.str());
 		} break;
 
 		case e_node_identifier: {
@@ -174,12 +187,28 @@ func char* node_to_c_str(s_node* node)
 			return format_str("(%s + %s)", node_to_c_str(node->left), node_to_c_str(node->right));
 		} break;
 
+		case e_node_subtract: {
+			return format_str("(%s - %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+		} break;
+
+		case e_node_logic_or: {
+			return format_str("(%s || %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+		} break;
+
+		case e_node_logic_and: {
+			return format_str("(%s && %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+		} break;
+
 		case e_node_multiply: {
 			return format_str("(%s * %s)", node_to_c_str(node->left), node_to_c_str(node->right));
 		} break;
 
 		case e_node_greater_than: {
 			return format_str("(%s > %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+		} break;
+
+		case e_node_less_than: {
+			return format_str("(%s < %s)", node_to_c_str(node->left), node_to_c_str(node->right));
 		} break;
 
 		invalid_default_case;

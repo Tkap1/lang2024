@@ -5,6 +5,7 @@ enum e_token
 	e_token_eof,
 	e_token_identifier,
 	e_token_integer,
+	e_token_float,
 	e_token_open_brace,
 	e_token_close_brace,
 	e_token_semicolon,
@@ -23,6 +24,10 @@ enum e_token
 	e_token_dot,
 	e_token_assign,
 	e_token_greater_than,
+	e_token_less_than,
+	e_token_logic_or,
+	e_token_logic_and,
+	e_token_times_equals,
 };
 
 struct s_token
@@ -45,6 +50,7 @@ struct s_tokenizer
 	char* file;
 
 	s_token peek(s_error_reporter* reporter);
+	b8 peek_token(e_token type, s_error_reporter* reporter);
 	s_token next_token(s_error_reporter* reporter);
 	b8 consume_token(char* str, s_error_reporter* reporter);
 	b8 consume_token(e_token type, s_error_reporter* reporter);

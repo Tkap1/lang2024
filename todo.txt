@@ -2,3 +2,6 @@
 change how we handle struct members. we probably want a var_decl node which contains type and name.
 
 prevent duplicate arguments
+
+do we want to turn a *= b into a = a * (b) ???
+	seems like less type checking and code gen

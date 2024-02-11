@@ -10,6 +10,7 @@ enum e_node
 	e_node_struct,
 	e_node_type,
 	e_node_integer,
+	e_node_float,
 	e_node_array,
 	e_node_basic_type,
 	e_node_add,
@@ -30,7 +31,10 @@ enum e_node
 	e_node_assign,
 	e_node_if,
 	e_node_greater_than,
+	e_node_less_than,
 	e_node_unary_minus,
+	e_node_logic_or,
+	e_node_logic_and,
 };
 
 struct s_operator_data
@@ -50,6 +54,9 @@ global constexpr s_operator_data c_operator_data[] = {
 	{e_token_logic_not, e_node_logic_not, 15},
 	{e_token_dot, e_node_member_access, 16},
 	{e_token_greater_than, e_node_greater_than, 9},
+	{e_token_less_than, e_node_less_than, 9},
+	{e_token_logic_or, e_node_logic_or, 3},
+	{e_token_logic_and, e_node_logic_and, 4},
 };
 
 struct s_node
@@ -152,3 +159,4 @@ func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* re
 func void print_expression(s_node* node);
 func s_parse_result parse_function(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
+func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* reporter, b8 allow_assignment, s_lin_arena* arena);

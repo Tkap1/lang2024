@@ -157,6 +157,24 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, s_type_check* 
 			return true;
 		} break;
 
+		case e_node_less_than: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_add: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_subtract: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
 		case e_node_var_decl: {
 			// @TODO(tkap, 10/02/2024): check that variable name doesnt already exist in scope
 			s_node* type = node_to_basic_type(node->var_decl.type, data);
@@ -175,6 +193,18 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, s_type_check* 
 		} break;
 
 		case e_node_assign: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_logic_or: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_logic_and: {
 			// @TODO(tkap, 10/02/2024):
 			node->type_checked = true;
 			return true;
