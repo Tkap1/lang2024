@@ -21,6 +21,13 @@ func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_aren
 			continue;
 		}
 
+		pr = parse_var_decl(tokenizer, reporter, e_context_global, arena);
+		if(pr.success) {
+			tokenizer = pr.tokenizer;
+			current = advance_node(current, pr.node, arena);
+			continue;
+		}
+
 		reporter->fatal(token.file, token.line, "Failed to parse something starting at:\nvvvvvvvvvv\n%.32s\n^^^^^^^^^^\n", token.at);
 	}
 
@@ -320,6 +327,7 @@ func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* re
 				pr = parse_expression(tokenizer, reporter, level, arena);
 				if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression"); }
 				tokenizer = pr.tokenizer;
+
 				operator_pr.node.left = alloc_node(result.node, arena);
 				operator_pr.node.right = alloc_node(pr.node, arena);
 				result.node = operator_pr.node;
@@ -333,7 +341,7 @@ func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* re
 	return result;
 }
 
-func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* reporter, b8 allow_assignment, s_lin_arena* arena)
+func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* reporter, int context, s_lin_arena* arena)
 {
 	s_parse_result result = zero;
 	s_token token = zero;
@@ -343,14 +351,14 @@ func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* repo
 		s_parse_result pr = parse_type(tokenizer, reporter, arena);
 		if(!pr.success) { break; }
 		tokenizer = pr.tokenizer;
-		if(tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
+		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
 
 		result.node.type = e_node_var_decl;
 		result.node.var_decl.type = alloc_node(pr.node, arena);
 		result.node.var_decl.name = token;
 
 		if(tokenizer.peek_token(e_token_assign, reporter)) {
-			if(!allow_assignment) {
+			if(context & e_context_struct) {
 				reporter->fatal(tokenizer.file, tokenizer.line, "Unexpected '='");
 			}
 			tokenizer.next_token(reporter);
@@ -361,6 +369,12 @@ func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* repo
 			}
 			tokenizer = pr.tokenizer;
 			result.node.var_decl.value = alloc_node(pr.node, arena);
+		}
+
+		if(context & e_context_global || context & e_context_statement) {
+			if(!tokenizer.consume_token(e_token_semicolon, reporter)) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'");
+			}
 		}
 
 		result.success = true;
@@ -447,29 +461,12 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 		goto success;
 	}
 
-	s_parse_result pr = parse_type(tokenizer, reporter, arena);
+
+	s_parse_result pr = parse_var_decl(tokenizer, reporter, e_context_statement, arena);
 	if(pr.success) {
-		if(pr.tokenizer.consume_token(e_token_identifier, &token, reporter)) {
-			tokenizer = pr.tokenizer;
-			result.node.type = e_node_var_decl;
-			result.node.var_decl.type = alloc_node(pr.node, arena);
-			result.node.var_decl.name = token;
-
-			if(tokenizer.consume_token(e_token_assign, reporter)) {
-				pr = parse_expression(tokenizer, reporter, 0, arena);
-				if(!pr.success) {
-					reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after '='");
-				}
-				tokenizer = pr.tokenizer;
-				result.node.var_decl.value = alloc_node(pr.node, arena);
-			}
-
-			if(!tokenizer.consume_token(e_token_semicolon, reporter)) {
-				reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'");
-			}
-
-			goto success;
-		}
+		tokenizer = pr.tokenizer;
+		result.node = pr.node;
+		goto success;
 	}
 
 	pr = parse_expression(tokenizer, reporter, 0, arena);

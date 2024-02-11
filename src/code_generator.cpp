@@ -47,6 +47,19 @@ func void generate_node(s_node* node, t_code_builder* builder)
 			builder->pop_scope(format_str(" %s;", node->token.str()));
 		} break;
 
+		case e_node_var_decl: {
+			builder->add("%s %s%s", node_to_c_str(node->var_decl.type), node->var_decl.name.str(), get_suffix_str(node->var_decl.type));
+
+			if(node->var_decl.value) {
+				builder->add(" = %s", node_to_c_str(node->var_decl.value));
+			}
+			else {
+				// @TODO(tkap, 10/02/2024): we need to know if this is a struct or not
+				builder->add(" = {0}");
+			}
+			builder->add_line(";");
+		} break;
+
 		case e_node_compound: {
 			builder->push_scope();
 			for_node(statement, node->compound.statements) {
@@ -220,7 +233,7 @@ func char* get_suffix_str(s_node* node)
 {
 	switch(node->type) {
 		case e_node_array: {
-			return format_str("[%s]", node_to_c_str(node->array.size_expr));
+			return format_str("%s[%s]", get_suffix_str(node->left), node_to_c_str(node->array.size_expr));
 		} break;
 		default: return "";
 	}

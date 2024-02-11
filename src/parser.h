@@ -37,6 +37,13 @@ enum e_node
 	e_node_logic_and,
 };
 
+enum e_context
+{
+	e_context_struct = 1 << 0,
+	e_context_statement = 1 << 1,
+	e_context_global = 1 << 2,
+};
+
 struct s_operator_data
 {
 	e_token token_type;
@@ -159,4 +166,4 @@ func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* re
 func void print_expression(s_node* node);
 func s_parse_result parse_function(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
-func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* reporter, b8 allow_assignment, s_lin_arena* arena);
+func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* reporter, int context, s_lin_arena* arena);

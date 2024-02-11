@@ -9,7 +9,7 @@ struct s_player
 }
 
 int c_max_tiles = 32;
-s8 tiles[c_max_tiles][c_max_tiles];
+s8[c_max_tiles][c_max_tiles] tiles;
 
 
 func int main()

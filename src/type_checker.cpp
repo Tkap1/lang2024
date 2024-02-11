@@ -13,6 +13,13 @@ func void type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* a
 
 	{
 		s_node node = zero;
+		node.basic_type.name = "s8";
+		node.basic_type.size_in_bytes = 1;
+		data->types.add(alloc_node(node, arena));
+	}
+
+	{
+		s_node node = zero;
 		node.basic_type.name = "float";
 		node.basic_type.size_in_bytes = 4;
 		data->types.add(alloc_node(node, arena));
