@@ -139,6 +139,11 @@ func s_parse_result parse_type(s_tokenizer tokenizer, s_error_reporter* reporter
 	s_token token = zero;
 
 	breakable_block {
+
+		if(tokenizer.consume_token("const", reporter)) {
+			result.node.ntype.is_const = true;
+		}
+
 		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
 		result.node.token = token;
 		result.node.type = e_node_type;

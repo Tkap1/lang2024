@@ -141,6 +141,11 @@ struct s_node
 			s_node* condition;
 			s_node* body;
 		} nif;
+
+		struct
+		{
+			b8 is_const;
+		} ntype;
 	};
 };
 

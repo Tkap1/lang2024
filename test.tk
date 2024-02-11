@@ -8,7 +8,7 @@ struct s_player
 	float vel_y,
 }
 
-int c_max_tiles = 32;
+const int c_max_tiles = 32;
 s8[c_max_tiles][c_max_tiles] tiles;
 
 

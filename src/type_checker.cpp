@@ -189,6 +189,14 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, s_type_check* 
 				reporter->recoverable_error(node->var_decl.type->token.file, node->var_decl.type->token.line, "Variable '%s' has unknown type '%s'", node->var_decl.name.str(), node_to_str(node->var_decl.type));
 				return false;
 			}
+			if(node->var_decl.value && !node->var_decl.value->type_checked) {
+				if(!type_check_expr(node->var_decl.value, reporter, data, arena)) {
+					return false;
+				}
+			}
+			if(!node->var_decl.type->type_checked && !type_check_node(node->var_decl.type, reporter, data, arena)) {
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
@@ -213,6 +221,28 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, s_type_check* 
 
 		case e_node_logic_and: {
 			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_type: {
+			// @TODO(tkap, 11/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_array: {
+			if(!node->left->type_checked && !type_check_node(node->left, reporter, data, arena)) {
+				return false;
+			}
+			if(!node->array.size_expr->type_checked && !type_check_expr(node->array.size_expr, reporter, data, arena)) {
+				return false;
+			}
+			s_maybe<int> size = get_compile_time_value(node->array.size_expr);
+			if(!size.valid) {
+				reporter->fatal(node->array.size_expr->token.file, node->array.size_expr->token.line, "Array size is not constant");
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
@@ -277,6 +307,26 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, s_type_ch
 	// printf("Added function '%s'\n", node->func_decl.name.str());
 	data->funcs.add(node);
 	return true;
+}
+
+func b8 type_check_expr(s_node* node, s_error_reporter* reporter, s_type_check* data, s_lin_arena* arena)
+{
+	assert(!node->type_checked);
+	switch(node->type) {
+		case e_node_integer: {
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_identifier: {
+			// @TODO(tkap, 11/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		invalid_default_case;
+	}
+	return false;
 }
 
 func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_reporter* reporter, s_type_check* data, s_lin_arena* arena)
@@ -361,4 +411,15 @@ func char* node_to_str(s_node* node)
 		invalid_default_case;
 	}
 	return null;
+}
+
+func s_maybe<int> get_compile_time_value(s_node* node)
+{
+	switch(node->type) {
+		case e_node_integer: {
+			return maybe(atoi(node->token.str()));
+		} break;
+		invalid_default_case;
+	}
+	return zero;
 }

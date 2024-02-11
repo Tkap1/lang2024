@@ -127,3 +127,9 @@ void s_str_builder<n>::pop_scope(char* str)
 	scope -= 1;
 	add_line_tabs("}%s", str);
 }
+
+template <typename t>
+func s_maybe<t> maybe(t value)
+{
+	return {.valid = true, .value = value};
+}

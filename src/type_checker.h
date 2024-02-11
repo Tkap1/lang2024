@@ -16,3 +16,5 @@ func b8 type_check_struct_member(s_node* nstruct, s_node* node, s_error_reporter
 func s_node* node_to_basic_type(s_node* node, s_type_check* data);
 func char* node_to_str(s_node* node);
 func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, s_type_check* data, s_lin_arena* arena);
+func b8 type_check_expr(s_node* node, s_error_reporter* reporter, s_type_check* data, s_lin_arena* arena);
+func s_maybe<int> get_compile_time_value(s_node* node);

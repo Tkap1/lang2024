@@ -41,6 +41,13 @@ struct s_str_builder
 	void add_(char* str, b8 add_newline, b8 add_tabs, va_list args);
 };
 
+template <typename t>
+struct s_maybe
+{
+	b8 valid;
+	t value;
+};
+
 func char* read_file(char* path, s_lin_arena* arena);
 
 
