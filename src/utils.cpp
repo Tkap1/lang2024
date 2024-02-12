@@ -45,6 +45,24 @@ t s_sarray<t, n>::pop()
 }
 
 template <typename t, int n>
+t& s_sarray<t, n>::get_last()
+{
+	assert(count > 0);
+	return elements[count - 1];
+}
+
+template <typename t, int n>
+void s_sarray<t, n>::remove_and_shift(int index)
+{
+	assert(index < count);
+	count -= 1;
+	int to_copy = count - index;
+	if(to_copy < 0) {
+		memcpy(&elements[index], &elements[index + 1], sizeof(t) * to_copy);
+	}
+}
+
+template <typename t, int n>
 t& s_sarray<t, n>::operator[](int index)
 {
 	assert(index >= 0 && index < count);

@@ -171,6 +171,7 @@ struct s_node
 
 		struct
 		{
+			s_token iterator_name;
 			s_node* expr;
 			s_node* body;
 		} nfor;

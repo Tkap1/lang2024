@@ -37,6 +37,7 @@ struct s_player
 }
 
 const int c_max_tiles = 32;
+const int c_tile_size = 16;
 s8[c_max_tiles][c_max_tiles] tiles;
 
 
@@ -52,15 +53,16 @@ func int main()
 	InitWindow(800, 600, "AZEN");
 
 	s_player player;
+	player.pos = v2(32, 32);
 
 	while !WindowShouldClose() {
 		BeginDrawing();
 		ClearBackground(BLACK);
 
-		// DrawRectangle(player.x, player.y, 32, 32, RED);
-
-		for 32 {
-			DrawRectangle(it*64, it*32, 32, 32, RED);
+		for y: c_max_tiles {
+			for x: c_max_tiles {
+				DrawRectangle(x * c_tile_size, y * c_tile_size, c_tile_size, c_tile_size, RED);
+			}
 		}
 
 		DrawFPS(16, 16);

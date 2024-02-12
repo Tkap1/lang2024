@@ -28,6 +28,7 @@ enum e_token
 	e_token_logic_or,
 	e_token_logic_and,
 	e_token_times_equals,
+	e_token_colon,
 };
 
 struct s_token
@@ -49,8 +50,8 @@ struct s_tokenizer
 	char* at;
 	char* file;
 
-	s_token peek(s_error_reporter* reporter);
-	b8 peek_token(e_token type, s_error_reporter* reporter);
+	s_token peek(s_error_reporter* reporter, int offset = 0);
+	b8 peek_token(e_token type, s_error_reporter* reporter, int offset = 0);
 	s_token next_token(s_error_reporter* reporter);
 	b8 consume_token(char* str, s_error_reporter* reporter);
 	b8 consume_token(e_token type, s_error_reporter* reporter);

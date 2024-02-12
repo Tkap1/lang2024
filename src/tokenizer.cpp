@@ -35,9 +35,12 @@ func b8 continues_identifier(char c)
 	return c == '_' || is_alphanum(c);
 }
 
-s_token s_tokenizer::peek(s_error_reporter* reporter)
+s_token s_tokenizer::peek(s_error_reporter* reporter, int offset)
 {
 	s_tokenizer copy = *this;
+	for(int i = 0; i < offset; i++) {
+		copy.next_token(reporter);
+	}
 	return copy.next_token(reporter);
 }
 
@@ -172,6 +175,13 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 
 	else if(*at == ';') {
 		token.type = e_token_semicolon;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
+	else if(*at == ':') {
+		token.type = e_token_colon;
 		token.at = at;
 		token.len = 1;
 		at += 1;
@@ -327,10 +337,10 @@ b8 s_tokenizer::consume_token(e_token type, s_error_reporter* reporter)
 	return false;
 }
 
-b8 s_tokenizer::peek_token(e_token type, s_error_reporter* reporter)
+b8 s_tokenizer::peek_token(e_token type, s_error_reporter* reporter, int offset)
 {
 	assert(type > e_token_invalid);
-	s_token token = peek(reporter);
+	s_token token = peek(reporter, offset);
 	if(token.type == type) { return true; }
 	return false;
 }

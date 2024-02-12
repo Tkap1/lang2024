@@ -25,6 +25,8 @@ struct s_sarray
 	t pop();
 	t& get(int index);
 	t& operator[](int index);
+	t& get_last();
+	void remove_and_shift(int index);
 };
 
 template <int n>

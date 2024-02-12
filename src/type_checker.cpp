@@ -179,12 +179,21 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 {
 	if(node->type_checked) { return true; }
 
-	// @TODO(tkap, 12/02/2024): This will make recursion impossible!! fix!
+	int scope_index = data->count - 1;
+	int func_index;
+	{
+		s_scope* scope = *data->get_last();
+		func_index = scope->funcs.count;
+	}
+	add_func_to_scope(data, node, arena);
+
 	data->add(&node->func_decl.scope);
 
 	if(!type_check_expr(node->func_decl.return_type, reporter, data, arena)) {
 		reporter->recoverable_error(node->func_decl.name.file, node->func_decl.name.line, "Function '%s' has unknown return type '%s'", node->func_decl.name.str(), node_to_str(node->func_decl.return_type));
 		data->pop();
+		s_scope* scope = *data->get(scope_index);
+		scope->funcs.remove_and_shift(func_index);
 		return false;
 	}
 	node->var_type = node->func_decl.return_type->var_type;
@@ -202,6 +211,8 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 			else {
 				reporter->recoverable_error(arg->var_decl.name.file, arg->var_decl.name.line, "Function argument '%s' has unknown type '%s'", arg->var_decl.name.str(), node_to_str(arg->var_decl.type));
 				data->pop();
+				s_scope* scope = *data->get(scope_index);
+				scope->funcs.remove_and_shift(func_index);
 				return false;
 			}
 		}
@@ -211,6 +222,8 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 	if(!node->func_decl.is_external) {
 		if(!type_check_statement(node->func_decl.body, reporter, data, arena)) {
 			data->pop();
+			s_scope* scope = *data->get(scope_index);
+			scope->funcs.remove_and_shift(func_index);
 			return false;
 		}
 	}
@@ -220,7 +233,6 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 	data->pop();
 
 	// printf("Added function '%s'\n", node->func_decl.name.str());
-	add_func_to_scope(data, node, arena);
 	return true;
 }
 
@@ -261,7 +273,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			}
 			// @TODO(tkap, 12/02/2024): This is fucked. we are going to add the "it" variable to the scope the for loop is in, rather than inside the for loop
 			// @TODO(tkap, 12/02/2024): We are going to add this multiple times!!!
-			s_node temp = statement_str_to_node("int it = 0;", reporter, arena);
+			s_node temp = statement_str_to_node(format_str("int %s = 0;", node->nfor.iterator_name.str()), reporter, arena);
 			b8 success = type_check_statement(&temp, reporter, data, arena);
 			assert(success);
 			add_var_to_scope(data, alloc_node(temp, arena), arena);
@@ -319,11 +331,14 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 		} break;
 
 		case e_node_return: {
+			s_node* nfunc = get_latest_func(data);
+			assert(nfunc);
 			if(node->nreturn.expression) {
-				if(!type_check_expr(node->nreturn.expression, reporter, data, arena)) {
+				if(!type_check_expr(node->nreturn.expression, reporter, data, arena, nfunc->var_type)) {
 					return false;
 				}
 			}
+			// @TODO(tkap, 12/02/2024): check that types are the same
 			node->var_type = node->nreturn.expression->var_type;
 			node->type_checked = true;
 			return true;
@@ -735,6 +750,7 @@ func s_node* get_func_by_name(char* name, t_scope_arr* data)
 
 func b8 is_const(s_node* node, t_scope_arr* data)
 {
+	unreferenced(data);
 	switch(node->type) {
 		case e_node_type: {
 			return node->ntype.is_const;
@@ -742,4 +758,16 @@ func b8 is_const(s_node* node, t_scope_arr* data)
 		invalid_default_case;
 	}
 	return false;
+}
+
+
+func s_node* get_latest_func(t_scope_arr* data)
+{
+	for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
+		s_scope** scope2 = data->get(scope2_i);
+		s_scope* scope1 = *scope2;
+		if(!scope1) { continue; }
+		return scope1->funcs.get_last();
+	}
+	return null;
 }

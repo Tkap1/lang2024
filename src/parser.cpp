@@ -523,6 +523,15 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 	if(tokenizer.consume_token("for", reporter)) {
 
 		result.node.type = e_node_for;
+		s_tokenizer copy = tokenizer;
+		if(copy.consume_token(e_token_identifier, &token, reporter) && copy.consume_token(e_token_colon, reporter)) {
+			tokenizer = copy;
+			result.node.nfor.iterator_name = token;
+		}
+		else {
+			result.node.nfor.iterator_name = {.len = 2, .at = "it"};
+		}
+
 		s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
 		if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after 'for'"); }
 		result.node.nfor.expr = alloc_node(pr.node, arena);

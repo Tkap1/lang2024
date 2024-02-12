@@ -14,8 +14,48 @@ func b8 generate_code(s_node* ast, s_lin_arena* arena)
 	builder->add_line("typedef uint64_t u64;");
 	builder->add_line("typedef uint8_t b8;");
 	builder->add_line("typedef uint32_t b32;");
+	s_code_gen_context context = zero;
 	for_node(node, ast) {
-		generate_node(node, builder);
+		switch(node->type) {
+			case e_node_func_decl: {
+				builder->add("%s ", node_to_c_str(node->func_decl.return_type, context));
+				builder->add("%s(", node->func_decl.name.str());
+				if(node->func_decl.argument_count <= 0) {
+					builder->add("void");
+				}
+				else {
+					for_node(arg, node->func_decl.arguments) {
+						generate_func_decl_arg(arg, builder, node->func_decl.is_external);
+						// builder->add("%s", node_to_c_str(arg));
+						// builder->add("%s ", node_to_c_str(arg->var_decl.type));
+						// builder->add("%s", arg->var_decl.name.str());
+						if(arg->next) {
+							builder->add(", ");
+						}
+					}
+				}
+				if(node->func_decl.is_external) {
+					builder->add_line(");");
+				}
+				else {
+					builder->add_line(")");
+					generate_statement(node->func_decl.body, builder);
+				}
+			} break;
+
+			case e_node_struct: {
+				builder->add_line_tabs("typedef struct %s", node->token.str());
+				builder->push_scope();
+				for_node(member, node->nstruct.members) {
+					generate_struct_member(member, builder);
+				}
+				builder->pop_scope(format_str(" %s;", node->token.str()));
+			} break;
+
+			case e_node_var_decl: {
+				generate_statement(node, builder);
+			} break;
+		}
 	}
 
 	write_file("output.c", builder->data, builder->len);
@@ -23,80 +63,26 @@ func b8 generate_code(s_node* ast, s_lin_arena* arena)
 	return true;
 }
 
-func void generate_node(s_node* node, t_code_builder* builder)
+func void generate_func_decl_arg(s_node* node, t_code_builder* builder, b8 is_external)
 {
-	switch(node->type) {
-		case e_node_func_decl: {
-			builder->add("%s ", node_to_c_str(node->func_decl.return_type));
-			builder->add("%s(", node->func_decl.name.str());
-			if(node->func_decl.argument_count <= 0) {
-				builder->add("void");
-			}
-			else {
-				for_node(arg, node->func_decl.arguments) {
-					generate_node(arg, builder);
-					// builder->add("%s", node_to_c_str(arg));
-					// builder->add("%s ", node_to_c_str(arg->var_decl.type));
-					// builder->add("%s", arg->var_decl.name.str());
-					if(arg->next) {
-						builder->add(", ");
-					}
-				}
-			}
-			if(node->func_decl.is_external) {
-				builder->add_line(");");
-			}
-			else {
-				builder->add_line(")");
-				generate_node(node->func_decl.body, builder);
-			}
-		} break;
-
-		case e_node_struct: {
-			builder->add_line_tabs("typedef struct %s", node->token.str());
-			builder->push_scope();
-			for_node(member, node->nstruct.members) {
-				generate_struct_member(member, builder);
-			}
-			builder->pop_scope(format_str(" %s;", node->token.str()));
-		} break;
-
-		case e_node_var_decl: {
-			builder->add("%s %s%s", node_to_c_str(node->var_decl.type), node->var_decl.name.str(), get_suffix_str(node->var_decl.type));
-
-			if(node->var_decl.value) {
-				builder->add(" = %s", node_to_c_str(node->var_decl.value));
-			}
-			else {
-				// @TODO(tkap, 10/02/2024): we need to know if this is a struct or not
-				builder->add(" = {0}");
-			}
-			builder->add_line(";");
-		} break;
-
-		case e_node_compound: {
-			builder->push_scope();
-			for_node(statement, node->compound.statements) {
-				generate_statement(statement, builder);
-			}
-			builder->pop_scope();
-		} break;
-
-		case e_node_type: {
-			builder->add("%s", node_to_c_str(node));
-		} break;
-
-		invalid_default_case;
+	s_code_gen_context context = zero;
+	if(is_external) {
+		builder->add("%s%s", node_to_c_str(node, context), get_suffix_str(node));
+	}
+	else {
+		assert(node->type == e_node_var_decl);
+		builder->add("%s %s%s", node_to_c_str(node->var_decl.type, context), node->var_decl.name.str(), get_suffix_str(node->var_decl.type));
 	}
 }
 
 func void generate_statement(s_node* node, t_code_builder* builder)
 {
+	s_code_gen_context context = zero;
 	switch(node->type) {
 		case e_node_func_call: {
-			builder->add_tabs("%s(", node_to_c_str(node->left));
+			builder->add_tabs("%s(", node_to_c_str(node->left, context));
 			for_node(arg, node->func_call.arguments) {
-				builder->add("%s", node_to_c_str(arg));
+				builder->add("%s", node_to_c_str(arg, context));
 				if(arg->next) {
 					builder->add(", ");
 				}
@@ -105,18 +91,18 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 		} break;
 
 		case e_node_assign: {
-			builder->add_line_tabs("%s = %s;", node_to_c_str(node->left), node_to_c_str(node->right));
+			builder->add_line_tabs("%s = %s;", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		case e_node_return: {
-			builder->add_line_tabs("return %s;", node_to_c_str(node->nreturn.expression));
+			builder->add_line_tabs("return %s;", node_to_c_str(node->nreturn.expression, {.prefix_struct_literal = true}));
 		} break;
 
 		case e_node_var_decl: {
-			builder->add_tabs("%s %s%s", node_to_c_str(node->var_decl.type), node->var_decl.name.str(), get_suffix_str(node->var_decl.type));
+			builder->add_tabs("%s %s%s", node_to_c_str(node->var_decl.type, context), node->var_decl.name.str(), get_suffix_str(node->var_decl.type));
 
 			if(node->var_decl.value) {
-				builder->add(" = %s", node_to_c_str(node->var_decl.value));
+				builder->add(" = %s", node_to_c_str(node->var_decl.value, context));
 			}
 			else {
 				// @TODO(tkap, 10/02/2024): we need to know if this is a struct or not
@@ -131,20 +117,21 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 				builder->add("1");
 			}
 			else {
-				builder->add("%s", node_to_c_str(node->nwhile.condition));
+				builder->add("%s", node_to_c_str(node->nwhile.condition, context));
 			}
 			builder->add_line(")");
-			generate_node(node->nwhile.body, builder);
+			generate_statement(node->nwhile.body, builder);
 		} break;
 
 		case e_node_for: {
-			builder->add_line_tabs("for(int it = 0; it < %s; it += 1)", node_to_c_str(node->nfor.expr));
+			char* iterator_name = node->nfor.iterator_name.str();
+			builder->add_line_tabs("for(int %s = 0; %s < %s; %s += 1)", iterator_name, iterator_name, node_to_c_str(node->nfor.expr, context), iterator_name);
 			generate_statement(node->nfor.body, builder);
 		} break;
 
 		case e_node_if: {
-			builder->add_line_tabs("if(%s)", node_to_c_str(node->nwhile.condition));
-			generate_node(node->nif.body, builder);
+			builder->add_line_tabs("if(%s)", node_to_c_str(node->nwhile.condition, context));
+			generate_statement(node->nif.body, builder);
 		} break;
 
 		case e_node_compound: {
@@ -161,15 +148,16 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 
 func void generate_struct_member(s_node* node, t_code_builder* builder)
 {
+	s_code_gen_context context = zero;
 	switch(node->type) {
 		case e_node_var_decl: {
-			builder->add_line_tabs("%s %s%s;", node_to_c_str(node->var_decl.type), node->var_decl.name.str(), get_suffix_str(node->var_decl.type));
+			builder->add_line_tabs("%s %s%s;", node_to_c_str(node->var_decl.type, context), node->var_decl.name.str(), get_suffix_str(node->var_decl.type));
 		} break;
 		invalid_default_case;
 	}
 }
 
-func char* node_to_c_str(s_node* node)
+func char* node_to_c_str(s_node* node, s_code_gen_context context)
 {
 	switch(node->type) {
 		case e_node_type: {
@@ -194,7 +182,7 @@ func char* node_to_c_str(s_node* node)
 		} break;
 
 		case e_node_array: {
-			return node_to_c_str(node->left);
+			return node_to_c_str(node->left, context);
 		} break;
 
 		case e_node_string: {
@@ -202,76 +190,82 @@ func char* node_to_c_str(s_node* node)
 		} break;
 
 		case e_node_logic_not: {
-			char* str = node_to_c_str(node->left);
+			char* str = node_to_c_str(node->left, context);
 			return format_str("!%s", str);
 		} break;
 
 		case e_node_unary_minus: {
-			char* str = node_to_c_str(node->left);
+			char* str = node_to_c_str(node->left, context);
 			return format_str("-%s", str);
 		} break;
 
 		case e_node_member_access: {
-			return format_str("%s.%s", node_to_c_str(node->left), node_to_c_str(node->right));
+			return format_str("%s.%s", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		case e_node_func_call: {
 			s_str_builder<1024> builder = zero;
-			builder.add("%s(", node_to_c_str(node->left));
+			builder.add("%s(", node_to_c_str(node->left, context));
 			for_node(arg, node->func_call.arguments) {
-				builder.add("%s", node_to_c_str(arg));
+				builder.add("%s", node_to_c_str(arg, context));
 				if(arg->next) {
 					builder.add(", ");
 				}
 			}
-			builder.add(")", node_to_c_str(node->left));
+			builder.add(")", node_to_c_str(node->left, context));
 			return format_str("%s", builder.data);
 		} break;
 
 		case e_node_modulo: {
-			return format_str("(%s %% %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+			return format_str("(%s %% %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		case e_node_add: {
-			return format_str("(%s + %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+			return format_str("(%s + %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		case e_node_subtract: {
-			return format_str("(%s - %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+			return format_str("(%s - %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		case e_node_logic_or: {
-			return format_str("(%s || %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+			return format_str("(%s || %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		case e_node_logic_and: {
-			return format_str("(%s && %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+			return format_str("(%s && %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		case e_node_multiply: {
-			return format_str("(%s * %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+			return format_str("(%s * %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		case e_node_greater_than: {
-			return format_str("(%s > %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+			return format_str("(%s > %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		case e_node_less_than: {
-			return format_str("(%s < %s)", node_to_c_str(node->left), node_to_c_str(node->right));
+			return format_str("(%s < %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		case e_node_struct_literal: {
 			s_str_builder<1024> builder;
-			// builder.add("(%s){", node_to_c_str(node->var_type));
+			if(context.prefix_struct_literal) {
+				builder.add("(%s)", node_to_c_str(node->var_type, context));
+			}
 			builder.add("{");
 			for_node(expr, node->struct_literal.expressions) {
-				builder.add("%s", node_to_c_str(expr));
+				builder.add("%s", node_to_c_str(expr, context));
 				if(expr->next) {
 					builder.add(", ");
 				}
 			}
 			builder.add("}");
 			return format_str("%s", builder.data);
+		} break;
+
+		case e_node_struct: {
+			return node->token.str();
 		} break;
 
 		invalid_default_case;
@@ -281,9 +275,10 @@ func char* node_to_c_str(s_node* node)
 
 func char* get_suffix_str(s_node* node)
 {
+	s_code_gen_context context = zero;
 	switch(node->type) {
 		case e_node_array: {
-			return format_str("%s[%s]", get_suffix_str(node->left), node_to_c_str(node->array.size_expr));
+			return format_str("%s[%s]", get_suffix_str(node->left), node_to_c_str(node->array.size_expr, context));
 		} break;
 		default: return "";
 	}
