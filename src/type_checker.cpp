@@ -311,11 +311,6 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 		case e_node_var_decl: {
 			// @TODO(tkap, 12/02/2024): if var is a struct, recursively set the var_type of all e_node_struct_literal to the struct
 			// @TODO(tkap, 10/02/2024): check that variable name doesnt already exist in scope
-			// s_node* type = node_to_basic_type(node->var_decl.type, data);
-			// if(!type) {
-			// 	reporter->recoverable_error(node->var_decl.type->token.file, node->var_decl.type->token.line, "Variable '%s' has unknown type '%s'", node->var_decl.name.str(), node_to_str(node->var_decl.type));
-			// 	return false;
-			// }
 			if(!type_check_node(node->var_decl.type, reporter, data, arena)) {
 				return false;
 			}
@@ -354,7 +349,8 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 {
 	if(node->type_checked) { return true; }
 	switch(node->type) {
-		case e_node_integer: {
+		case e_node_integer:
+		case e_node_float: {
 			node->type_checked = true;
 			return true;
 		} break;
@@ -366,7 +362,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				assert(expected_type->type == e_node_struct);
 				for_node(member, expected_type->nstruct.members) {
 					if(node->token.equals(member->var_decl.name)) {
-						node->var_type = member->var_decl.type->var_type;
+						node->var_type = member->var_type;
 						success = true;
 						break;
 					}
@@ -402,6 +398,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_add:
 		case e_node_multiply:
+		case e_node_divide:
 		case e_node_modulo: {
 			// @TODO(tkap, 11/02/2024):
 			if(!type_check_expr(node->left, reporter, data, arena)) { return false; }
@@ -454,6 +451,17 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			return true;
 		} break;
 
+		case e_node_subscript: {
+			if(!type_check_expr(node->left, reporter, data, arena)) {
+				return false;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena)) {
+				return false;
+			}
+			// @TODO(tkap, 12/02/2024): check that left is array
+			node->type_checked = true;
+			return true;
+		} break;
 
 		case e_node_logic_not: {
 			// @TODO(tkap, 10/02/2024):
@@ -512,6 +520,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				reporter->fatal(node->array.size_expr->token.file, node->array.size_expr->token.line, "Array size is not constant");
 				return false;
 			}
+			node->var_type = node;
 			node->array.size_expr->type = e_node_integer;
 			node->array.size_expr->integer.value = size.value;
 			// @Fixme(tkap, 12/02/2024):
@@ -552,11 +561,14 @@ func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_report
 
 	// @TODO(tkap, 10/02/2024): Handle a member of type current_struct*
 	// @TODO(tkap, 10/02/2024): check that array size makes sense
+	// @TODO(tkap, 12/02/2024): Remove this garbage, just call type_check
 	s_node* type = node_to_basic_type(member->var_decl.type, data);
 	if(!type) {
 		result = false;
 		reporter->recoverable_error(member->var_decl.type->token.file, member->var_decl.type->token.line, "Struct member '%s' has unknown type '%s'", member->var_decl.name.str(), node_to_str(member->var_decl.type));
 	}
+	// @TODO(tkap, 12/02/2024): We actually want member->var_type, but we are not setting that still
+	member->var_type = member->var_decl.type;
 
 	member->type_checked = result;
 	if(result) {

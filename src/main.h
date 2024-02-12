@@ -1,7 +1,15 @@
 
 
+enum e_error_level
+{
+	e_error_level_none,
+	e_error_level_recoverable,
+	e_error_level_fatal,
+};
+
 struct s_error_reporter
 {
+	e_error_level error_level;
 	b8 ignore_errors;
 	char error_str[1024];
 	b8 has_error;

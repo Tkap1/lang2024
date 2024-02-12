@@ -14,6 +14,17 @@ const int FLAG_VSYNC_HINT = 64;
 const s_color BLACK = {0, 0, 0, 0};
 const s_color RED = {230, 41, 55, 255};
 const s_color GREEN = {0, 228, 48, 255};
+const s_color BLUE = {0, 121, 241, 255};
+const int MOUSE_BUTTON_LEFT = 0;
+const int MOUSE_BUTTON_RIGHT = 1;
+
+
+struct s_v2
+{
+	float x,
+	float y,
+}
+
 
 external_func void SetTraceLogLevel(s32);
 external_func void SetConfigFlags(u32);
@@ -25,12 +36,9 @@ external_func void DrawFPS(s32, s32);
 external_func void EndDrawing();
 external_func void ClearBackground(s_color);
 external_func int rand();
-
-struct s_v2
-{
-	float x,
-	float y,
-}
+external_func s_v2 GetMousePosition();
+external_func b32 IsMouseButtonPressed(int);
+external_func b32 IsMouseButtonDown(int);
 
 struct s_player
 {
@@ -38,7 +46,7 @@ struct s_player
 	s_v2 vel,
 }
 
-const int c_max_tiles = 32;
+const int c_max_tiles = 64;
 const int c_tile_size = 16;
 s8[c_max_tiles][c_max_tiles] tiles;
 
@@ -50,9 +58,11 @@ func s_v2 v2(float x, float y)
 
 func int main()
 {
+
 	SetTraceLogLevel(4);
 	SetConfigFlags(64);
 	InitWindow(800, 600, "AZEN");
+
 
 	s_player player;
 	player.pos = v2(32, 32);
@@ -61,17 +71,35 @@ func int main()
 		BeginDrawing();
 		ClearBackground(BLACK);
 
+		s_v2 mouse = GetMousePosition();
+
+		if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
+			int x = mouse.x / c_tile_size;
+			int y = mouse.y / c_tile_size;
+			tiles[y][x] = 1;
+		}
+
+		if IsMouseButtonDown(MOUSE_BUTTON_RIGHT) {
+			int x = mouse.x / c_tile_size;
+			int y = mouse.y / c_tile_size;
+			tiles[y][x] = 2;
+		}
+
 		for y: c_max_tiles {
 			for x: c_max_tiles {
-				int r = rand() % 2;
-				if r == 0 {
+				s8 tile = tiles[y][x];
+				if tile == 1 {
 					DrawRectangle(x * c_tile_size, y * c_tile_size, c_tile_size, c_tile_size, RED);
 				}
-				if r == 1 {
+				if tile == 2 {
 					DrawRectangle(x * c_tile_size, y * c_tile_size, c_tile_size, c_tile_size, GREEN);
 				}
 			}
 		}
+
+		player.vel.y += 0.1;
+		player.pos.y += player.vel.y;
+		DrawRectangle(player.pos.x, player.pos.y, c_tile_size, c_tile_size * 2, BLUE);
 
 		DrawFPS(16, 16);
 

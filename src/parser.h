@@ -38,6 +38,7 @@ enum e_node
 	e_node_for,
 	e_node_struct_literal,
 	e_node_comparison,
+	e_node_subscript,
 };
 
 enum e_context
@@ -60,7 +61,6 @@ global constexpr s_operator_data c_operator_data[] = {
 	{e_token_asterisk, e_node_multiply, 13},
 	{e_token_forward_slash, e_node_divide, 13},
 	{e_token_percent, e_node_modulo, 13},
-	{e_token_open_paren, e_node_func_call, 16},
 	{e_token_logic_not, e_node_logic_not, 15},
 	{e_token_dot, e_node_member_access, 16},
 	{e_token_greater_than, e_node_greater_than, 9},
@@ -68,6 +68,8 @@ global constexpr s_operator_data c_operator_data[] = {
 	{e_token_logic_or, e_node_logic_or, 3},
 	{e_token_logic_and, e_node_logic_and, 4},
 	{e_token_comparison, e_node_comparison, 8},
+	{e_token_open_paren, e_node_func_call, 16},
+	{e_token_open_bracket, e_node_subscript, 16},
 };
 
 struct s_node;

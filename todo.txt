@@ -18,3 +18,5 @@ for constants?
 the name resolving for consts should happen in right when we typecheck, so we collapse stuff into an int and we dont have to do nonsense again
 
 typecheck struct members if  we are not doing it already
+
+if we already have a fatal error, do not overwrite the error string

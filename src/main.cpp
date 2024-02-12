@@ -46,7 +46,8 @@ int main(int argc, char** argv)
 
 void s_error_reporter::fatal(char* file, int line, char* str, ...)
 {
-	if(ignore_errors) { return; }
+	if(error_level >= e_error_level_fatal) { return; }
+	error_level = e_error_level_fatal;
 
 	if(!str) {
 		str = "fatal!";
@@ -82,6 +83,9 @@ void s_error_reporter::fatal(char* file, int line, char* str, ...)
 
 void s_error_reporter::recoverable_error(char* file, int line, char* str, ...)
 {
+	if(error_level >= e_error_level_recoverable) { return; }
+	error_level = e_error_level_recoverable;
+
 	if(!str) {
 		str = "recoverable error";
 	}
@@ -120,7 +124,9 @@ func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_r
 
 	s_node* ast = parse(tokenizer, reporter, arena);
 	if(!ast) {
-		printf("An empty program is not valid!\n");
+		if(!ignore_errors) {
+			printf("An empty program is not valid!\n");
+		}
 		return false;
 	}
 	if(!type_check_ast(ast, reporter, arena)) {
@@ -141,6 +147,9 @@ func void run_tests(s_lin_arena* arena)
 	constexpr s_test test_data[] = {
 		{"tests/foo.tk", false},
 		{"tests/bar.tk", true},
+		{"tests/subscript0.tk", true},
+		{"tests/semicolon_instead_of_comma.tk", false},
+		{"tests/two_member_access.tk", true},
 	};
 	s_error_reporter reporter = zero;
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {

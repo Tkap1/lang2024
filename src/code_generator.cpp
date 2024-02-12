@@ -142,7 +142,9 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 			builder->pop_scope();
 		} break;
 
-		invalid_default_case;
+		default: {
+			builder->add_line_tabs("%s;", node_to_c_str(node, context));
+		}
 	}
 }
 
@@ -224,6 +226,10 @@ func char* node_to_c_str(s_node* node, s_code_gen_context context)
 			return format_str("(%s + %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
+		case e_node_divide: {
+			return format_str("(%s / %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+		} break;
+
 		case e_node_subtract: {
 			return format_str("(%s - %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
@@ -270,6 +276,10 @@ func char* node_to_c_str(s_node* node, s_code_gen_context context)
 
 		case e_node_struct: {
 			return node->token.str();
+		} break;
+
+		case e_node_subscript: {
+			return format_str("%s[%s]", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		invalid_default_case;

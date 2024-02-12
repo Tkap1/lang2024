@@ -1,0 +1,17 @@
+
+
+struct s_a
+{
+	int a_member,
+}
+
+struct s_b
+{
+	s_a b_member,
+}
+
+func int main()
+{
+	s_b b;
+	b.b_member.a_member;
+}

@@ -36,6 +36,10 @@ func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_aren
 		}
 
 		reporter->fatal(token.file, token.line, "Failed to parse something starting at:\nvvvvvvvvvv\n%.32s\n^^^^^^^^^^\n", token.at);
+
+		if(reporter->error_level >= e_error_level_fatal) {
+			return null;
+		}
 	}
 
 	// for_node(node, ast->nstruct.members) {
@@ -71,7 +75,7 @@ func s_parse_result parse_struct(s_tokenizer tokenizer, s_error_reporter* report
 			member.var_decl.name = token;
 			member.var_decl.type = alloc_node(pr.node, arena);
 			curr_struct_member = advance_node(curr_struct_member, member, arena);
-			if(!tokenizer.consume_token(e_token_comma, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ','"); }
+			if(!tokenizer.consume_token(e_token_comma, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ','"); return result; }
 			result.node.nstruct.member_count += 1;
 		}
 		if(result.node.nstruct.member_count <= 0) {
@@ -196,6 +200,10 @@ func s_parse_result parse_type(s_tokenizer tokenizer, s_error_reporter* reporter
 		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
 		result.node.token = token;
 		result.node.type = e_node_type;
+		if(is_keyword(token)) {
+			reporter->fatal(token.file, token.line, "Variable type cannot be a reserved keyword");
+			return result;
+		}
 
 		while(tokenizer.consume_token(e_token_asterisk, reporter)) {
 			result.node.pointer_level += 1;
@@ -398,7 +406,22 @@ func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* re
 				}
 
 				if(!tokenizer.consume_token(e_token_close_paren, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ')'"); }
+			}
 
+			else if(operator_pr.operator_data.node_type == e_node_subscript) {
+				s_node node = zero;
+				node.type = e_node_subscript;
+				node.left = alloc_node(result.node, arena);
+
+				pr = parse_expression(tokenizer, reporter, 0, arena);
+				if(!pr.success) {
+					reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression inside '[]'");
+				}
+				tokenizer = pr.tokenizer;
+				node.right = alloc_node(pr.node, arena);
+
+				if(!tokenizer.consume_token(e_token_close_bracket, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ']'"); }
+				result.node = node;
 			}
 			else {
 				pr = parse_expression(tokenizer, reporter, level, arena);
@@ -600,6 +623,7 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 			};
 			constexpr s_temp c_assignments[] = {
 				{e_token_times_equals, e_node_multiply},
+				{e_token_plus_equals, e_node_add},
 			};
 
 			// @Note(tkap, 11/02/2024): We are turning "a *= b" into "a = a * (b)"
@@ -663,7 +687,13 @@ func s_node* alloc_node(s_node node, s_lin_arena* arena)
 func b8 is_keyword(s_token token)
 {
 	// @TODO(tkap, 10/02/2024):
-	return token.equals("if");
+	constexpr char* c_keywords[] = {
+		"if", "struct", "for", "while", "enum",
+	};
+	for(int keyword_i = 0; keyword_i < array_count(c_keywords); keyword_i++) {
+		if(token.equals(c_keywords[keyword_i])) { return true; }
+	}
+	return false;
 }
 
 func void print_expression(s_node* node)

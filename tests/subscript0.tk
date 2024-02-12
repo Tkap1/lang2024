@@ -1,0 +1,9 @@
+
+
+
+int[32] tiles;
+
+func int main()
+{
+	tiles[0];
+}
