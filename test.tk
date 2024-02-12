@@ -13,6 +13,7 @@ const int LOG_WARNING = 4;
 const int FLAG_VSYNC_HINT = 64;
 const s_color BLACK = {0, 0, 0, 0};
 const s_color RED = {230, 41, 55, 255};
+const s_color GREEN = {0, 228, 48, 255};
 
 external_func void SetTraceLogLevel(s32);
 external_func void SetConfigFlags(u32);
@@ -23,6 +24,7 @@ external_func void DrawRectangle(s32, s32, s32, s32, s_color);
 external_func void DrawFPS(s32, s32);
 external_func void EndDrawing();
 external_func void ClearBackground(s_color);
+external_func int rand();
 
 struct s_v2
 {
@@ -61,7 +63,13 @@ func int main()
 
 		for y: c_max_tiles {
 			for x: c_max_tiles {
-				DrawRectangle(x * c_tile_size, y * c_tile_size, c_tile_size, c_tile_size, RED);
+				int r = rand() % 2;
+				if r == 0 {
+					DrawRectangle(x * c_tile_size, y * c_tile_size, c_tile_size, c_tile_size, RED);
+				}
+				if r == 1 {
+					DrawRectangle(x * c_tile_size, y * c_tile_size, c_tile_size, c_tile_size, GREEN);
+				}
 			}
 		}
 

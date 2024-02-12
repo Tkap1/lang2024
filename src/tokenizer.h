@@ -28,6 +28,7 @@ enum e_token
 	e_token_logic_or,
 	e_token_logic_and,
 	e_token_times_equals,
+	e_token_comparison,
 	e_token_colon,
 };
 

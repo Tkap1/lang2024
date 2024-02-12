@@ -37,6 +37,7 @@ enum e_node
 	e_node_logic_and,
 	e_node_for,
 	e_node_struct_literal,
+	e_node_comparison,
 };
 
 enum e_context
@@ -66,6 +67,7 @@ global constexpr s_operator_data c_operator_data[] = {
 	{e_token_less_than, e_node_less_than, 9},
 	{e_token_logic_or, e_node_logic_or, 3},
 	{e_token_logic_and, e_node_logic_and, 4},
+	{e_token_comparison, e_node_comparison, 8},
 };
 
 struct s_node;
