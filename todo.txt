@@ -7,3 +7,10 @@ do we want to turn a *= b into a = a * (b) ???
 	seems like less type checking and code gen
 
 make a separate pass to turn every compile-time-known expression into the actual value rather than the full expression???
+
+do the scope thing. the annoying thing is looping through it and finding stuff. can we make a helper?
+
+int foo := 5;
+or
+const int foo = 5;
+for constants?

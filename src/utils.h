@@ -19,9 +19,11 @@ template <typename t, int n>
 struct s_sarray
 {
 	t elements[n];
-	int count;
+	int count = 0;
 
 	void add(t new_element);
+	t pop();
+	t& get(int index);
 	t& operator[](int index);
 };
 
@@ -29,7 +31,7 @@ template <int n>
 struct s_str_builder
 {
 	char data[n];
-	int len;
+	int len = 0;
 	int scope;
 
 	void add(char* str, ...);

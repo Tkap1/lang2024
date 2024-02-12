@@ -55,7 +55,8 @@ struct s_tokenizer
 	b8 consume_token(char* str, s_error_reporter* reporter);
 	b8 consume_token(e_token type, s_error_reporter* reporter);
 	b8 consume_token(e_token type, s_token* out_token, s_error_reporter* reporter);
-	void eat_whitespace();
+	b8 eat_whitespace();
+	b8 eat_comment();
 };
 
 func char* token_to_str(s_token token);

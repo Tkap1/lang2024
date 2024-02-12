@@ -44,7 +44,11 @@ s_token s_tokenizer::peek(s_error_reporter* reporter)
 s_token s_tokenizer::next_token(s_error_reporter* reporter)
 {
 	s_token token = zero;
-	eat_whitespace();
+	while(true) {
+		b8 ate_something = eat_whitespace();
+		ate_something = eat_comment() || ate_something;
+		if(!ate_something) { break; }
+	}
 	token.line = line;
 	token.file = file;
 
@@ -256,20 +260,43 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 	return token;
 }
 
-void s_tokenizer::eat_whitespace()
+b8 s_tokenizer::eat_whitespace()
 {
+	b8 result = false;
 	while(true) {
 		if(is_newline(*at)) {
+			result = true;
 			at += 1;
 			line += 1;
 			continue;
 		}
 		if(is_whitespace(*at)) {
+			result = true;
 			at += 1;
 			continue;
 		}
 		break;
 	}
+	return result;
+}
+
+b8 s_tokenizer::eat_comment()
+{
+	b8 result = false;
+	if(*at == '/' && at[1] == '/') {
+		result = true;
+		at += 2;
+		while(true) {
+			if(*at == 0) { break; }
+			else if(*at == '\n') {
+				at += 1;
+				line += 1;
+				break;
+			}
+			at += 1;
+		}
+	}
+	return result;
 }
 
 b8 s_tokenizer::consume_token(char* str, s_error_reporter* reporter)

@@ -8,14 +8,20 @@ struct s_player
 	float vel_y,
 }
 
+// const int LOG_WARNING = 4;
+// const int FLAG_VSYNC_HINT = 64;
+// @TODO(tkap, 12/02/2024):
+int BLACK = 0;
+int RED = 0;
+
 const int c_max_tiles = 32;
-s8[c_max_tiles][c_max_tiles] tiles;
+s8[(c_max_tiles + 1) * 2][(c_max_tiles + 3) * 4] tiles;
 
 
 func int main()
 {
-	SetTraceLogLevel(LOG_WARNING);
-	SetConfigFlags(FLAG_VSYNC_HINT);
+	SetTraceLogLevel(4);
+	SetConfigFlags(64);
 	InitWindow(800, 600, "AZEN");
 
 	s_player player;
@@ -25,7 +31,11 @@ func int main()
 		BeginDrawing();
 		ClearBackground(BLACK);
 
-		DrawRectangle(player.x, player.y, 32, 32, RED);
+		// DrawRectangle(player.x, player.y, 32, 32, RED);
+
+		for 32 {
+			DrawRectangle(it*64, it*32, 32, 32, RED);
+		}
 
 		DrawFPS(16, 16);
 

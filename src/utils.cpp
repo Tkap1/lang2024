@@ -37,7 +37,22 @@ void s_sarray<t, n>::add(t new_element)
 }
 
 template <typename t, int n>
+t s_sarray<t, n>::pop()
+{
+	assert(count > 0);
+	count -= 1;
+	return elements[count];
+}
+
+template <typename t, int n>
 t& s_sarray<t, n>::operator[](int index)
+{
+	assert(index >= 0 && index < count);
+	return elements[index];
+}
+
+template <typename t, int n>
+t& s_sarray<t, n>::get(int index)
 {
 	assert(index >= 0 && index < count);
 	return elements[index];
@@ -132,4 +147,10 @@ template <typename t>
 func s_maybe<t> maybe(t value)
 {
 	return {.valid = true, .value = value};
+}
+
+template <typename t>
+func s_maybe<t> maybe()
+{
+	return {.valid = false};
 }

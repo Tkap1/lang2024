@@ -35,6 +35,7 @@ enum e_node
 	e_node_unary_minus,
 	e_node_logic_or,
 	e_node_logic_and,
+	e_node_for,
 };
 
 enum e_context
@@ -64,6 +65,16 @@ global constexpr s_operator_data c_operator_data[] = {
 	{e_token_less_than, e_node_less_than, 9},
 	{e_token_logic_or, e_node_logic_or, 3},
 	{e_token_logic_and, e_node_logic_and, 4},
+};
+
+struct s_node;
+
+struct s_scope
+{
+	s_sarray<s_node*, 128> structs;
+	s_sarray<s_node*, 128> funcs;
+	s_sarray<s_node*, 128> types;
+	s_sarray<s_node*, 128> vars;
 };
 
 struct s_node
@@ -102,6 +113,7 @@ struct s_node
 			s_token name;
 			s_node* arguments;
 			s_node* body;
+			s_scope* scope;
 		} func_decl;
 
 		struct
@@ -118,6 +130,7 @@ struct s_node
 		struct
 		{
 			s_node* statements;
+			s_scope* scope;
 		} compound;
 
 		struct
@@ -146,6 +159,17 @@ struct s_node
 		{
 			b8 is_const;
 		} ntype;
+
+		struct
+		{
+			int value;
+		} integer;
+
+		struct
+		{
+			s_node* expr;
+			s_node* body;
+		} nfor;
 	};
 };
 
@@ -172,3 +196,4 @@ func void print_expression(s_node* node);
 func s_parse_result parse_function(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* reporter, int context, s_lin_arena* arena);
+func s_node statement_str_to_node(char* str, s_error_reporter* reporter, s_lin_arena* arena);

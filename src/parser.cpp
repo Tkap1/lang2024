@@ -239,6 +239,7 @@ func s_parse_result parse_sub_expression(s_tokenizer tokenizer, s_error_reporter
 	if(tokenizer.consume_token(e_token_integer, &token, reporter)) {
 		result.node.type = e_node_integer;
 		result.node.token = token;
+		result.node.integer.value = atoi(token.str());
 		goto success;
 	}
 	if(tokenizer.consume_token(e_token_float, &token, reporter)) {
@@ -448,6 +449,24 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 		goto success;
 	}
 
+	if(tokenizer.consume_token("for", reporter)) {
+
+		result.node.type = e_node_for;
+		s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
+		if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after 'for'"); }
+		result.node.nfor.expr = alloc_node(pr.node, arena);
+		tokenizer = pr.tokenizer;
+
+		pr = parse_statement(tokenizer, reporter, arena);
+		if(!pr.success || pr.node.type != e_node_compound) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected '{' after 'for'");
+		}
+		tokenizer = pr.tokenizer;
+		result.node.nfor.body = alloc_node(pr.node, arena);
+
+		goto success;
+	}
+
 	if(tokenizer.consume_token("if", reporter)) {
 
 		result.node.type = e_node_if;
@@ -590,4 +609,13 @@ func void print_expression(s_node* node)
 
 		invalid_default_case;
 	}
+}
+
+func s_node statement_str_to_node(char* str, s_error_reporter* reporter, s_lin_arena* arena)
+{
+	s_tokenizer tokenizer = zero;
+	tokenizer.at = str;
+	s_parse_result pr = parse_statement(tokenizer, reporter, arena);
+	assert(pr.success);
+	return pr.node;
 }

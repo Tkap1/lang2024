@@ -119,9 +119,22 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 			generate_node(node->nwhile.body, builder);
 		} break;
 
+		case e_node_for: {
+			builder->add_line_tabs("for(int it = 0; it < %s; it += 1)", node_to_c_str(node->nfor.expr));
+			generate_statement(node->nfor.body, builder);
+		} break;
+
 		case e_node_if: {
 			builder->add_line_tabs("if(%s)", node_to_c_str(node->nwhile.condition));
 			generate_node(node->nif.body, builder);
+		} break;
+
+		case e_node_compound: {
+			builder->push_scope();
+			for_node(statement, node->compound.statements) {
+				generate_statement(statement, builder);
+			}
+			builder->pop_scope();
 		} break;
 
 		invalid_default_case;
@@ -146,7 +159,7 @@ func char* node_to_c_str(s_node* node)
 		} break;
 
 		case e_node_integer: {
-			return node->token.str();
+			return format_str("%i", node->integer.value);
 		} break;
 
 		case e_node_float: {
