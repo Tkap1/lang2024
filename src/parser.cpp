@@ -14,7 +14,14 @@ func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_aren
 			continue;
 		}
 
-		pr = parse_function(tokenizer, reporter, arena);
+		pr = parse_func_decl(tokenizer, reporter, arena);
+		if(pr.success) {
+			tokenizer = pr.tokenizer;
+			current = advance_node(current, pr.node, arena);
+			continue;
+		}
+
+		pr = parse_external_func_decl(tokenizer, reporter, arena);
 		if(pr.success) {
 			tokenizer = pr.tokenizer;
 			current = advance_node(current, pr.node, arena);
@@ -82,7 +89,7 @@ func s_parse_result parse_struct(s_tokenizer tokenizer, s_error_reporter* report
 	return result;
 }
 
-func s_parse_result parse_function(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
+func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
 {
 	s_parse_result result = zero;
 	s_token token = zero;
@@ -133,6 +140,48 @@ func s_parse_result parse_function(s_tokenizer tokenizer, s_error_reporter* repo
 	return result;
 }
 
+func s_parse_result parse_external_func_decl(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
+{
+	s_parse_result result = zero;
+	s_token token = zero;
+
+	breakable_block {
+		if(!tokenizer.consume_token("external_func", reporter)) { break; }
+		result.node.type = e_node_func_decl;
+		result.node.func_decl.is_external = true;
+		s_parse_result pr = parse_type(tokenizer, reporter, arena);
+		if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected a type after 'external_func'"); }
+		tokenizer = pr.tokenizer;
+		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected function name"); }
+		result.node.func_decl.name = token;
+		result.node.func_decl.return_type = alloc_node(pr.node, arena);
+		if(is_keyword(token)) { reporter->fatal(token.file, token.line, "Function name cannot be a reserved keyword"); }
+
+		if(!tokenizer.consume_token(e_token_open_paren, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected '('"); }
+
+		s_node** curr_argument = &result.node.func_decl.arguments;
+		while(true) {
+			pr = parse_type(tokenizer, reporter, arena);
+			if(!pr.success) { break; }
+			tokenizer = pr.tokenizer;
+			curr_argument = advance_node(curr_argument, pr.node, arena);
+			result.node.func_decl.argument_count += 1;
+			if(!tokenizer.consume_token(e_token_comma, reporter)) { break; }
+		}
+
+		if(!tokenizer.consume_token(e_token_close_paren, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ')'"); }
+
+		if(!tokenizer.consume_token(e_token_semicolon, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'");
+		}
+
+		result.tokenizer = tokenizer;
+		result.success = true;
+	}
+
+	return result;
+}
+
 func s_parse_result parse_type(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
 {
 	s_parse_result result = zero;
@@ -147,6 +196,10 @@ func s_parse_result parse_type(s_tokenizer tokenizer, s_error_reporter* reporter
 		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
 		result.node.token = token;
 		result.node.type = e_node_type;
+
+		while(tokenizer.consume_token(e_token_asterisk, reporter)) {
+			result.node.pointer_level += 1;
+		}
 
 		while(true) {
 			s_parse_result pr = parse_array(tokenizer, reporter, arena);

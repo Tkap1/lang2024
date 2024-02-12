@@ -14,14 +14,26 @@ const int FLAG_VSYNC_HINT = 64;
 const s_color BLACK = {0, 0, 0, 0};
 const s_color RED = {230, 41, 55, 255};
 
+external_func void SetTraceLogLevel(s32);
+external_func void SetConfigFlags(u32);
+external_func void InitWindow(s32, s32, char*);
+external_func b32 WindowShouldClose();
+external_func void BeginDrawing();
+external_func void DrawRectangle(s32, s32, s32, s32, s_color);
+external_func void DrawFPS(s32, s32);
+external_func void EndDrawing();
+external_func void ClearBackground(s_color);
 
-
-struct s_player
+struct s_v2
 {
 	float x,
 	float y,
-	float vel_x,
-	float vel_y,
+}
+
+struct s_player
+{
+	s_v2 pos,
+	s_v2 vel,
 }
 
 const int c_max_tiles = 32;
@@ -30,25 +42,24 @@ s8[(c_max_tiles + 1) * 2][(c_max_tiles + 3) * 4] tiles;
 
 func int main()
 {
-	// SetTraceLogLevel(4);
-	// SetConfigFlags(64);
-	// InitWindow(800, 600, "AZEN");
+	SetTraceLogLevel(4);
+	SetConfigFlags(64);
+	InitWindow(800, 600, "AZEN");
 
-	// s_player player;
-	// player.vel_x = 10;
+	s_player player;
 
-	// while !WindowShouldClose() {
-	// 	BeginDrawing();
-	// 	ClearBackground(BLACK);
+	while !WindowShouldClose() {
+		BeginDrawing();
+		ClearBackground(BLACK);
 
-	// 	// DrawRectangle(player.x, player.y, 32, 32, RED);
+		// DrawRectangle(player.x, player.y, 32, 32, RED);
 
-	// 	for 32 {
-	// 		DrawRectangle(it*64, it*32, 32, 32, RED);
-	// 	}
+		for 32 {
+			DrawRectangle(ita*64, it*32, 32, 32, RED);
+		}
 
-	// 	DrawFPS(16, 16);
+		DrawFPS(16, 16);
 
-	// 	EndDrawing();
-	// }
+		EndDrawing();
+	}
 }

@@ -8,7 +8,36 @@ func void type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* a
 
 	{
 		s_node node = zero;
+		node.basic_type.name = "void";
+		node.basic_type.size_in_bytes = 0;
+		add_type_to_scope(data, alloc_node(node, arena), arena);
+	}
+
+	{
+		s_node node = zero;
 		node.basic_type.name = "int";
+		node.basic_type.size_in_bytes = 4;
+		add_type_to_scope(data, alloc_node(node, arena), arena);
+	}
+
+	{
+		s_node node = zero;
+		node.basic_type.name = "s32";
+		node.basic_type.size_in_bytes = 4;
+		add_type_to_scope(data, alloc_node(node, arena), arena);
+	}
+
+	{
+		s_node node = zero;
+		node.basic_type.is_unsigned = true;
+		node.basic_type.name = "u32";
+		node.basic_type.size_in_bytes = 4;
+		add_type_to_scope(data, alloc_node(node, arena), arena);
+	}
+
+	{
+		s_node node = zero;
+		node.basic_type.name = "b32";
 		node.basic_type.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -23,6 +52,7 @@ func void type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* a
 	{
 		s_node node = zero;
 		node.basic_type.name = "u8";
+		node.basic_type.is_unsigned = true;
 		node.basic_type.size_in_bytes = 1;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -90,187 +120,25 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_func_decl: {
 			data->add(&node->func_decl.scope);
-			return type_check_func_decl(node, reporter, data, arena);
-		} break;
-
-		case e_node_compound: {
-			data->add(&node->compound.scope);
-			for_node(statement, node->compound.statements) {
-				if(!type_check_node(statement, reporter, data, arena)) {
-					return false;
-				}
-			}
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_func_call: {
-			if(!type_check_node(node->left, reporter, data, arena)) {
+			if(!type_check_func_decl(node, reporter, data, arena)) {
 				return false;
 			}
-			for_node(arg, node->func_call.arguments) {
-				if(!type_check_expr(arg, reporter, data, arena)) {
-					return false;
-				}
-			}
-			// @TODO(tkap, 10/02/2024): check that function exists
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_integer: {
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_identifier: {
-			// @TODO(tkap, 10/02/2024): we have to check that this is a variable or function
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_logic_not: {
-			// @TODO(tkap, 10/02/2024):
-			if(!type_check_node(node->left, reporter, data, arena)) {
-				return false;
-			}
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_while: {
-			// @TODO(tkap, 10/02/2024):
-			if(node->nwhile.condition && !type_check_node(node->nwhile.condition, reporter, data, arena)) {
-				return false;
-			}
-			if(!type_check_node(node->nwhile.body, reporter, data, arena)) {
-				return false;
-			}
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_for: {
-			// @TODO(tkap, 12/02/2024):
-			if(!type_check_expr(node->nfor.expr, reporter, data, arena)) {
-				return false;
-			}
-			// @TODO(tkap, 12/02/2024): This is fucked. we are going to add the "it" variable to the scope the for loop is in, rather than inside the for loop
-			// @TODO(tkap, 12/02/2024): We are going to add this multiple times!!!
-			s_node temp = statement_str_to_node("int it = 0;", reporter, arena);
-			add_var_to_scope(data, alloc_node(temp, arena), arena);
-			if(!type_check_node(node->nfor.body, reporter, data, arena)) {
-				return false;
-			}
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_if: {
-			// @TODO(tkap, 10/02/2024):
-			if(!type_check_node(node->nif.condition, reporter, data, arena)) {
-				return false;
-			}
-			if(!type_check_node(node->nif.body, reporter, data, arena)) {
-				return false;
-			}
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_greater_than: {
-			// @TODO(tkap, 10/02/2024):
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_less_than: {
-			// @TODO(tkap, 10/02/2024):
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_add: {
-			// @TODO(tkap, 10/02/2024):
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_subtract: {
-			// @TODO(tkap, 10/02/2024):
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_var_decl: {
-			// @TODO(tkap, 12/02/2024): if var is a struct, recursively set the var_type of all e_node_struct_literal to the struct
-			// @TODO(tkap, 10/02/2024): check that variable name doesnt already exist in scope
-			// s_node* type = node_to_basic_type(node->var_decl.type, data);
-			// if(!type) {
-			// 	reporter->recoverable_error(node->var_decl.type->token.file, node->var_decl.type->token.line, "Variable '%s' has unknown type '%s'", node->var_decl.name.str(), node_to_str(node->var_decl.type));
-			// 	return false;
-			// }
-			if(!type_check_node(node->var_decl.type, reporter, data, arena)) {
-				return false;
-			}
-			if(node->var_decl.value) {
-				if(!type_check_expr(node->var_decl.value, reporter, data, arena, node->var_decl.type)) {
-					return false;
-				}
-			}
-			add_var_to_scope(data, node, arena);
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_member_access: {
-			// @TODO(tkap, 10/02/2024):
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_assign: {
-			// @TODO(tkap, 10/02/2024):
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_logic_or: {
-			// @TODO(tkap, 10/02/2024):
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_logic_and: {
-			// @TODO(tkap, 10/02/2024):
-			node->type_checked = true;
-			return true;
-		} break;
-
-		case e_node_type: {
-			// @TODO(tkap, 11/02/2024):
-			node->type_checked = true;
+			node->var_type = node->func_decl.return_type;
 			return true;
 		} break;
 
 		case e_node_array: {
-			if(!type_check_node(node->left, reporter, data, arena)) {
-				return false;
-			}
-			if(!type_check_expr(node->array.size_expr, reporter, data, arena)) {
-				return false;
-			}
-			s_maybe<int> size = get_compile_time_value(node->array.size_expr, data);
-			if(!size.valid) {
-				reporter->fatal(node->array.size_expr->token.file, node->array.size_expr->token.line, "Array size is not constant");
-				return false;
-			}
-			node->array.size_expr->type = e_node_integer;
-			node->array.size_expr->integer.value = size.value;
-			// @Fixme(tkap, 12/02/2024):
-			node->type_checked = true;
-			return true;
+			return type_check_expr(node, reporter, data, arena);
 		} break;
+
+		case e_node_var_decl: {
+			return type_check_statement(node, reporter, data, arena);
+		} break;
+
+		case e_node_type: {
+			return type_check_expr(node, reporter, data, arena);
+		} break;
+
 
 		invalid_default_case;
 	}
@@ -280,6 +148,8 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 func b8 type_check_struct(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena)
 {
 	if(node->type_checked) { return true; }
+
+	node->var_type = node;
 
 	b8 result = true;
 	// s_node* existing_struct = get_struct_by_name(data, token_to_str(node->token));
@@ -305,26 +175,34 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 {
 	if(node->type_checked) { return true; }
 
-	s_node* type = node_to_basic_type(node->func_decl.return_type, data);
-	if(!type) {
+	if(!type_check_expr(node->func_decl.return_type, reporter, data, arena)) {
 		reporter->recoverable_error(node->func_decl.name.file, node->func_decl.name.line, "Function '%s' has unknown return type '%s'", node->func_decl.name.str(), node_to_str(node->func_decl.return_type));
 		return false;
 	}
+	node->var_type = node->func_decl.return_type->var_type;
 
-	for_node(arg, node->func_decl.arguments) {
-		if(arg->type_checked) { continue; }
-		type = node_to_basic_type(arg->var_decl.type, data);
-		if(type) {
-			arg->type_checked = true;
-		}
-		else {
-			reporter->recoverable_error(arg->var_decl.name.file, arg->var_decl.name.line, "Function argument '%s' has unknown type '%s'", arg->var_decl.name.str(), node_to_str(arg->var_decl.type));
-			return false;
+	// @TODO(tkap, 12/02/2024):
+	#if 0
+	// @TODO(tkap, 12/02/2024): Type check args
+	if(!node->func_decl.is_external) {
+		for_node(arg, node->func_decl.arguments) {
+			if(arg->type_checked) { continue; }
+			type = node_to_basic_type(arg->var_decl.type, data);
+			if(type) {
+				arg->type_checked = true;
+			}
+			else {
+				reporter->recoverable_error(arg->var_decl.name.file, arg->var_decl.name.line, "Function argument '%s' has unknown type '%s'", arg->var_decl.name.str(), node_to_str(arg->var_decl.type));
+				return false;
+			}
 		}
 	}
+	#endif
 
-	if(!type_check_node(node->func_decl.body, reporter, data, arena)) {
-		return false;
+	if(!node->func_decl.is_external) {
+		if(!type_check_statement(node->func_decl.body, reporter, data, arena)) {
+			return false;
+		}
 	}
 
 	node->type_checked = true;
@@ -332,6 +210,104 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 	// printf("Added function '%s'\n", node->func_decl.name.str());
 	add_func_to_scope(data, node, arena);
 	return true;
+}
+
+func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena)
+{
+	if(node->type_checked) { return true; }
+	switch(node->type) {
+
+		case e_node_compound: {
+			data->add(&node->compound.scope);
+			for_node(statement, node->compound.statements) {
+				if(!type_check_statement(statement, reporter, data, arena)) {
+					return false;
+				}
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_while: {
+			// @TODO(tkap, 10/02/2024):
+			if(node->nwhile.condition && !type_check_expr(node->nwhile.condition, reporter, data, arena)) {
+				return false;
+			}
+			if(!type_check_statement(node->nwhile.body, reporter, data, arena)) {
+				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_for: {
+			// @TODO(tkap, 12/02/2024):
+			if(!type_check_expr(node->nfor.expr, reporter, data, arena)) {
+				return false;
+			}
+			// @TODO(tkap, 12/02/2024): This is fucked. we are going to add the "it" variable to the scope the for loop is in, rather than inside the for loop
+			// @TODO(tkap, 12/02/2024): We are going to add this multiple times!!!
+			s_node temp = statement_str_to_node("int it = 0;", reporter, arena);
+			b8 success = type_check_statement(&temp, reporter, data, arena);
+			assert(success);
+			add_var_to_scope(data, alloc_node(temp, arena), arena);
+			if(!type_check_statement(node->nfor.body, reporter, data, arena)) {
+				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_if: {
+			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->nif.condition, reporter, data, arena)) {
+				return false;
+			}
+			if(!type_check_statement(node->nif.body, reporter, data, arena)) {
+				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_assign: {
+			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena)) {
+				return false;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena)) {
+				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_var_decl: {
+			// @TODO(tkap, 12/02/2024): if var is a struct, recursively set the var_type of all e_node_struct_literal to the struct
+			// @TODO(tkap, 10/02/2024): check that variable name doesnt already exist in scope
+			// s_node* type = node_to_basic_type(node->var_decl.type, data);
+			// if(!type) {
+			// 	reporter->recoverable_error(node->var_decl.type->token.file, node->var_decl.type->token.line, "Variable '%s' has unknown type '%s'", node->var_decl.name.str(), node_to_str(node->var_decl.type));
+			// 	return false;
+			// }
+			if(!type_check_node(node->var_decl.type, reporter, data, arena)) {
+				return false;
+			}
+			node->var_type = node->var_decl.type->var_type;
+			if(node->var_decl.value) {
+				if(!type_check_expr(node->var_decl.value, reporter, data, arena, node->var_decl.type)) {
+					return false;
+				}
+			}
+			add_var_to_scope(data, node, arena);
+			node->type_checked = true;
+			return true;
+		} break;
+
+		default: {
+			return type_check_expr(node, reporter, data, arena);
+		}
+	}
 }
 
 func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_node* expected_type)
@@ -344,18 +320,44 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_identifier: {
-			// @TODO(tkap, 12/02/2024): Enable this when we actually have proper bindings
-			#if 1
-			// @TODO(tkap, 11/02/2024):
-			s_node* var = get_var_by_name(node->token.str(), data);
-			// @TODO(tkap, 12/02/2024): Look for functions too
-			if(!var) {
+			// @TODO(tkap, 12/02/2024):
+			b8 success = false;
+			if(expected_type) {
+				assert(expected_type->type == e_node_struct);
+				for_node(member, expected_type->nstruct.members) {
+					if(node->token.equals(member->var_decl.name)) {
+						node->var_type = member->var_decl.type->var_type;
+						success = true;
+						break;
+					}
+				}
+			}
+			else {
+				breakable_block {
+					s_node* var = get_var_by_name(node->token.str(), data);
+					if(var) {
+						assert(var->var_type);
+						node->var_type = var->var_type;
+						success = true;
+						break;
+					}
+					s_node* nfunc = get_func_by_name(node->token.str(), data);
+					if(nfunc) {
+						assert(nfunc->var_type);
+						node->var_type = nfunc->var_type;
+						success = true;
+						break;
+					}
+				}
+			}
+			if(success) {
+				node->type_checked = true;
+				return true;
+			}
+			else {
 				reporter->recoverable_error(node->token.file, node->token.line, "Identifier '%s' not found", node->token.str());
 				return false;
 			}
-			#endif
-			node->type_checked = true;
-			return true;
 		} break;
 
 		case e_node_add:
@@ -379,6 +381,114 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			return true;
 		} break;
 
+		case e_node_member_access: {
+			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena, expected_type)) {
+				return false;
+			}
+			if(!node->left->var_type || node->left->var_type->type != e_node_struct) {
+				reporter->fatal(node->token.file, node->token.line, "todo bad member access");
+				return false;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena, node->left->var_type)) {
+				reporter->fatal(node->token.file, node->token.line, "todo bad member access 2");
+				return false;
+			}
+			node->var_type = node->right->var_type;
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_func_call: {
+			if(!type_check_expr(node->left, reporter, data, arena)) {
+				return false;
+			}
+			for_node(arg, node->func_call.arguments) {
+				if(!type_check_expr(arg, reporter, data, arena)) {
+					return false;
+				}
+			}
+			// @TODO(tkap, 10/02/2024): check that function exists
+			node->type_checked = true;
+			return true;
+		} break;
+
+
+		case e_node_logic_not: {
+			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena)) {
+				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_greater_than: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_less_than: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_subtract: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_logic_or: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_logic_and: {
+			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_array: {
+			if(!type_check_expr(node->left, reporter, data, arena)) {
+				return false;
+			}
+			if(!type_check_expr(node->array.size_expr, reporter, data, arena)) {
+				return false;
+			}
+			s_maybe<int> size = get_compile_time_value(node->array.size_expr, data);
+			if(!size.valid) {
+				reporter->fatal(node->array.size_expr->token.file, node->array.size_expr->token.line, "Array size is not constant");
+				return false;
+			}
+			node->array.size_expr->type = e_node_integer;
+			node->array.size_expr->integer.value = size.value;
+			// @Fixme(tkap, 12/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_type: {
+			// @TODO(tkap, 11/02/2024):
+			s_node* type = get_type_by_name(node->token.str(), data);
+			if(type) {
+				node->var_type = type;
+				node->type_checked = true;
+				return true;
+			}
+			s_node* nstruct = get_struct_by_name_except(node->token.str(), null, data);
+			if(nstruct) {
+				node->var_type = nstruct;
+				node->type_checked = true;
+				return true;
+			}
+			reporter->recoverable_error(node->token.file, node->token.line, "Unkown type '%s'", node->token.str());
+			return false;
+		} break;
 
 		invalid_default_case;
 	}
@@ -574,6 +684,23 @@ func s_node* get_var_by_name(char* name, t_scope_arr* data)
 				assert(var->type == e_node_var_decl);
 				if(var->var_decl.name.equals(name)) {
 					return var;
+				}
+			}
+		}
+	}
+	return null;
+}
+
+func s_node* get_func_by_name(char* name, t_scope_arr* data)
+{
+	for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
+		s_scope** scope2 = data->get(scope2_i);
+		if(*scope2) {
+			s_scope* scope1 = *scope2;
+			foreach_val(nfunc_i, nfunc, scope1->funcs) {
+				assert(nfunc->type == e_node_func_decl);
+				if(nfunc->func_decl.name.equals(name)) {
+					return nfunc;
 				}
 			}
 		}

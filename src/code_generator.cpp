@@ -12,7 +12,8 @@ func void generate_code(s_node* ast, s_lin_arena* arena)
 	builder->add_line("typedef uint16_t u16;");
 	builder->add_line("typedef uint32_t u32;");
 	builder->add_line("typedef uint64_t u64;");
-	builder->add_line("#include \"raylib.h\"\n");
+	builder->add_line("typedef uint8_t b8;");
+	builder->add_line("typedef uint32_t b32;");
 	for_node(node, ast) {
 		generate_node(node, builder);
 	}
@@ -26,16 +27,26 @@ func void generate_node(s_node* node, t_code_builder* builder)
 		case e_node_func_decl: {
 			builder->add("%s ", node_to_c_str(node->func_decl.return_type));
 			builder->add("%s(", node->func_decl.name.str());
-			for_node(arg, node->func_decl.arguments) {
-				builder->add("%s", node_to_c_str(arg));
-				// builder->add("%s ", node_to_c_str(arg->var_decl.type));
-				// builder->add("%s", arg->var_decl.name.str());
-				if(arg->next) {
-					builder->add(", ");
+			if(node->func_decl.argument_count <= 0) {
+				builder->add("void");
+			}
+			else {
+				for_node(arg, node->func_decl.arguments) {
+					builder->add("%s", node_to_c_str(arg));
+					// builder->add("%s ", node_to_c_str(arg->var_decl.type));
+					// builder->add("%s", arg->var_decl.name.str());
+					if(arg->next) {
+						builder->add(", ");
+					}
 				}
 			}
-			builder->add_line(")");
-			generate_node(node->func_decl.body, builder);
+			if(node->func_decl.is_external) {
+				builder->add_line(");");
+			}
+			else {
+				builder->add_line(")");
+				generate_node(node->func_decl.body, builder);
+			}
 		} break;
 
 		case e_node_struct: {
@@ -155,7 +166,12 @@ func char* node_to_c_str(s_node* node)
 {
 	switch(node->type) {
 		case e_node_type: {
-			return node->token.str();
+			s_str_builder<1024> builder;
+			builder.add("%s", node->token.str());
+			for(int i = 0; i < node->pointer_level; i++) {
+				builder.add("*");
+			}
+			return format_str(builder.data);
 		} break;
 
 		case e_node_integer: {
@@ -239,7 +255,8 @@ func char* node_to_c_str(s_node* node)
 
 		case e_node_struct_literal: {
 			s_str_builder<1024> builder;
-			builder.add("(%s){", node_to_c_str(node->var_type));
+			// builder.add("(%s){", node_to_c_str(node->var_type));
+			builder.add("{");
 			for_node(expr, node->struct_literal.expressions) {
 				builder.add("%s", node_to_c_str(expr));
 				if(expr->next) {

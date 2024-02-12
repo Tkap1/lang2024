@@ -84,6 +84,7 @@ struct s_node
 	e_node type;
 	int line;
 	s_token token;
+	int pointer_level;
 
 	// @TODO(tkap, 10/02/2024): probably dont want this
 	s_node* left;
@@ -109,6 +110,7 @@ struct s_node
 
 		struct
 		{
+			b8 is_external;
 			int argument_count;
 			s_node* return_type;
 			s_token name;
@@ -124,6 +126,7 @@ struct s_node
 
 		struct
 		{
+			b8 is_unsigned;
 			int size_in_bytes;
 			char* name;
 		} basic_type;
@@ -199,7 +202,8 @@ func s_parse_result parse_type(s_tokenizer tokenizer, s_error_reporter* reporter
 func s_parse_result parse_array(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* reporter, int in_operator_level, s_lin_arena* arena);
 func void print_expression(s_node* node);
-func s_parse_result parse_function(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
+func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
+func s_parse_result parse_external_func_decl(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* reporter, int context, s_lin_arena* arena);
 func s_node statement_str_to_node(char* str, s_error_reporter* reporter, s_lin_arena* arena);
