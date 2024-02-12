@@ -1,6 +1,6 @@
 
 
-func void type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* arena)
+func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* arena)
 {
 	s_scope* base_scope = null;
 	t_scope_arr* data = (t_scope_arr*)arena->alloc_zero(sizeof(t_scope_arr));
@@ -81,9 +81,11 @@ func void type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* a
 		if(!successfully_typechecked_something) {
 			if(reporter->has_error) {
 				reporter->fatal(null, 0, reporter->error_str);
+				return false;
 			}
 			else {
 				reporter->fatal(null, 0, "failed to typecheck a thing");
+				return false;
 			}
 		}
 	}
@@ -94,6 +96,7 @@ func void type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* a
 		s_node* dupe = get_struct_by_name_except(node->token.str(), node, data);
 		if(dupe) {
 			reporter->fatal(dupe->token.file, dupe->token.line, "Duplicate struct name '%s'", dupe->token.str());
+			return false;
 		}
 
 		// @Note(tkap, 10/02/2024): Check duplicate struct members
@@ -102,11 +105,13 @@ func void type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* a
 				if(member == other_member) { continue; }
 				if(member->var_decl.name.equals(other_member->var_decl.name)) {
 					reporter->fatal(other_member->var_decl.name.file, other_member->var_decl.name.line, "Duplicate struct member name '%s' on struct '%s'", member->var_decl.name.str(), node->token.str());
+					return false;
 				}
 			}
 		}
 	}
 
+	return true;
 }
 
 func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena)
@@ -119,7 +124,6 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_func_decl: {
-			data->add(&node->func_decl.scope);
 			if(!type_check_func_decl(node, reporter, data, arena)) {
 				return false;
 			}
@@ -175,8 +179,12 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 {
 	if(node->type_checked) { return true; }
 
+	// @TODO(tkap, 12/02/2024): This will make recursion impossible!! fix!
+	data->add(&node->func_decl.scope);
+
 	if(!type_check_expr(node->func_decl.return_type, reporter, data, arena)) {
 		reporter->recoverable_error(node->func_decl.name.file, node->func_decl.name.line, "Function '%s' has unknown return type '%s'", node->func_decl.name.str(), node_to_str(node->func_decl.return_type));
+		data->pop();
 		return false;
 	}
 	node->var_type = node->func_decl.return_type->var_type;
@@ -193,6 +201,7 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 			}
 			else {
 				reporter->recoverable_error(arg->var_decl.name.file, arg->var_decl.name.line, "Function argument '%s' has unknown type '%s'", arg->var_decl.name.str(), node_to_str(arg->var_decl.type));
+				data->pop();
 				return false;
 			}
 		}
@@ -201,11 +210,14 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 
 	if(!node->func_decl.is_external) {
 		if(!type_check_statement(node->func_decl.body, reporter, data, arena)) {
+			data->pop();
 			return false;
 		}
 	}
 
 	node->type_checked = true;
+
+	data->pop();
 
 	// printf("Added function '%s'\n", node->func_decl.name.str());
 	add_func_to_scope(data, node, arena);
@@ -221,9 +233,11 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			data->add(&node->compound.scope);
 			for_node(statement, node->compound.statements) {
 				if(!type_check_statement(statement, reporter, data, arena)) {
+					data->pop();
 					return false;
 				}
 			}
+			data->pop();
 			node->type_checked = true;
 			return true;
 		} break;
@@ -300,6 +314,17 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 				}
 			}
 			add_var_to_scope(data, node, arena);
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_return: {
+			if(node->nreturn.expression) {
+				if(!type_check_expr(node->nreturn.expression, reporter, data, arena)) {
+					return false;
+				}
+			}
+			node->var_type = node->nreturn.expression->var_type;
 			node->type_checked = true;
 			return true;
 		} break;

@@ -1,6 +1,6 @@
 
 
-func void generate_code(s_node* ast, s_lin_arena* arena)
+func b8 generate_code(s_node* ast, s_lin_arena* arena)
 {
 	t_code_builder* builder = (t_code_builder*)arena->alloc_zero(sizeof(t_code_builder));
 	builder->add_line("#include <stdint.h>");
@@ -19,6 +19,8 @@ func void generate_code(s_node* ast, s_lin_arena* arena)
 	}
 
 	write_file("output.c", builder->data, builder->len);
+
+	return true;
 }
 
 func void generate_node(s_node* node, t_code_builder* builder)
@@ -32,7 +34,8 @@ func void generate_node(s_node* node, t_code_builder* builder)
 			}
 			else {
 				for_node(arg, node->func_decl.arguments) {
-					builder->add("%s", node_to_c_str(arg));
+					generate_node(arg, builder);
+					// builder->add("%s", node_to_c_str(arg));
 					// builder->add("%s ", node_to_c_str(arg->var_decl.type));
 					// builder->add("%s", arg->var_decl.name.str());
 					if(arg->next) {
@@ -77,6 +80,10 @@ func void generate_node(s_node* node, t_code_builder* builder)
 				generate_statement(statement, builder);
 			}
 			builder->pop_scope();
+		} break;
+
+		case e_node_type: {
+			builder->add("%s", node_to_c_str(node));
 		} break;
 
 		invalid_default_case;

@@ -37,8 +37,13 @@ struct s_player
 }
 
 const int c_max_tiles = 32;
-s8[(c_max_tiles + 1) * 2][(c_max_tiles + 3) * 4] tiles;
+s8[c_max_tiles][c_max_tiles] tiles;
 
+
+func s_v2 v2(float x, float y)
+{
+	return {x, y};
+}
 
 func int main()
 {
@@ -55,7 +60,7 @@ func int main()
 		// DrawRectangle(player.x, player.y, 32, 32, RED);
 
 		for 32 {
-			DrawRectangle(ita*64, it*32, 32, 32, RED);
+			DrawRectangle(it*64, it*32, 32, 32, RED);
 		}
 
 		DrawFPS(16, 16);

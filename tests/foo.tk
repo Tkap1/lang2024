@@ -1,0 +1,8 @@
+
+
+func void foo(int x) {}
+
+func int main()
+{
+	foo(var);
+}
