@@ -236,6 +236,24 @@ func s_parse_result parse_sub_expression(s_tokenizer tokenizer, s_error_reporter
 		goto success;
 	}
 
+	if(tokenizer.consume_token(e_token_open_brace, reporter)) {
+		result.node.type = e_node_struct_literal;
+		s_node** curr_expr = &result.node.struct_literal.expressions;
+		while(true) {
+			s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
+			if(!pr.success) { break; }
+			tokenizer = pr.tokenizer;
+			curr_expr = advance_node(curr_expr, pr.node, arena);
+			if(!tokenizer.consume_token(e_token_comma, reporter)) { break; }
+		}
+
+		if(!tokenizer.consume_token(e_token_close_brace, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected '}' to end struct literal");
+		}
+
+		goto success;
+	}
+
 	if(tokenizer.consume_token(e_token_integer, &token, reporter)) {
 		result.node.type = e_node_integer;
 		result.node.token = token;

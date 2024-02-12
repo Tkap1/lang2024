@@ -36,6 +36,7 @@ enum e_node
 	e_node_logic_or,
 	e_node_logic_and,
 	e_node_for,
+	e_node_struct_literal,
 };
 
 enum e_context
@@ -170,6 +171,11 @@ struct s_node
 			s_node* expr;
 			s_node* body;
 		} nfor;
+
+		struct
+		{
+			s_node* expressions;
+		} struct_literal;
 	};
 };
 

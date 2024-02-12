@@ -22,6 +22,13 @@ func void type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* a
 
 	{
 		s_node node = zero;
+		node.basic_type.name = "u8";
+		node.basic_type.size_in_bytes = 1;
+		add_type_to_scope(data, alloc_node(node, arena), arena);
+	}
+
+	{
+		s_node node = zero;
 		node.basic_type.name = "float";
 		node.basic_type.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
@@ -196,19 +203,20 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_var_decl: {
+			// @TODO(tkap, 12/02/2024): if var is a struct, recursively set the var_type of all e_node_struct_literal to the struct
 			// @TODO(tkap, 10/02/2024): check that variable name doesnt already exist in scope
-			s_node* type = node_to_basic_type(node->var_decl.type, data);
-			if(!type) {
-				reporter->recoverable_error(node->var_decl.type->token.file, node->var_decl.type->token.line, "Variable '%s' has unknown type '%s'", node->var_decl.name.str(), node_to_str(node->var_decl.type));
+			// s_node* type = node_to_basic_type(node->var_decl.type, data);
+			// if(!type) {
+			// 	reporter->recoverable_error(node->var_decl.type->token.file, node->var_decl.type->token.line, "Variable '%s' has unknown type '%s'", node->var_decl.name.str(), node_to_str(node->var_decl.type));
+			// 	return false;
+			// }
+			if(!type_check_node(node->var_decl.type, reporter, data, arena)) {
 				return false;
 			}
 			if(node->var_decl.value) {
-				if(!type_check_expr(node->var_decl.value, reporter, data, arena)) {
+				if(!type_check_expr(node->var_decl.value, reporter, data, arena, node->var_decl.type)) {
 					return false;
 				}
-			}
-			if(!type_check_node(node->var_decl.type, reporter, data, arena)) {
-				return false;
 			}
 			add_var_to_scope(data, node, arena);
 			node->type_checked = true;
@@ -326,7 +334,7 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 	return true;
 }
 
-func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena)
+func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_node* expected_type)
 {
 	if(node->type_checked) { return true; }
 	switch(node->type) {
@@ -336,6 +344,8 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_identifier: {
+			// @TODO(tkap, 12/02/2024): Enable this when we actually have proper bindings
+			#if 1
 			// @TODO(tkap, 11/02/2024):
 			s_node* var = get_var_by_name(node->token.str(), data);
 			// @TODO(tkap, 12/02/2024): Look for functions too
@@ -343,6 +353,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				reporter->recoverable_error(node->token.file, node->token.line, "Identifier '%s' not found", node->token.str());
 				return false;
 			}
+			#endif
 			node->type_checked = true;
 			return true;
 		} break;
@@ -357,6 +368,13 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_string: {
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_struct_literal: {
+			// @TODO(tkap, 12/02/2024):
+			node->var_type = expected_type;
 			node->type_checked = true;
 			return true;
 		} break;

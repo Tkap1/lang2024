@@ -237,6 +237,19 @@ func char* node_to_c_str(s_node* node)
 			return format_str("(%s < %s)", node_to_c_str(node->left), node_to_c_str(node->right));
 		} break;
 
+		case e_node_struct_literal: {
+			s_str_builder<1024> builder;
+			builder.add("(%s){", node_to_c_str(node->var_type));
+			for_node(expr, node->struct_literal.expressions) {
+				builder.add("%s", node_to_c_str(expr));
+				if(expr->next) {
+					builder.add(", ");
+				}
+			}
+			builder.add("}");
+			return format_str("%s", builder.data);
+		} break;
+
 		invalid_default_case;
 	}
 	return null;
