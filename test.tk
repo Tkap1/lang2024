@@ -9,12 +9,23 @@ struct s_color
 	u8 b,
 	u8 a,
 }
+struct s_texture
+{
+	u32 id,
+	int width,
+	int height,
+	int mipmaps,
+	int format,
+}
+
 const int LOG_WARNING = 4;
 const int FLAG_VSYNC_HINT = 64;
 const s_color BLACK = {0, 0, 0, 0};
 const s_color RED = {230, 41, 55, 255};
 const s_color GREEN = {0, 228, 48, 255};
 const s_color BLUE = {0, 121, 241, 255};
+const s_color WHITE = {255, 255, 255, 255};
+const s_color DARK = {50, 50, 50, 255};
 const int MOUSE_BUTTON_LEFT = 0;
 const int MOUSE_BUTTON_RIGHT = 1;
 
@@ -23,13 +34,13 @@ const int KEY_LEFT = 263;
 const int KEY_DOWN = 264;
 const int KEY_UP = 265;
 const int KEY_SPACE = 32;
+const int TEXTURE_FILTER_ANISOTROPIC_16X = 5;
 
 struct s_v2
 {
 	float x,
 	float y,
 }
-
 
 struct s_v2i
 {
@@ -54,6 +65,10 @@ external_func b32 IsMouseButtonDown(int);
 external_func float floorf(float);
 external_func b32 IsKeyDown(int);
 external_func b32 IsKeyPressed(int);
+external_func s_texture LoadTexture(char*);
+external_func void SetTextureFilter(s_texture, int);
+external_func void DrawTexture(s_texture, int, int, s_color);
+external_func void DrawTextureEx(s_texture, s_v2, float, float, s_color);
 
 struct s_player
 {
@@ -61,10 +76,24 @@ struct s_player
 	s_v2 vel,
 }
 
-const int c_max_tiles = 64;
-const int c_tile_size = 16;
-s8[c_max_tiles][c_max_tiles] tiles;
+struct s_camera
+{
+	float x,
+	float y,
+}
 
+const int c_max_tiles = 64;
+s8[c_max_tiles][c_max_tiles] tiles;
+s_camera camera;
+
+
+func s_v2 cam_transform(s_v2 v)
+{
+	s_v2 result = v;
+	v.x -= camera.x;
+	v.y -= camera.y;
+	return v;
+}
 
 func s_v2 v2(float x, float y)
 {
@@ -85,32 +114,55 @@ func b8 rect_collides_rect(s_v2 pos1, s_v2 size1, s_v2 pos2, s_v2 size2)
 func int main()
 {
 
+	const int ww = 1280;
+	const int wh = 900;
 	SetTraceLogLevel(4);
 	SetConfigFlags(64);
-	InitWindow(800, 600, "AZEN");
+	InitWindow(ww, wh, "AZEN");
+
+	s_texture texture = LoadTexture("assets/pink_body_square.png");
+	SetTextureFilter(texture, TEXTURE_FILTER_ANISOTROPIC_16X);
+
+	s_texture tile0 = LoadTexture("assets/tile_grey.png");
+	SetTextureFilter(tile0, TEXTURE_FILTER_ANISOTROPIC_16X);
+
+	s_texture face = LoadTexture("assets/face_h.png");
+	SetTextureFilter(face, TEXTURE_FILTER_ANISOTROPIC_16X);
+
+	float player_scale = 0.4;
+	float tile_scale = 0.25;
+
+	s_v2 tile_size = v2(tile0.width * tile_scale, tile0.height * tile_scale);
+
+	s_v2 player_size = v2(texture.width * player_scale, texture.height * player_scale);
 
 
 	s_player player;
 	player.pos = v2(32, 32);
 
+	int bottom_tile = wh / tile_size.x;
+	for x: c_max_tiles {
+		tiles[bottom_tile - 1][x] = 1;
+		tiles[bottom_tile][x] = 1;
+	}
+
 	while !WindowShouldClose() {
 		BeginDrawing();
 		ClearBackground(BLACK);
 
+		camera.x += 0.01;
+
 		s_v2 mouse = GetMousePosition();
 
-		s_v2 player_size = v2(c_tile_size, c_tile_size * 2);
-		s_v2 tile_size = v2(c_tile_size, c_tile_size);
-
 		if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
-			int x = mouse.x / c_tile_size;
-			int y = mouse.y / c_tile_size;
+			int x = mouse.x / tile_size.x;
+			int y = mouse.y / tile_size.x;
 			tiles[y][x] = 1;
 		}
 
 		if IsMouseButtonDown(MOUSE_BUTTON_RIGHT) {
-			int x = mouse.x / c_tile_size;
-			int y = mouse.y / c_tile_size;
+			int x = mouse.x / tile_size.x;
+			int y = mouse.y / tile_size.x;
 			tiles[y][x] = 2;
 		}
 
@@ -128,14 +180,21 @@ func int main()
 			player.vel.y = -3;
 		}
 
-		for y: c_max_tiles {
-			for x: c_max_tiles {
+		int right = ww / tile_size.x + 1;
+		int down = wh / tile_size.y + 1;
+		for y: down {
+			for x: right {
 				s8 tile = tiles[y][x];
+				s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
+				if tile == 0 {
+					DrawTextureEx(tile0, tile_pos, 0, tile_scale, DARK);
+				}
 				if tile == 1 {
-					DrawRectangle(x * c_tile_size, y * c_tile_size, c_tile_size, c_tile_size, RED);
+					// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
+					DrawTextureEx(tile0, tile_pos, 0, tile_scale, WHITE);
 				}
 				if tile == 2 {
-					DrawRectangle(x * c_tile_size, y * c_tile_size, c_tile_size, c_tile_size, GREEN);
+					DrawTextureEx(tile0, tile_pos, 0, tile_scale, WHITE);
 				}
 			}
 		}
@@ -143,17 +202,17 @@ func int main()
 		player.pos.x += player.vel.x;
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		s_v2i player_index = v2i(floorf(player.pos.x / c_tile_size), floorf(player.pos.y / c_tile_size));
-		for y: 5 {
-			int yy = -2 + y;
-			for x: 5 {
-				int xx = -2 + x;
+		s_v2i player_index = v2i(floorf(player.pos.x / tile_size.x), floorf(player.pos.y / tile_size.x));
+		for y: 7 {
+			int yy = -3 + y;
+			for x: 7 {
+				int xx = -3 + x;
 				s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
 				if index.x < 0 || index.x >= c_max_tiles { continue; }
 				if index.y < 0 || index.y >= c_max_tiles { continue; }
 
 				s8 tile = tiles[index.y][index.x];
-				s_v2 tile_pos = v2(index.x * c_tile_size, index.y * c_tile_size);
+				s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 				if tile > 0 {
 					if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
 						if player.vel.x > 0 {
@@ -172,17 +231,17 @@ func int main()
 		player.pos.y += player.vel.y;
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		player_index = v2i(floorf(player.pos.x / c_tile_size), floorf(player.pos.y / c_tile_size));
-		for y: 5 {
-			int yy = -2 + y;
-			for x: 5 {
-				int xx = -2 + x;
+		player_index = v2i(floorf(player.pos.x / tile_size.x), floorf(player.pos.y / tile_size.x));
+		for y: 7 {
+			int yy = -3 + y;
+			for x: 7 {
+				int xx = -3 + x;
 				s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
 				if index.x < 0 || index.x >= c_max_tiles { continue; }
 				if index.y < 0 || index.y >= c_max_tiles { continue; }
 
 				s8 tile = tiles[index.y][index.x];
-				s_v2 tile_pos = v2(index.x * c_tile_size, index.y * c_tile_size);
+				s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 				if tile > 0 {
 					if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
 						if player.vel.y > 0 {
@@ -198,7 +257,16 @@ func int main()
 		}
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		y collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-		DrawRectangle(player.pos.x, player.pos.y, player_size.x, player_size.y, BLUE);
+		// DrawRectangle(player.pos.x, player.pos.y, player_size.x, player_size.y, BLUE);
+		// DrawTexture(texture, player.pos.x, player.pos.y, WHITE);
+		{
+			DrawTextureEx(texture, cam_transform(player.pos), 0, player_scale, WHITE);
+		}
+
+		s_v2 face_pos = player.pos;
+		face_pos.x += player_size.x / 4;
+		face_pos.y += player_size.y / 4;
+		DrawTextureEx(face, face_pos, 0, player_scale, WHITE);
 
 		DrawFPS(16, 16);
 

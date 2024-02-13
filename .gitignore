@@ -33,3 +33,5 @@
 build/
 compiler_output.txt
 output.c
+assets/
+kenney_shape-characters/

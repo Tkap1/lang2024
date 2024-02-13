@@ -423,6 +423,12 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			return true;
 		} break;
 
+		case e_node_continue: {
+			// @TODO(tkap, 13/02/2024): check that we are inside a loop
+			node->type_checked = true;
+			return true;
+		} break;
+
 		default: {
 			return type_check_expr(node, reporter, data, arena, context);
 		}

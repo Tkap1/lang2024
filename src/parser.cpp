@@ -526,6 +526,14 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 		goto success;
 	}
 
+	if(tokenizer.consume_token("continue", reporter)) {
+		result.node.type = e_node_continue;
+		if(!tokenizer.consume_token(e_token_semicolon, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';' after 'continue'");
+		}
+		goto success;
+	}
+
 	if(tokenizer.consume_token("while", reporter)) {
 
 		result.node.type = e_node_while;

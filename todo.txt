@@ -20,3 +20,5 @@ the name resolving for consts should happen in right when we typecheck, so we co
 typecheck struct members if  we are not doing it already
 
 if we already have a fatal error, do not overwrite the error string
+
+stop doing the fucking static buffer bullshit.

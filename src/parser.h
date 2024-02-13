@@ -41,6 +41,7 @@ enum e_node
 	e_node_struct_literal,
 	e_node_comparison,
 	e_node_subscript,
+	e_node_continue,
 };
 
 enum e_context
