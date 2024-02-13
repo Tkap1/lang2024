@@ -91,16 +91,6 @@ func int main()
 		ClearBackground(BLACK);
 
 		s_v2 mouse = GetMousePosition();
-		s_v2 object = v2(400, 400);
-		s_v2 object_size = v2(64, 64);
-
-		s_color c = GREEN;
-		if rect_collides_rect(mouse, v2(32, 32), object, object_size) {
-			c = RED;
-		}
-		DrawRectangle(mouse.x, mouse.y, 32, 32, c);
-		DrawRectangle(object.x, object.y, 64, 64, c);
-
 
 		s_v2 player_size = v2(c_tile_size, c_tile_size * 2);
 		s_v2 tile_size = v2(c_tile_size, c_tile_size);
@@ -129,7 +119,7 @@ func int main()
 			}
 		}
 
-		player.vel.y += 0.1;
+		player.vel.y += 0.01;
 		player.pos.x += player.vel.x;
 
 		s_v2i[9] offsets = {
@@ -175,7 +165,7 @@ func int main()
 			if tile > 0 {
 				if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
 					if player.vel.y > 0 {
-						player.pos.y = tile_pos.y - player_size.y;
+						player.pos.y = tile_pos.y - player_size.y * 3;
 					}
 					else {
 						player.pos.y = tile_pos.y + tile_size.y;

@@ -145,28 +145,37 @@ func void run_tests(s_lin_arena* arena)
 	};
 
 	constexpr s_test test_data[] = {
-		// {"tests/foo.tk", false},
-		// {"tests/bar.tk", true},
-		// {"tests/subscript0.tk", true},
-		// {"tests/semicolon_instead_of_comma.tk", false},
-		// {"tests/two_member_access.tk", true},
-		// {"tests/for_int.tk", true},
-		// {"tests/for_int_array.tk", true},
-		// {"tests/for_struct_array.tk", true},
-		// {"tests/struct_var_decl.tk", true},
+		{"tests/foo.tk", false},
+		{"tests/bar.tk", true},
+		{"tests/subscript0.tk", true},
+		{"tests/semicolon_instead_of_comma.tk", false},
+		{"tests/two_member_access.tk", true},
+		{"tests/for_int.tk", true},
+		{"tests/for_int_array.tk", true},
+		{"tests/for_struct_array.tk", true},
+		{"tests/struct_var_decl.tk", true},
 		{"tests/function.tk", true},
+		{"tests/return_struct_literal.tk", true},
 	};
+
+	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
+
 	s_error_reporter reporter = zero;
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
 		s_test test = test_data[test_i];
 		b8 success = compile(test.file_path, arena, true, &reporter);
-		printf("%s ", test.file_path);
 		if(success == test.should_compile) {
+			SetConsoleTextAttribute(hstdout, FOREGROUND_GREEN);
+			printf("%s ", test.file_path);
 			printf("PASSED!\n");
+			SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 		}
 		else {
+			SetConsoleTextAttribute(hstdout, FOREGROUND_RED);
+			printf("%s ", test.file_path);
 			printf("FAILED!\n");
 			printf("\t%s\n", reporter.error_str);
+			SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 		}
 		reporter = zero;
 	}

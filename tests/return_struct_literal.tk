@@ -1,0 +1,11 @@
+
+struct s_foo
+{
+	int a,
+	int b,
+}
+
+func s_foo foo()
+{
+	return {69, 420};
+}

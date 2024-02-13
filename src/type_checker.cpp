@@ -6,6 +6,8 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 	t_scope_arr* data = (t_scope_arr*)arena->alloc_zero(sizeof(t_scope_arr));
 	data->add(&base_scope);
 
+	s_type_check_context context = zero;
+
 	{
 		s_node node = zero;
 		node.type = e_node_type;
@@ -94,7 +96,7 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 		int not_type_checked_count = 0;
 		for_node(node, ast) {
 			if(node->type_checked) { continue; }
-			b8 result = type_check_node(node, reporter, data, arena);
+			b8 result = type_check_node(node, reporter, data, arena, context);
 			if(result) {
 				successfully_typechecked_something = true;
 			}
@@ -139,17 +141,17 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 	return true;
 }
 
-func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena)
+func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context)
 {
 	if(node->type_checked) { return true; }
 
 	switch(node->type) {
 		case e_node_struct: {
-			return type_check_struct(node, reporter, data, arena);
+			return type_check_struct(node, reporter, data, arena, context);
 		} break;
 
 		case e_node_func_decl: {
-			if(!type_check_func_decl(node, reporter, data, arena)) {
+			if(!type_check_func_decl(node, reporter, data, arena, context)) {
 				return false;
 			}
 			node->var_type = node->func_decl.return_type;
@@ -157,15 +159,15 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_array: {
-			return type_check_expr(node, reporter, data, arena);
+			return type_check_expr(node, reporter, data, arena, context);
 		} break;
 
 		case e_node_var_decl: {
-			return type_check_statement(node, reporter, data, arena);
+			return type_check_statement(node, reporter, data, arena, context);
 		} break;
 
 		case e_node_type: {
-			return type_check_expr(node, reporter, data, arena);
+			return type_check_expr(node, reporter, data, arena, context);
 		} break;
 
 
@@ -174,7 +176,7 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 	return false;
 }
 
-func b8 type_check_struct(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena)
+func b8 type_check_struct(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context)
 {
 	if(node->type_checked) { return true; }
 
@@ -187,7 +189,7 @@ func b8 type_check_struct(s_node* node, s_error_reporter* reporter, t_scope_arr*
 	// }
 	for_node(member, node->nstruct.members) {
 		if(member->type_checked) { continue; }
-		if(!type_check_struct_member(node, member, reporter, data, arena)) {
+		if(!type_check_struct_member(node, member, reporter, data, arena, context)) {
 			result = false;
 			break;
 		}
@@ -200,7 +202,7 @@ func b8 type_check_struct(s_node* node, s_error_reporter* reporter, t_scope_arr*
 	return result;
 }
 
-func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena)
+func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context)
 {
 	if(node->type_checked) { return true; }
 
@@ -214,7 +216,7 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 
 	data->add(&node->func_decl.scope);
 
-	if(!type_check_expr(node->func_decl.return_type, reporter, data, arena)) {
+	if(!type_check_expr(node->func_decl.return_type, reporter, data, arena, context)) {
 		reporter->recoverable_error(node->func_decl.name.file, node->func_decl.name.line, "Function '%s' has unknown return type '%s'", node->func_decl.name.str(), node_to_str(node->func_decl.return_type));
 		data->pop();
 		s_scope* scope = *data->get(scope_index);
@@ -245,7 +247,7 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 	#endif
 
 	if(!node->func_decl.is_external) {
-		if(!type_check_statement(node->func_decl.body, reporter, data, arena)) {
+		if(!type_check_statement(node->func_decl.body, reporter, data, arena, context)) {
 			data->pop();
 			s_scope* scope = *data->get(scope_index);
 			scope->funcs.remove_and_shift(func_index);
@@ -261,7 +263,7 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 	return true;
 }
 
-func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena)
+func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context)
 {
 	if(node->type_checked) { return true; }
 	switch(node->type) {
@@ -269,7 +271,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 		case e_node_compound: {
 			data->add(&node->compound.scope);
 			for_node(statement, node->compound.statements) {
-				if(!type_check_statement(statement, reporter, data, arena)) {
+				if(!type_check_statement(statement, reporter, data, arena, context)) {
 					data->pop();
 					return false;
 				}
@@ -281,10 +283,10 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 
 		case e_node_while: {
 			// @TODO(tkap, 10/02/2024):
-			if(node->nwhile.condition && !type_check_expr(node->nwhile.condition, reporter, data, arena)) {
+			if(node->nwhile.condition && !type_check_expr(node->nwhile.condition, reporter, data, arena, context)) {
 				return false;
 			}
-			if(!type_check_statement(node->nwhile.body, reporter, data, arena)) {
+			if(!type_check_statement(node->nwhile.body, reporter, data, arena, context)) {
 				return false;
 			}
 			node->type_checked = true;
@@ -293,7 +295,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 
 		case e_node_for: {
 			// @TODO(tkap, 12/02/2024):
-			if(!type_check_expr(node->nfor.expr, reporter, data, arena)) {
+			if(!type_check_expr(node->nfor.expr, reporter, data, arena, context)) {
 				return false;
 			}
 			assert(node->nfor.expr->var_type);
@@ -353,7 +355,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			// b8 success = type_check_statement(&temp, reporter, data, arena);
 			// assert(success);
 			// add_var_to_scope(data, alloc_node(temp, arena), arena);
-			if(!type_check_statement(node->nfor.body, reporter, data, arena)) {
+			if(!type_check_statement(node->nfor.body, reporter, data, arena, context)) {
 				return false;
 			}
 			node->type_checked = true;
@@ -362,10 +364,10 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 
 		case e_node_if: {
 			// @TODO(tkap, 10/02/2024):
-			if(!type_check_expr(node->nif.condition, reporter, data, arena)) {
+			if(!type_check_expr(node->nif.condition, reporter, data, arena, context)) {
 				return false;
 			}
-			if(!type_check_statement(node->nif.body, reporter, data, arena)) {
+			if(!type_check_statement(node->nif.body, reporter, data, arena, context)) {
 				return false;
 			}
 			node->type_checked = true;
@@ -374,10 +376,10 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 
 		case e_node_assign: {
 			// @TODO(tkap, 10/02/2024):
-			if(!type_check_expr(node->left, reporter, data, arena)) {
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
-			if(!type_check_expr(node->right, reporter, data, arena)) {
+			if(!type_check_expr(node->right, reporter, data, arena, context)) {
 				return false;
 			}
 			node->type_checked = true;
@@ -387,12 +389,12 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 		case e_node_var_decl: {
 			// @TODO(tkap, 12/02/2024): if var is a struct, recursively set the var_type of all e_node_struct_literal to the struct
 			// @TODO(tkap, 10/02/2024): check that variable name doesnt already exist in scope
-			if(!type_check_node(node->var_decl.type, reporter, data, arena)) {
+			if(!type_check_node(node->var_decl.type, reporter, data, arena, context)) {
 				return false;
 			}
 			node->var_type = node->var_decl.type->var_type;
 			if(node->var_decl.value) {
-				if(!type_check_expr(node->var_decl.value, reporter, data, arena)) {
+				if(!type_check_expr(node->var_decl.value, reporter, data, arena, context)) {
 					return false;
 				}
 			}
@@ -406,7 +408,12 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			assert(nfunc);
 			if(node->nreturn.expression) {
 				// @Fixme(tkap, 13/02/2024): we cant use this last param for struct literals and return checking
-				if(!type_check_expr(node->nreturn.expression, reporter, data, arena, nfunc->var_type)) {
+				s_type_check_context temp = context;
+				temp.expected_return_type = nfunc->var_type;
+				if(nfunc->var_type->type == e_node_struct) {
+					temp.expected_literal_type = nfunc->var_type;
+				}
+				if(!type_check_expr(node->nreturn.expression, reporter, data, arena, temp)) {
 					return false;
 				}
 			}
@@ -417,12 +424,12 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 		} break;
 
 		default: {
-			return type_check_expr(node, reporter, data, arena);
+			return type_check_expr(node, reporter, data, arena, context);
 		}
 	}
 }
 
-func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_node* expected_type)
+func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context)
 {
 	if(node->type_checked) { return true; }
 	switch(node->type) {
@@ -442,9 +449,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		case e_node_identifier: {
 			// @TODO(tkap, 12/02/2024):
 			b8 success = false;
-			if(expected_type) {
-				assert(expected_type->type == e_node_struct);
-				for_node(member, expected_type->nstruct.members) {
+			if(context.expected_literal_type) {
+				assert(context.expected_literal_type->type == e_node_struct);
+				for_node(member, context.expected_literal_type->nstruct.members) {
 					if(node->token.equals(member->var_decl.name)) {
 						node->var_type = member->var_type;
 						success = true;
@@ -485,8 +492,8 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		case e_node_divide:
 		case e_node_modulo: {
 			// @TODO(tkap, 11/02/2024):
-			if(!type_check_expr(node->left, reporter, data, arena)) { return false; }
-			if(!type_check_expr(node->right, reporter, data, arena)) { return false; }
+			if(!type_check_expr(node->left, reporter, data, arena, context)) { return false; }
+			if(!type_check_expr(node->right, reporter, data, arena, context)) { return false; }
 			node->type_checked = true;
 			return true;
 		} break;
@@ -498,21 +505,23 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_struct_literal: {
 			// @TODO(tkap, 12/02/2024):
-			node->var_type = expected_type;
+			node->var_type = context.expected_literal_type;
 			node->type_checked = true;
 			return true;
 		} break;
 
 		case e_node_member_access: {
 			// @TODO(tkap, 10/02/2024):
-			if(!type_check_expr(node->left, reporter, data, arena, expected_type)) {
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
 			if(!node->left->var_type || node->left->var_type->type != e_node_struct) {
 				reporter->fatal(node->token.file, node->token.line, "todo bad member access");
 				return false;
 			}
-			if(!type_check_expr(node->right, reporter, data, arena, node->left->var_type)) {
+			s_type_check_context temp = context;
+			temp.expected_literal_type = node->left->var_type;
+			if(!type_check_expr(node->right, reporter, data, arena, temp)) {
 				reporter->fatal(node->token.file, node->token.line, "todo bad member access 2");
 				return false;
 			}
@@ -522,11 +531,11 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_func_call: {
-			if(!type_check_expr(node->left, reporter, data, arena)) {
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
 			for_node(arg, node->func_call.arguments) {
-				if(!type_check_expr(arg, reporter, data, arena)) {
+				if(!type_check_expr(arg, reporter, data, arena, context)) {
 					return false;
 				}
 			}
@@ -536,10 +545,10 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_subscript: {
-			if(!type_check_expr(node->left, reporter, data, arena)) {
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
-			if(!type_check_expr(node->right, reporter, data, arena)) {
+			if(!type_check_expr(node->right, reporter, data, arena, context)) {
 				return false;
 			}
 			// @TODO(tkap, 12/02/2024): check that left is array
@@ -549,7 +558,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_logic_not: {
 			// @TODO(tkap, 10/02/2024):
-			if(!type_check_expr(node->left, reporter, data, arena)) {
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
 			node->type_checked = true;
@@ -570,10 +579,10 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_less_than_or_equal: {
 			// @TODO(tkap, 10/02/2024):
-			if(!type_check_expr(node->left, reporter, data, arena)) {
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
-			if(!type_check_expr(node->right, reporter, data, arena)) {
+			if(!type_check_expr(node->right, reporter, data, arena, context)) {
 				return false;
 			}
 			node->type_checked = true;
@@ -605,10 +614,10 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_array: {
-			if(!type_check_expr(node->left, reporter, data, arena)) {
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
-			if(!type_check_expr(node->array.size_expr, reporter, data, arena)) {
+			if(!type_check_expr(node->array.size_expr, reporter, data, arena, context)) {
 				return false;
 			}
 			s_maybe<int> size = get_compile_time_value(node->array.size_expr, data);
@@ -647,8 +656,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 	return false;
 }
 
-func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena)
+func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context)
 {
+	unreferenced(context);
 	unreferenced(nstruct);
 	unreferenced(arena);
 
