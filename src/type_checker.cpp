@@ -226,20 +226,16 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 	node->var_type = node->func_decl.return_type->var_type;
 
 	// @TODO(tkap, 12/02/2024):
-	#if 0
+	#if 1
 	// @TODO(tkap, 12/02/2024): Type check args
 	if(!node->func_decl.is_external) {
 		for_node(arg, node->func_decl.arguments) {
-			if(arg->type_checked) { continue; }
-			type = node_to_basic_type(arg->var_decl.type, data);
-			if(type) {
-				arg->type_checked = true;
-			}
-			else {
-				reporter->recoverable_error(arg->var_decl.name.file, arg->var_decl.name.line, "Function argument '%s' has unknown type '%s'", arg->var_decl.name.str(), node_to_str(arg->var_decl.type));
+			assert(arg->type == e_node_var_decl);
+			if(!type_check_statement(arg, reporter, data, arena, context)) {
 				data->pop();
 				s_scope* scope = *data->get(scope_index);
 				scope->funcs.remove_and_shift(func_index);
+				reporter->recoverable_error(arg->var_decl.name.file, arg->var_decl.name.line, "Function argument '%s' has unknown type '%s'", arg->var_decl.name.str(), node_to_str(arg->var_decl.type));
 				return false;
 			}
 		}
@@ -455,9 +451,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		case e_node_identifier: {
 			// @TODO(tkap, 12/02/2024):
 			b8 success = false;
-			if(context.expected_literal_type) {
-				assert(context.expected_literal_type->type == e_node_struct);
-				for_node(member, context.expected_literal_type->nstruct.members) {
+			if(context.member_access) {
+				assert(context.member_access->type == e_node_struct);
+				for_node(member, context.member_access->nstruct.members) {
 					if(node->token.equals(member->var_decl.name)) {
 						node->var_type = member->var_type;
 						success = true;
@@ -526,7 +522,8 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				return false;
 			}
 			s_type_check_context temp = context;
-			temp.expected_literal_type = node->left->var_type;
+			// temp.expected_literal_type = node->left->var_type; // @TODO(tkap, 13/02/2024): Do I need this?
+			temp.member_access = node->left->var_type;
 			if(!type_check_expr(node->right, reporter, data, arena, temp)) {
 				reporter->fatal(node->token.file, node->token.line, "todo bad member access 2");
 				return false;

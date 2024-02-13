@@ -4,6 +4,7 @@ struct s_type_check_context
 {
 	s_node* expected_return_type;
 	s_node* expected_literal_type;
+	s_node* member_access;
 };
 
 

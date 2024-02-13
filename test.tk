@@ -90,9 +90,9 @@ s_camera camera;
 func s_v2 cam_transform(s_v2 v)
 {
 	s_v2 result = v;
-	v.x -= camera.x;
-	v.y -= camera.y;
-	return v;
+	result.x -= camera.x;
+	result.y -= camera.y;
+	return result;
 }
 
 func s_v2 v2(float x, float y)
@@ -150,7 +150,7 @@ func int main()
 		BeginDrawing();
 		ClearBackground(BLACK);
 
-		camera.x += 0.01;
+		camera.x += 1.1;
 
 		s_v2 mouse = GetMousePosition();
 
@@ -180,21 +180,21 @@ func int main()
 			player.vel.y = -3;
 		}
 
-		int right = ww / tile_size.x + 1;
-		int down = wh / tile_size.y + 1;
+		int right = (ww + camera.x) / tile_size.x + 1;
+		int down = (wh + camera.y) / tile_size.y + 1;
 		for y: down {
 			for x: right {
 				s8 tile = tiles[y][x];
 				s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
 				if tile == 0 {
-					DrawTextureEx(tile0, tile_pos, 0, tile_scale, DARK);
+					DrawTextureEx(tile0, cam_transform(tile_pos), 0, tile_scale, DARK);
 				}
 				if tile == 1 {
 					// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
-					DrawTextureEx(tile0, tile_pos, 0, tile_scale, WHITE);
+					DrawTextureEx(tile0, cam_transform(tile_pos), 0, tile_scale, WHITE);
 				}
 				if tile == 2 {
-					DrawTextureEx(tile0, tile_pos, 0, tile_scale, WHITE);
+					DrawTextureEx(tile0, cam_transform(tile_pos), 0, tile_scale, WHITE);
 				}
 			}
 		}
@@ -266,7 +266,7 @@ func int main()
 		s_v2 face_pos = player.pos;
 		face_pos.x += player_size.x / 4;
 		face_pos.y += player_size.y / 4;
-		DrawTextureEx(face, face_pos, 0, player_scale, WHITE);
+		DrawTextureEx(face, cam_transform(face_pos), 0, player_scale, WHITE);
 
 		DrawFPS(16, 16);
 

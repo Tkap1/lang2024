@@ -2,6 +2,6 @@
 
 func int foo(int x)
 {
-	int y = x + 1;
+	int y = x;
 	return y;
 }
