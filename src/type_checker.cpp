@@ -91,6 +91,15 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
+	{
+		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 6, .at = "double"};
+		node.basic_type.name = "double";
+		node.basic_type.size_in_bytes = 8;
+		add_type_to_scope(data, alloc_node(node, arena), arena);
+	}
+
 	while(true) {
 		b8 successfully_typechecked_something = false;
 		int not_type_checked_count = 0;
@@ -420,6 +429,12 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 		} break;
 
 		case e_node_continue: {
+			// @TODO(tkap, 13/02/2024): check that we are inside a loop
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_break: {
 			// @TODO(tkap, 13/02/2024): check that we are inside a loop
 			node->type_checked = true;
 			return true;

@@ -136,6 +136,10 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 			builder->add_line_tabs("continue;");
 		} break;
 
+		case e_node_break: {
+			builder->add_line_tabs("break;");
+		} break;
+
 		case e_node_if: {
 			builder->add_line_tabs("if(%s)", node_to_c_str(node->nwhile.condition, context));
 			generate_statement(node->nif.body, builder);

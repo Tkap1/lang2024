@@ -69,11 +69,22 @@ external_func s_texture LoadTexture(char*);
 external_func void SetTextureFilter(s_texture, int);
 external_func void DrawTexture(s_texture, int, int, s_color);
 external_func void DrawTextureEx(s_texture, s_v2, float, float, s_color);
+external_func float sinf(float);
+external_func double GetTime();
 
 struct s_player
 {
 	s_v2 pos,
 	s_v2 vel,
+}
+
+const int c_max_projectiles = 128;
+
+struct s_projectiles
+{
+	b8[c_max_projectiles] active,
+	s_v2[c_max_projectiles] pos,
+	s_v2[c_max_projectiles] vel,
 }
 
 struct s_camera
@@ -129,6 +140,9 @@ func int main()
 	s_texture face = LoadTexture("assets/face_h.png");
 	SetTextureFilter(face, TEXTURE_FILTER_ANISOTROPIC_16X);
 
+	s_texture hand = LoadTexture("assets/pink_hand_open.png");
+	SetTextureFilter(hand, TEXTURE_FILTER_ANISOTROPIC_16X);
+
 	float player_scale = 0.4;
 	float tile_scale = 0.25;
 
@@ -136,6 +150,7 @@ func int main()
 
 	s_v2 player_size = v2(texture.width * player_scale, texture.height * player_scale);
 
+	s_projectiles projectiles;
 
 	s_player player;
 	player.pos = v2(32, 32);
@@ -150,20 +165,32 @@ func int main()
 		BeginDrawing();
 		ClearBackground(BLACK);
 
+		float time = GetTime();
+
 		camera.x += 1.1;
 
 		s_v2 mouse = GetMousePosition();
 
-		if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
-			int x = mouse.x / tile_size.x;
-			int y = mouse.y / tile_size.x;
-			tiles[y][x] = 1;
-		}
+		// if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
+		// 	int x = mouse.x / tile_size.x;
+		// 	int y = mouse.y / tile_size.x;
+		// 	tiles[y][x] = 1;
+		// }
 
-		if IsMouseButtonDown(MOUSE_BUTTON_RIGHT) {
-			int x = mouse.x / tile_size.x;
-			int y = mouse.y / tile_size.x;
-			tiles[y][x] = 2;
+		// if IsMouseButtonDown(MOUSE_BUTTON_RIGHT) {
+		// 	int x = mouse.x / tile_size.x;
+		// 	int y = mouse.y / tile_size.x;
+		// 	tiles[y][x] = 2;
+		// }
+
+		if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
+			for c_max_projectiles {
+				if !projectiles.active[it] {
+					projectiles.active[it] = 1;
+					projectiles.pos[it] = mouse;
+					break;
+				}
+			}
 		}
 
 		s_v2 dir;
@@ -263,10 +290,34 @@ func int main()
 			DrawTextureEx(texture, cam_transform(player.pos), 0, player_scale, WHITE);
 		}
 
-		s_v2 face_pos = player.pos;
-		face_pos.x += player_size.x / 4;
-		face_pos.y += player_size.y / 4;
-		DrawTextureEx(face, cam_transform(face_pos), 0, player_scale, WHITE);
+		{
+			s_v2 face_pos = player.pos;
+			face_pos.x += player_size.x / 4;
+			face_pos.y += player_size.y / 4;
+			DrawTextureEx(face, cam_transform(face_pos), 0, player_scale, WHITE);
+		}
+
+		{
+			s_v2 hand_pos = player.pos;
+			hand_pos.x -= 80 * player_scale;
+			hand_pos.y += 20;
+			hand_pos.y += sinf(time * 6) * 5;
+			DrawTextureEx(hand, cam_transform(hand_pos), 0, player_scale, WHITE);
+		}
+
+		{
+			s_v2 hand_pos = player.pos;
+			hand_pos.x += 200 * player_scale;
+			hand_pos.y += 20;
+			hand_pos.y += sinf(time * 6) * 5;
+			DrawTextureEx(hand, cam_transform(hand_pos), 0, player_scale, WHITE);
+		}
+
+		for c_max_projectiles {
+			if !projectiles.active[it] { continue; }
+			s_v2 pos = projectiles.pos[it];
+			DrawRectangle(pos.x, pos.y, 32, 32, RED);
+		}
 
 		DrawFPS(16, 16);
 

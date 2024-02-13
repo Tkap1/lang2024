@@ -42,6 +42,7 @@ enum e_node
 	e_node_comparison,
 	e_node_subscript,
 	e_node_continue,
+	e_node_break,
 };
 
 enum e_context
