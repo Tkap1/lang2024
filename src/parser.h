@@ -31,7 +31,9 @@ enum e_node
 	e_node_assign,
 	e_node_if,
 	e_node_greater_than,
+	e_node_greater_than_or_equal,
 	e_node_less_than,
+	e_node_less_than_or_equal,
 	e_node_unary_minus,
 	e_node_logic_or,
 	e_node_logic_and,
@@ -64,6 +66,8 @@ global constexpr s_operator_data c_operator_data[] = {
 	{e_token_logic_not, e_node_logic_not, 15},
 	{e_token_dot, e_node_member_access, 16},
 	{e_token_greater_than, e_node_greater_than, 9},
+	{e_token_greater_than_or_equal, e_node_greater_than_or_equal, 9},
+	{e_token_less_than_or_equal, e_node_less_than_or_equal, 9},
 	{e_token_less_than, e_node_less_than, 9},
 	{e_token_logic_or, e_node_logic_or, 3},
 	{e_token_logic_and, e_node_logic_and, 4},
@@ -89,6 +93,7 @@ struct s_node
 	int line;
 	s_token token;
 	int pointer_level;
+	b8 dont_generate;
 
 	// @TODO(tkap, 10/02/2024): probably dont want this
 	s_node* left;
@@ -161,6 +166,7 @@ struct s_node
 		{
 			s_node* condition;
 			s_node* body;
+			s_node* nelse;
 		} nif;
 
 		struct
@@ -175,9 +181,11 @@ struct s_node
 
 		struct
 		{
+			s_token iterator_index_name;
 			s_token iterator_name;
 			s_node* expr;
 			s_node* body;
+			s_node* upper_bound;
 		} nfor;
 
 		struct

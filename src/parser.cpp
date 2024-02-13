@@ -551,9 +551,6 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 			tokenizer = copy;
 			result.node.nfor.iterator_name = token;
 		}
-		else {
-			result.node.nfor.iterator_name = {.len = 2, .at = "it"};
-		}
 
 		s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
 		if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after 'for'"); }
@@ -584,6 +581,15 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 		}
 		tokenizer = pr.tokenizer;
 		result.node.nif.body = alloc_node(pr.node, arena);
+
+		if(tokenizer.consume_token("else", reporter)) {
+			pr = parse_statement(tokenizer, reporter, arena);
+			if(!pr.success || pr.node.type != e_node_compound) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "Expected '{' after 'else'");
+			}
+			tokenizer = pr.tokenizer;
+			result.node.nif.nelse = alloc_node(pr.node, arena);
+		}
 
 		goto success;
 	}
@@ -688,7 +694,7 @@ func b8 is_keyword(s_token token)
 {
 	// @TODO(tkap, 10/02/2024):
 	constexpr char* c_keywords[] = {
-		"if", "struct", "for", "while", "enum",
+		"if", "struct", "for", "while", "enum", "else",
 	};
 	for(int keyword_i = 0; keyword_i < array_count(c_keywords); keyword_i++) {
 		if(token.equals(c_keywords[keyword_i])) { return true; }

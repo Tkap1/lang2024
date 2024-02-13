@@ -26,6 +26,13 @@ struct s_v2
 }
 
 
+struct s_v2i
+{
+	int x,
+	int y,
+}
+
+
 external_func void SetTraceLogLevel(s32);
 external_func void SetConfigFlags(u32);
 external_func void InitWindow(s32, s32, char*);
@@ -39,6 +46,7 @@ external_func int rand();
 external_func s_v2 GetMousePosition();
 external_func b32 IsMouseButtonPressed(int);
 external_func b32 IsMouseButtonDown(int);
+external_func float floorf(float);
 
 struct s_player
 {
@@ -54,6 +62,17 @@ s8[c_max_tiles][c_max_tiles] tiles;
 func s_v2 v2(float x, float y)
 {
 	return {x, y};
+}
+
+func s_v2i v2i(int x, int y)
+{
+	return {x, y};
+}
+
+func b8 rect_collides_rect(s_v2 pos1, s_v2 size1, s_v2 pos2, s_v2 size2)
+{
+	return pos1.x + size1.x > pos2.x && pos1.x < pos2.x + size2.x &&
+		pos1.y + size1.y > pos2.y && pos1.y < pos2.y + size2.y;
 }
 
 func int main()
@@ -72,6 +91,19 @@ func int main()
 		ClearBackground(BLACK);
 
 		s_v2 mouse = GetMousePosition();
+		s_v2 object = v2(400, 400);
+		s_v2 object_size = v2(64, 64);
+
+		s_color c = GREEN;
+		if rect_collides_rect(mouse, v2(32, 32), object, object_size) {
+			c = RED;
+		}
+		DrawRectangle(mouse.x, mouse.y, 32, 32, c);
+		DrawRectangle(object.x, object.y, 64, 64, c);
+
+
+		s_v2 player_size = v2(c_tile_size, c_tile_size * 2);
+		s_v2 tile_size = v2(c_tile_size, c_tile_size);
 
 		if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
 			int x = mouse.x / c_tile_size;
@@ -98,8 +130,63 @@ func int main()
 		}
 
 		player.vel.y += 0.1;
+		player.pos.x += player.vel.x;
+
+		s_v2i[9] offsets = {
+			v2i(-1, -1), v2i(0, -1), v2i(1, 1),
+			v2i(-1, 0), v2i(0, 0), v2i(1, 0),
+			v2i(-1, 1), v2i(0, 1), v2i(1, 1),
+		};
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		s_v2i player_index = v2i(floorf(player.pos.x / c_tile_size), floorf(player.pos.y / c_tile_size));
+		for offsets {
+			it.x += player_index.x;
+			it.y += player_index.y;
+			if it.x < 0 || it.x >= c_max_tiles { continue; }
+			if it.y < 0 || it.y >= c_max_tiles { continue; }
+			s8 tile = tiles[it.y][it.x];
+			s_v2 tile_pos = v2(it.x * c_tile_size, it.y * c_tile_size);
+			if tile > 0 {
+				if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
+					if player.vel.x > 0 {
+						player.pos.x = tile_pos.x - player_size.x;
+					}
+					else {
+						player.pos.x = tile_pos.x + tile_size.x;
+					}
+					player.vel.x = 0;
+				}
+			}
+		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		x collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 		player.pos.y += player.vel.y;
-		DrawRectangle(player.pos.x, player.pos.y, c_tile_size, c_tile_size * 2, BLUE);
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		player_index = v2i(floorf(player.pos.x / c_tile_size), floorf(player.pos.y / c_tile_size));
+		for offsets {
+			it.x += player_index.x;
+			it.y += player_index.y;
+			if it.x < 0 || it.x >= c_max_tiles { continue; }
+			if it.y < 0 || it.y >= c_max_tiles { continue; }
+			s8 tile = tiles[it.y][it.x];
+			s_v2 tile_pos = v2(it.x * c_tile_size, it.y * c_tile_size);
+			if tile > 0 {
+				if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
+					if player.vel.y > 0 {
+						player.pos.y = tile_pos.y - player_size.y;
+					}
+					else {
+						player.pos.y = tile_pos.y + tile_size.y;
+					}
+					player.vel.y = 0;
+				}
+			}
+		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		y collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+		DrawRectangle(player.pos.x, player.pos.y, player_size.x, player_size.y, BLUE);
 
 		DrawFPS(16, 16);
 

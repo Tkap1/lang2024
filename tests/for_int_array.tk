@@ -1,0 +1,9 @@
+
+
+
+func int main()
+{
+	int[32] foo;
+	for foo {
+	}
+}

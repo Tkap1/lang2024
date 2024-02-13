@@ -8,6 +8,8 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 
 	{
 		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 4, .at = "void"};
 		node.basic_type.name = "void";
 		node.basic_type.size_in_bytes = 0;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
@@ -15,6 +17,8 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 
 	{
 		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 3, .at = "int"};
 		node.basic_type.name = "int";
 		node.basic_type.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
@@ -22,6 +26,8 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 
 	{
 		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 3, .at = "s32"};
 		node.basic_type.name = "s32";
 		node.basic_type.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
@@ -29,6 +35,8 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 
 	{
 		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 3, .at = "u32"};
 		node.basic_type.is_unsigned = true;
 		node.basic_type.name = "u32";
 		node.basic_type.size_in_bytes = 4;
@@ -37,6 +45,8 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 
 	{
 		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 3, .at = "b32"};
 		node.basic_type.name = "b32";
 		node.basic_type.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
@@ -44,6 +54,17 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 
 	{
 		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 2, .at = "b8"};
+		node.basic_type.name = "b8";
+		node.basic_type.size_in_bytes = 1;
+		add_type_to_scope(data, alloc_node(node, arena), arena);
+	}
+
+	{
+		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 2, .at = "s8"};
 		node.basic_type.name = "s8";
 		node.basic_type.size_in_bytes = 1;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
@@ -51,6 +72,8 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 
 	{
 		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 2, .at = "u8"};
 		node.basic_type.name = "u8";
 		node.basic_type.is_unsigned = true;
 		node.basic_type.size_in_bytes = 1;
@@ -59,6 +82,8 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 
 	{
 		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 5, .at = "float"};
 		node.basic_type.name = "float";
 		node.basic_type.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
@@ -271,12 +296,63 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			if(!type_check_expr(node->nfor.expr, reporter, data, arena)) {
 				return false;
 			}
+			assert(node->nfor.expr->var_type);
+
+			s_node* iter_type;
+			s_node temp = zero;
+			if(node->nfor.expr->var_type->type == e_node_array) {
+				if(node->nfor.iterator_name.len <= 0) {
+					node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 8, .at = "it_index"};
+					node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
+				}
+				else {
+					char* str = alloc_str(arena, "%s_index", node->nfor.iterator_name.str());
+					node->nfor.iterator_index_name = {.type = e_token_identifier, .len = (int)strlen(str), .at = str};
+				}
+
+				s_node* it_index = alloc_node(statement_str_to_node(format_str("int %s = 0;", node->nfor.iterator_index_name.str()), reporter, arena), arena);
+				it_index->dont_generate = true;
+				// @TODO(tkap, 13/02/2024): Should this be ->var_type?
+				iter_type = node->nfor.expr->var_type->left;
+				temp.type = e_node_var_decl;
+				temp.var_decl.type = iter_type;
+				temp.var_decl.value = alloc_node(statement_str_to_node(alloc_str(arena, "%s[%s];", node->nfor.expr->token.str(), node->nfor.iterator_index_name.str()), reporter, arena), arena);
+				temp.var_decl.name = node->nfor.iterator_name;
+				s_node* old = node->nfor.body->compound.statements;
+				node->nfor.body->compound.statements = it_index;
+				it_index->next = alloc_node(temp, arena);
+				it_index->next->next = old;
+				node->nfor.upper_bound = node->nfor.expr->var_type->array.size_expr;
+			}
+			else {
+				if(node->nfor.iterator_name.len <= 0) {
+					node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 2, .at = "it"};
+					node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
+				}
+				else {
+					node->nfor.iterator_index_name = node->nfor.iterator_name;
+				}
+
+				iter_type = node->nfor.expr->var_type;
+				temp.type = e_node_var_decl;
+				temp.dont_generate = true;
+				temp.var_decl.type = iter_type;
+				temp.var_decl.value = alloc_node(statement_str_to_node("0;", reporter, arena), arena);
+				temp.var_decl.name = node->nfor.iterator_name;
+				s_node* temp2 = alloc_node(temp, arena);
+				s_node* old = node->nfor.body->compound.statements;
+				node->nfor.body->compound.statements = temp2;
+				temp2->next = old;
+				node->nfor.upper_bound = node->nfor.expr;
+			}
+			assert(iter_type);
+			assert(iter_type->type == e_node_type);
+
 			// @TODO(tkap, 12/02/2024): This is fucked. we are going to add the "it" variable to the scope the for loop is in, rather than inside the for loop
 			// @TODO(tkap, 12/02/2024): We are going to add this multiple times!!!
-			s_node temp = statement_str_to_node(format_str("int %s = 0;", node->nfor.iterator_name.str()), reporter, arena);
-			b8 success = type_check_statement(&temp, reporter, data, arena);
-			assert(success);
-			add_var_to_scope(data, alloc_node(temp, arena), arena);
+			// b8 success = type_check_statement(&temp, reporter, data, arena);
+			// assert(success);
+			// add_var_to_scope(data, alloc_node(temp, arena), arena);
 			if(!type_check_statement(node->nfor.body, reporter, data, arena)) {
 				return false;
 			}
@@ -316,7 +392,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			}
 			node->var_type = node->var_decl.type->var_type;
 			if(node->var_decl.value) {
-				if(!type_check_expr(node->var_decl.value, reporter, data, arena, node->var_decl.type)) {
+				if(!type_check_expr(node->var_decl.value, reporter, data, arena)) {
 					return false;
 				}
 			}
@@ -329,6 +405,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			s_node* nfunc = get_latest_func(data);
 			assert(nfunc);
 			if(node->nreturn.expression) {
+				// @Fixme(tkap, 13/02/2024): we cant use this last param for struct literals and return checking
 				if(!type_check_expr(node->nreturn.expression, reporter, data, arena, nfunc->var_type)) {
 					return false;
 				}
@@ -349,8 +426,15 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 {
 	if(node->type_checked) { return true; }
 	switch(node->type) {
-		case e_node_integer:
+		case e_node_integer: {
+			node->var_type = get_type_by_name("int", data);
+			assert(node->var_type);
+			node->type_checked = true;
+			return true;
+		} break;
 		case e_node_float: {
+			node->var_type = get_type_by_name("float", data);
+			assert(node->var_type);
 			node->type_checked = true;
 			return true;
 		} break;
@@ -480,6 +564,18 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_less_than: {
 			// @TODO(tkap, 10/02/2024):
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_less_than_or_equal: {
+			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena)) {
+				return false;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena)) {
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
@@ -786,6 +882,7 @@ func s_node* get_latest_func(t_scope_arr* data)
 		s_scope** scope2 = data->get(scope2_i);
 		s_scope* scope1 = *scope2;
 		if(!scope1) { continue; }
+		if(scope1->funcs.count <= 0) { continue; }
 		return scope1->funcs.get_last();
 	}
 	return null;

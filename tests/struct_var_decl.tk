@@ -1,0 +1,13 @@
+
+
+struct s_foo
+{
+	int member,
+}
+
+const s_foo c_foo;
+
+func int main()
+{
+	s_foo foo = c_foo;
+}

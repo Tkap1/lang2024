@@ -1,0 +1,14 @@
+
+
+struct s_v2i
+{
+	int x,
+	int y,
+}
+
+func int main()
+{
+	s_v2i[32] foo;
+	for foo {
+	}
+}

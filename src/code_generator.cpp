@@ -4,6 +4,7 @@ func b8 generate_code(s_node* ast, s_lin_arena* arena)
 {
 	t_code_builder* builder = (t_code_builder*)arena->alloc_zero(sizeof(t_code_builder));
 	builder->add_line("#include <stdint.h>");
+	builder->add_line("#include <math.h>");
 	builder->add_line("typedef int8_t s8;");
 	builder->add_line("typedef int16_t s16;");
 	builder->add_line("typedef int32_t s32;");
@@ -77,6 +78,8 @@ func void generate_func_decl_arg(s_node* node, t_code_builder* builder, b8 is_ex
 
 func void generate_statement(s_node* node, t_code_builder* builder)
 {
+	if(node->dont_generate) { return; }
+
 	s_code_gen_context context = zero;
 	switch(node->type) {
 		case e_node_func_call: {
@@ -124,8 +127,8 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 		} break;
 
 		case e_node_for: {
-			char* iterator_name = node->nfor.iterator_name.str();
-			builder->add_line_tabs("for(int %s = 0; %s < %s; %s += 1)", iterator_name, iterator_name, node_to_c_str(node->nfor.expr, context), iterator_name);
+			char* iterator_name = node->nfor.iterator_index_name.str();
+			builder->add_line_tabs("for(int %s = 0; %s < %s; %s += 1)", iterator_name, iterator_name, node_to_c_str(node->nfor.upper_bound, context), iterator_name);
 			generate_statement(node->nfor.body, builder);
 		} break;
 
@@ -161,6 +164,8 @@ func void generate_struct_member(s_node* node, t_code_builder* builder)
 
 func char* node_to_c_str(s_node* node, s_code_gen_context context)
 {
+	if(node->dont_generate) { return ""; }
+
 	switch(node->type) {
 		case e_node_type: {
 			s_str_builder<1024> builder;
@@ -252,6 +257,14 @@ func char* node_to_c_str(s_node* node, s_code_gen_context context)
 
 		case e_node_greater_than: {
 			return format_str("(%s > %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+		} break;
+
+		case e_node_greater_than_or_equal: {
+			return format_str("(%s >= %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+		} break;
+
+		case e_node_less_than_or_equal: {
+			return format_str("(%s <= %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
 		case e_node_less_than: {

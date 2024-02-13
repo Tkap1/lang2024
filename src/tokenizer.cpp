@@ -145,6 +145,20 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 		at += 2;
 	}
 
+	else if(*at == '>' && at[1] == '=') {
+		token.type = e_token_greater_than_or_equal;
+		token.at = at;
+		token.len = 2;
+		at += 2;
+	}
+
+	else if(*at == '<' && at[1] == '=') {
+		token.type = e_token_less_than_or_equal;
+		token.at = at;
+		token.len = 2;
+		at += 2;
+	}
+
 	else if(*at == '{') {
 		token.type = e_token_open_brace;
 		token.at = at;
