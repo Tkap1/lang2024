@@ -343,9 +343,11 @@ func s_parse_result parse_sub_expression(s_tokenizer tokenizer, s_error_reporter
 		// @TODO(tkap, 10/02/2024): we can make this into a for loop. this is cringe
 		if(pr.operator_data.node_type == e_node_logic_not) {
 			node_type = e_node_logic_not;
+			pr.operator_data.precedence = 15;
 		}
 		else if(pr.operator_data.node_type == e_node_subtract) {
 			node_type = e_node_unary_minus;
+			pr.operator_data.precedence = 15;
 		}
 		else {
 			goto end;
@@ -630,6 +632,7 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 			constexpr s_temp c_assignments[] = {
 				{e_token_times_equals, e_node_multiply},
 				{e_token_plus_equals, e_node_add},
+				{e_token_minus_equals, e_node_subtract},
 			};
 
 			// @Note(tkap, 11/02/2024): We are turning "a *= b" into "a = a * (b)"

@@ -2,6 +2,6 @@
 
 
 pushd build
-cl ..\output.c -W4 -nologo -link ..\raylibdll.lib
+cl ..\output.c -W4 -nologo -link ..\raylib.lib
 popd
 build\output.exe

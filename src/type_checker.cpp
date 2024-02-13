@@ -651,6 +651,15 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			return false;
 		} break;
 
+		case e_node_unary_minus: {
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			node->var_type = node->left->var_type;
+			node->type_checked = true;
+			return true;
+		} break;
+
 		invalid_default_case;
 	}
 	return false;

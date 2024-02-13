@@ -135,6 +135,10 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 		case e_node_if: {
 			builder->add_line_tabs("if(%s)", node_to_c_str(node->nwhile.condition, context));
 			generate_statement(node->nif.body, builder);
+			if(node->nif.nelse) {
+				builder->add_line_tabs("else");
+				generate_statement(node->nif.nelse, builder);
+			}
 		} break;
 
 		case e_node_compound: {
@@ -203,7 +207,7 @@ func char* node_to_c_str(s_node* node, s_code_gen_context context)
 
 		case e_node_unary_minus: {
 			char* str = node_to_c_str(node->left, context);
-			return format_str("-%s", str);
+			return format_str("(-%s)", str);
 		} break;
 
 		case e_node_member_access: {
