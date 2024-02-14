@@ -569,6 +569,8 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_expr(node->right, reporter, data, arena, context)) {
 				return false;
 			}
+			// @TODO(tkap, 14/02/2024): Not sure about this
+			node->var_type = node->left->var_type->left->var_type;
 			// @TODO(tkap, 12/02/2024): check that left is array
 			node->type_checked = true;
 			return true;
@@ -690,53 +692,16 @@ func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_report
 	unreferenced(arena);
 
 	if(member->type_checked) { return true; }
-	b8 result = true;
 
 	// @TODO(tkap, 10/02/2024): Handle a member of type current_struct*
-	// @TODO(tkap, 10/02/2024): check that array size makes sense
-	// @TODO(tkap, 12/02/2024): Remove this garbage, just call type_check
-	s_node* type = node_to_basic_type(member->var_decl.type, data);
-	if(!type) {
-		result = false;
+	if(!type_check_statement(member->var_decl.type, reporter, data, arena, context)) {
 		reporter->recoverable_error(member->var_decl.type->token.file, member->var_decl.type->token.line, "Struct member '%s' has unknown type '%s'", member->var_decl.name.str(), node_to_str(member->var_decl.type));
+		return false;
 	}
-	// @TODO(tkap, 12/02/2024): We actually want member->var_type, but we are not setting that still
-	member->var_type = member->var_decl.type;
+	member->var_type = member->var_decl.type->var_type;
 
-	member->type_checked = result;
-	if(result) {
-		member->var_type = type;
-		// printf("type checked %s %s\n", node_to_str(member->var_decl.type), member->var_decl.name.str());
-	}
-	return result;
-}
-
-// func b8 compare_s_type(s_type a, s_type b)
-// {
-// 	return strcmp(a.name, b.name) == 0;
-// }
-
-func s_node* node_to_basic_type(s_node* node, t_scope_arr* data)
-{
-	switch(node->type) {
-		case e_node_type: {
-			s_node* type = get_type_by_name(node->token.str(), data);
-			if(type) {
-				return type;
-			}
-			type = get_struct_by_name_except(node->token.str(), null, data);
-			if(type) {
-				return type;
-			}
-		} break;
-
-		case e_node_array: {
-			return node_to_basic_type(node->left, data);
-		} break;
-
-		invalid_default_case;
-	}
-	return null;
+	member->type_checked = true;
+	return true;
 }
 
 func char* node_to_str(s_node* node)

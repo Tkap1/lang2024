@@ -159,6 +159,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/return_struct_literal.tk", true},
 		{"tests/func_arg.tk", true},
 		{"tests/func_arg2.tk", true},
+		{"tests/member_access_subscript.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

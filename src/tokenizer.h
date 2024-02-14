@@ -32,6 +32,7 @@ enum e_token
 	e_token_plus_equals,
 	e_token_minus_equals,
 	e_token_times_equals,
+	e_token_divide_equals,
 	e_token_comparison,
 	e_token_colon,
 };

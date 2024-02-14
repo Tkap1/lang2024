@@ -70,6 +70,7 @@ external_func void SetTextureFilter(s_texture, int);
 external_func void DrawTexture(s_texture, int, int, s_color);
 external_func void DrawTextureEx(s_texture, s_v2, float, float, s_color);
 external_func float sinf(float);
+external_func float sqrtf(float);
 external_func double GetTime();
 
 struct s_player
@@ -122,6 +123,37 @@ func b8 rect_collides_rect(s_v2 pos1, s_v2 size1, s_v2 pos2, s_v2 size2)
 		pos1.y + size1.y > pos2.y && pos1.y < pos2.y + size2.y;
 }
 
+func s_v2 get_center(s_v2 pos, s_v2 size)
+{
+	s_v2 result = pos;
+	result.x += size.x / 2;
+	result.y += size.y / 2;
+	return result;
+}
+
+func float v2_length(s_v2 v)
+{
+	return sqrtf(v.x * v.x + v.y * v.y);
+}
+
+func s_v2 v2_normalized(s_v2 v)
+{
+	float length = v2_length(v);
+	if(length > 0) {
+		v.x /= length;
+		v.y /= length;
+	}
+	return v;
+}
+
+func s_v2 dir_from_to(s_v2 from, s_v2 to)
+{
+	s_v2 result = to;
+	result.x -= from.x;
+	result.y -= from.y;
+	return v2_normalized(result);
+}
+
 func int main()
 {
 
@@ -161,6 +193,8 @@ func int main()
 		tiles[bottom_tile][x] = 1;
 	}
 
+	s_v2 projectile_size = v2(32, 32);
+
 	while !WindowShouldClose() {
 		BeginDrawing();
 		ClearBackground(BLACK);
@@ -183,15 +217,23 @@ func int main()
 		// 	tiles[y][x] = 2;
 		// }
 
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		create projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
 			for c_max_projectiles {
 				if !projectiles.active[it] {
 					projectiles.active[it] = 1;
-					projectiles.pos[it] = mouse;
+					s_v2 player_center = get_center(player.pos, player_size);
+					projectiles.pos[it] = player_center;
+					projectiles.pos[it].x -= projectile_size.x / 2;
+					projectiles.pos[it].y -= projectile_size.y / 2;
+					projectiles.vel[it] = dir_from_to(projectiles.pos[it], mouse);
+					projectiles.vel[it].x *= 10;
+					projectiles.vel[it].y *= 10;
 					break;
 				}
 			}
 		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		create projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 		s_v2 dir;
 		if IsKeyDown(KEY_LEFT) {
@@ -229,7 +271,8 @@ func int main()
 		player.pos.x += player.vel.x;
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		s_v2i player_index = v2i(floorf(player.pos.x / tile_size.x), floorf(player.pos.y / tile_size.x));
+		s_v2 player_center = get_center(player.pos, player_size);
+		s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
 		for y: 7 {
 			int yy = -3 + y;
 			for x: 7 {
@@ -258,7 +301,8 @@ func int main()
 		player.pos.y += player.vel.y;
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		player_index = v2i(floorf(player.pos.x / tile_size.x), floorf(player.pos.y / tile_size.x));
+		player_center = get_center(player.pos, player_size);
+		player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
 		for y: 7 {
 			int yy = -3 + y;
 			for x: 7 {
@@ -313,11 +357,15 @@ func int main()
 			DrawTextureEx(hand, cam_transform(hand_pos), 0, player_scale, WHITE);
 		}
 
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		for c_max_projectiles {
 			if !projectiles.active[it] { continue; }
-			s_v2 pos = projectiles.pos[it];
-			DrawRectangle(pos.x, pos.y, 32, 32, RED);
+			projectiles.pos[it].x += projectiles.vel[it].x;
+			projectiles.pos[it].y += projectiles.vel[it].y;
+			s_v2 pos = cam_transform(projectiles.pos[it]);
+			DrawRectangle(pos.x, pos.y, projectile_size.x, projectile_size.y, RED);
 		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 		DrawFPS(16, 16);
 

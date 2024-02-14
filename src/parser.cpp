@@ -646,9 +646,10 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 				e_node node_type;
 			};
 			constexpr s_temp c_assignments[] = {
-				{e_token_times_equals, e_node_multiply},
 				{e_token_plus_equals, e_node_add},
 				{e_token_minus_equals, e_node_subtract},
+				{e_token_times_equals, e_node_multiply},
+				{e_token_divide_equals, e_node_divide},
 			};
 
 			// @Note(tkap, 11/02/2024): We are turning "a *= b" into "a = a * (b)"
