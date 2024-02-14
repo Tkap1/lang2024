@@ -1,0 +1,18 @@
+
+
+struct s_v2
+{
+	float x,
+	float y,
+}
+
+struct s_player
+{
+	import s_v2 pos,
+}
+
+func void foo()
+{
+	s_player player;
+	player.pos.x = 1;
+}

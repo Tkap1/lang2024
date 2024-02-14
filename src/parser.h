@@ -114,6 +114,7 @@ struct s_node
 
 		struct
 		{
+			b8 is_import; // @Note(tkap, 14/02/2024): Used by struct members
 			s_node* type;
 			s_node* value;
 			s_token name;

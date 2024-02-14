@@ -481,12 +481,10 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			b8 success = false;
 			if(context.member_access) {
 				assert(context.member_access->type == e_node_struct);
-				for_node(member, context.member_access->nstruct.members) {
-					if(node->token.equals(member->var_decl.name)) {
-						node->var_type = member->var_type;
-						success = true;
-						break;
-					}
+				s_node* member = get_struct_member(node->token.str(), context.member_access, data);
+				if(member) {
+					node->var_type = member->var_type;
+					success = true;
 				}
 			}
 			else {
@@ -1041,6 +1039,21 @@ func s_node* get_latest_func(t_scope_arr* data)
 		if(!scope1) { continue; }
 		if(scope1->funcs.count <= 0) { continue; }
 		return scope1->funcs.get_last();
+	}
+	return null;
+}
+
+func s_node* get_struct_member(char* name, s_node* nstruct, t_scope_arr* data)
+{
+	assert(nstruct->type == e_node_struct);
+	for_node(member, nstruct->nstruct.members) {
+		if(member->var_decl.name.equals(name)) {
+			return member;
+		}
+		if(member->var_decl.is_import) {
+			s_node* result = get_struct_member(name, member->var_type, data);
+			if(result) { return result; }
+		}
 	}
 	return null;
 }

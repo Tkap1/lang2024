@@ -76,7 +76,7 @@ external_func float GetFrameTime();
 
 struct s_player
 {
-	s_v2 pos,
+	import s_v2 pos,
 	s_v2 vel,
 }
 

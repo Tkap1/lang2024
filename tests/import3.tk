@@ -1,0 +1,14 @@
+
+
+struct s_v2
+{
+	float x,
+	float y,
+}
+
+struct s_player
+{
+	import s_v2 pos,
+	float x,
+	float y,
+}

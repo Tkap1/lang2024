@@ -29,3 +29,4 @@ func s_node* get_var_by_name(char* name, t_scope_arr* data);
 func b8 is_const(s_node* node, t_scope_arr* data);
 func s_node* get_func_by_name(char* name, t_scope_arr* data);
 func s_node* get_latest_func(t_scope_arr* data);
+func s_node* get_struct_member(char* name, s_node* nstruct, t_scope_arr* data);

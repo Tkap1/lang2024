@@ -64,13 +64,16 @@ func s_parse_result parse_struct(s_tokenizer tokenizer, s_error_reporter* report
 
 		s_node** curr_struct_member = &result.node.nstruct.members;
 		while(true) {
+			s_node member = zero;
+			if(tokenizer.consume_token("import", reporter)) {
+				member.var_decl.is_import = true;
+			}
 			s_parse_result pr = parse_type(tokenizer, reporter, arena);
 			if(!pr.success) { break; }
 			tokenizer = pr.tokenizer;
 			if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) {
 				reporter->fatal(tokenizer.file, tokenizer.line, "Expected a name after struct member type");
 			}
-			s_node member = zero;
 			member.type = e_node_var_decl;
 			member.var_decl.name = token;
 			member.var_decl.type = alloc_node(pr.node, arena);
@@ -723,7 +726,7 @@ func b8 is_keyword(s_token token)
 {
 	// @TODO(tkap, 10/02/2024):
 	constexpr char* c_keywords[] = {
-		"if", "struct", "for", "while", "enum", "else",
+		"if", "struct", "for", "while", "enum", "else", "import"
 	};
 	for(int keyword_i = 0; keyword_i < array_count(c_keywords); keyword_i++) {
 		if(token.equals(c_keywords[keyword_i])) { return true; }
