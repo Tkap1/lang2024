@@ -130,7 +130,8 @@ func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_r
 		}
 		return false;
 	}
-	if(!type_check_ast(ast, reporter, arena)) {
+	ast = type_check_ast(ast, reporter, arena);
+	if(!ast) {
 		return false;
 	}
 
@@ -160,6 +161,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/func_arg.tk", true},
 		{"tests/func_arg2.tk", true},
 		{"tests/member_access_subscript.tk", true},
+		{"tests/no_forward_decl.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

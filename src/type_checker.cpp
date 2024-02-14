@@ -1,7 +1,9 @@
 
 
-func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* arena)
+func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* arena)
 {
+	s_node* out_ast = null;
+	s_node** target = &out_ast;
 	s_scope* base_scope = null;
 	t_scope_arr* data = (t_scope_arr*)arena->alloc_zero(sizeof(t_scope_arr));
 	data->add(&base_scope);
@@ -107,6 +109,7 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 			if(node->type_checked) { continue; }
 			b8 result = type_check_node(node, reporter, data, arena, context);
 			if(result) {
+				target = advance_node_remove_next(target, *node, arena);
 				successfully_typechecked_something = true;
 			}
 			else {
@@ -117,11 +120,11 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 		if(!successfully_typechecked_something) {
 			if(reporter->has_error) {
 				reporter->fatal(null, 0, reporter->error_str);
-				return false;
+				return null;
 			}
 			else {
 				reporter->fatal(null, 0, "failed to typecheck a thing");
-				return false;
+				return null;
 			}
 		}
 	}
@@ -132,7 +135,7 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 		s_node* dupe = get_struct_by_name_except(node->token.str(), node, data);
 		if(dupe) {
 			reporter->fatal(dupe->token.file, dupe->token.line, "Duplicate struct name '%s'", dupe->token.str());
-			return false;
+			return null;
 		}
 
 		// @Note(tkap, 10/02/2024): Check duplicate struct members
@@ -141,13 +144,13 @@ func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* are
 				if(member == other_member) { continue; }
 				if(member->var_decl.name.equals(other_member->var_decl.name)) {
 					reporter->fatal(other_member->var_decl.name.file, other_member->var_decl.name.line, "Duplicate struct member name '%s' on struct '%s'", member->var_decl.name.str(), node->token.str());
-					return false;
+					return null;
 				}
 			}
 		}
 	}
 
-	return true;
+	return out_ast;
 }
 
 func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context)

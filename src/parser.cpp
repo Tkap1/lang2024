@@ -703,6 +703,14 @@ func s_node** advance_node(s_node** a2, s_node node, s_lin_arena* arena)
 	return &a1->next;
 }
 
+func s_node** advance_node_remove_next(s_node** a2, s_node node, s_lin_arena* arena)
+{
+	node.next = null;
+	*a2 = alloc_node(node, arena);
+	s_node* a1 = *a2;
+	return &a1->next;
+}
+
 func s_node* alloc_node(s_node node, s_lin_arena* arena)
 {
 	s_node* new_node = (s_node*)arena->alloc(sizeof(s_node));

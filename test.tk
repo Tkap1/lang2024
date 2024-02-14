@@ -99,61 +99,6 @@ s8[c_max_tiles][c_max_tiles] tiles;
 s_camera camera;
 
 
-func s_v2 cam_transform(s_v2 v)
-{
-	s_v2 result = v;
-	result.x -= camera.x;
-	result.y -= camera.y;
-	return result;
-}
-
-func s_v2 v2(float x, float y)
-{
-	return {x, y};
-}
-
-func s_v2i v2i(int x, int y)
-{
-	return {x, y};
-}
-
-func b8 rect_collides_rect(s_v2 pos1, s_v2 size1, s_v2 pos2, s_v2 size2)
-{
-	return pos1.x + size1.x > pos2.x && pos1.x < pos2.x + size2.x &&
-		pos1.y + size1.y > pos2.y && pos1.y < pos2.y + size2.y;
-}
-
-func s_v2 get_center(s_v2 pos, s_v2 size)
-{
-	s_v2 result = pos;
-	result.x += size.x / 2;
-	result.y += size.y / 2;
-	return result;
-}
-
-func float v2_length(s_v2 v)
-{
-	return sqrtf(v.x * v.x + v.y * v.y);
-}
-
-func s_v2 v2_normalized(s_v2 v)
-{
-	float length = v2_length(v);
-	if(length > 0) {
-		v.x /= length;
-		v.y /= length;
-	}
-	return v;
-}
-
-func s_v2 dir_from_to(s_v2 from, s_v2 to)
-{
-	s_v2 result = to;
-	result.x -= from.x;
-	result.y -= from.y;
-	return v2_normalized(result);
-}
-
 func int main()
 {
 
@@ -204,18 +149,7 @@ func int main()
 		camera.x += 1.1;
 
 		s_v2 mouse = GetMousePosition();
-
-		// if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
-		// 	int x = mouse.x / tile_size.x;
-		// 	int y = mouse.y / tile_size.x;
-		// 	tiles[y][x] = 1;
-		// }
-
-		// if IsMouseButtonDown(MOUSE_BUTTON_RIGHT) {
-		// 	int x = mouse.x / tile_size.x;
-		// 	int y = mouse.y / tile_size.x;
-		// 	tiles[y][x] = 2;
-		// }
+		s_v2 world_mouse = to_world(mouse);
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		create projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
@@ -226,7 +160,7 @@ func int main()
 					projectiles.pos[it] = player_center;
 					projectiles.pos[it].x -= projectile_size.x / 2;
 					projectiles.pos[it].y -= projectile_size.y / 2;
-					projectiles.vel[it] = dir_from_to(projectiles.pos[it], mouse);
+					projectiles.vel[it] = dir_from_to(projectiles.pos[it], world_mouse);
 					projectiles.vel[it].x *= 10;
 					projectiles.vel[it].y *= 10;
 					break;
@@ -256,14 +190,14 @@ func int main()
 				s8 tile = tiles[y][x];
 				s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
 				if tile == 0 {
-					DrawTextureEx(tile0, cam_transform(tile_pos), 0, tile_scale, DARK);
+					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, DARK);
 				}
 				if tile == 1 {
 					// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
-					DrawTextureEx(tile0, cam_transform(tile_pos), 0, tile_scale, WHITE);
+					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
 				}
 				if tile == 2 {
-					DrawTextureEx(tile0, cam_transform(tile_pos), 0, tile_scale, WHITE);
+					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
 				}
 			}
 		}
@@ -331,14 +265,14 @@ func int main()
 		// DrawRectangle(player.pos.x, player.pos.y, player_size.x, player_size.y, BLUE);
 		// DrawTexture(texture, player.pos.x, player.pos.y, WHITE);
 		{
-			DrawTextureEx(texture, cam_transform(player.pos), 0, player_scale, WHITE);
+			DrawTextureEx(texture, to_screen(player.pos), 0, player_scale, WHITE);
 		}
 
 		{
 			s_v2 face_pos = player.pos;
 			face_pos.x += player_size.x / 4;
 			face_pos.y += player_size.y / 4;
-			DrawTextureEx(face, cam_transform(face_pos), 0, player_scale, WHITE);
+			DrawTextureEx(face, to_screen(face_pos), 0, player_scale, WHITE);
 		}
 
 		{
@@ -346,7 +280,7 @@ func int main()
 			hand_pos.x -= 80 * player_scale;
 			hand_pos.y += 20;
 			hand_pos.y += sinf(time * 6) * 5;
-			DrawTextureEx(hand, cam_transform(hand_pos), 0, player_scale, WHITE);
+			DrawTextureEx(hand, to_screen(hand_pos), 0, player_scale, WHITE);
 		}
 
 		{
@@ -354,7 +288,7 @@ func int main()
 			hand_pos.x += 200 * player_scale;
 			hand_pos.y += 20;
 			hand_pos.y += sinf(time * 6) * 5;
-			DrawTextureEx(hand, cam_transform(hand_pos), 0, player_scale, WHITE);
+			DrawTextureEx(hand, to_screen(hand_pos), 0, player_scale, WHITE);
 		}
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -362,7 +296,7 @@ func int main()
 			if !projectiles.active[it] { continue; }
 			projectiles.pos[it].x += projectiles.vel[it].x;
 			projectiles.pos[it].y += projectiles.vel[it].y;
-			s_v2 pos = cam_transform(projectiles.pos[it]);
+			s_v2 pos = to_screen(projectiles.pos[it]);
 			DrawRectangle(pos.x, pos.y, projectile_size.x, projectile_size.y, RED);
 		}
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -371,4 +305,67 @@ func int main()
 
 		EndDrawing();
 	}
+}
+
+func s_v2 to_screen(s_v2 v)
+{
+	s_v2 result = v;
+	result.x -= camera.x;
+	result.y -= camera.y;
+	return result;
+}
+
+func s_v2 to_world(s_v2 v)
+{
+	s_v2 result = v;
+	result.x += camera.x;
+	result.y += camera.y;
+	return result;
+}
+
+func s_v2 v2(float x, float y)
+{
+	return {x, y};
+}
+
+func s_v2i v2i(int x, int y)
+{
+	return {x, y};
+}
+
+func b8 rect_collides_rect(s_v2 pos1, s_v2 size1, s_v2 pos2, s_v2 size2)
+{
+	return pos1.x + size1.x > pos2.x && pos1.x < pos2.x + size2.x &&
+		pos1.y + size1.y > pos2.y && pos1.y < pos2.y + size2.y;
+}
+
+func s_v2 get_center(s_v2 pos, s_v2 size)
+{
+	s_v2 result = pos;
+	result.x += size.x / 2;
+	result.y += size.y / 2;
+	return result;
+}
+
+func float v2_length(s_v2 v)
+{
+	return sqrtf(v.x * v.x + v.y * v.y);
+}
+
+func s_v2 v2_normalized(s_v2 v)
+{
+	float length = v2_length(v);
+	if(length > 0) {
+		v.x /= length;
+		v.y /= length;
+	}
+	return v;
+}
+
+func s_v2 dir_from_to(s_v2 from, s_v2 to)
+{
+	s_v2 result = to;
+	result.x -= from.x;
+	result.y -= from.y;
+	return v2_normalized(result);
 }

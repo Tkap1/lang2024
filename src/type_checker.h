@@ -10,7 +10,7 @@ struct s_type_check_context
 
 typedef s_sarray<s_scope**, 64> t_scope_arr;
 
-func b8 type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* arena);
+func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* arena);
 func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context);
 func b8 type_check_struct(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context);
 func b8 type_check_struct_member(s_node* nstruct, s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context);
