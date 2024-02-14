@@ -72,6 +72,7 @@ external_func void DrawTextureEx(s_texture, s_v2, float, float, s_color);
 external_func float sinf(float);
 external_func float sqrtf(float);
 external_func double GetTime();
+external_func float GetFrameTime();
 
 struct s_player
 {
@@ -97,219 +98,66 @@ struct s_camera
 const int c_max_tiles = 64;
 s8[c_max_tiles][c_max_tiles] tiles;
 s_camera camera;
-
+float delta;
+float update_timer;
+const int c_updates_per_second = 240;
+const float c_update_delay = 1.0 / c_updates_per_second;
+const int ww = 1280;
+const int wh = 900;
+s_v2 tile_size;
+s_v2 player_size;
+s_texture texture;
+s_texture tile0;
+s_texture face;
+s_texture hand;
+float player_scale = 0.4;
+float tile_scale = 0.25;
+s_player player;
+s_projectiles projectiles;
+s_v2 projectile_size;
+s_v2 mouse;
+s_v2 world_mouse;
 
 func int main()
 {
 
-	const int ww = 1280;
-	const int wh = 900;
 	SetTraceLogLevel(4);
 	SetConfigFlags(64);
 	InitWindow(ww, wh, "AZEN");
 
-	s_texture texture = LoadTexture("assets/pink_body_square.png");
+	texture = LoadTexture("assets/pink_body_square.png");
 	SetTextureFilter(texture, TEXTURE_FILTER_ANISOTROPIC_16X);
 
-	s_texture tile0 = LoadTexture("assets/tile_grey.png");
+	tile0 = LoadTexture("assets/tile_grey.png");
 	SetTextureFilter(tile0, TEXTURE_FILTER_ANISOTROPIC_16X);
 
-	s_texture face = LoadTexture("assets/face_h.png");
+	face = LoadTexture("assets/face_h.png");
 	SetTextureFilter(face, TEXTURE_FILTER_ANISOTROPIC_16X);
 
-	s_texture hand = LoadTexture("assets/pink_hand_open.png");
+	hand = LoadTexture("assets/pink_hand_open.png");
 	SetTextureFilter(hand, TEXTURE_FILTER_ANISOTROPIC_16X);
 
-	float player_scale = 0.4;
-	float tile_scale = 0.25;
+	tile_size = v2(tile0.width * tile_scale, tile0.height * tile_scale);
+	player_size = v2(texture.width * player_scale, texture.height * player_scale);
 
-	s_v2 tile_size = v2(tile0.width * tile_scale, tile0.height * tile_scale);
-
-	s_v2 player_size = v2(texture.width * player_scale, texture.height * player_scale);
-
-	s_projectiles projectiles;
-
-	s_player player;
 	player.pos = v2(32, 32);
 
 	int bottom_tile = wh / tile_size.x;
 	for x: c_max_tiles {
-		tiles[bottom_tile - 1][x] = 1;
 		tiles[bottom_tile][x] = 1;
 	}
 
-	s_v2 projectile_size = v2(32, 32);
+	projectile_size = v2(32, 32);
 
 	while !WindowShouldClose() {
-		BeginDrawing();
-		ClearBackground(BLACK);
+		delta = GetFrameTime();
 
-		float time = GetTime();
-
-		s_v2 mouse = GetMousePosition();
-		s_v2 world_mouse = to_world(mouse);
-
-		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		create projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
-			for c_max_projectiles {
-				if !projectiles.active[it] {
-					projectiles.active[it] = 1;
-					s_v2 player_center = get_center(player.pos, player_size);
-					projectiles.pos[it] = player_center;
-					projectiles.pos[it].x -= projectile_size.x / 2;
-					projectiles.pos[it].y -= projectile_size.y / 2;
-					projectiles.vel[it] = dir_from_to(projectiles.pos[it], world_mouse);
-					projectiles.vel[it].x *= 10;
-					projectiles.vel[it].y *= 10;
-					break;
-				}
-			}
+		update_timer += delta;
+		while update_timer >= c_update_delay {
+			update_timer -= c_update_delay;
+			update();
 		}
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		create projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-		s_v2 dir;
-		if IsKeyDown(KEY_LEFT) {
-			dir.x -= 1;
-		}
-		if IsKeyDown(KEY_RIGHT) {
-			dir.x += 1;
-		}
-		player.vel.x += dir.x * 2;
-
-		player.vel.y += 0.09;
-		if IsKeyPressed(KEY_SPACE) {
-			player.vel.y = -3;
-		}
-
-		player.pos.x += player.vel.x;
-
-		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		s_v2 player_center = get_center(player.pos, player_size);
-		s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
-		for y: 7 {
-			int yy = -3 + y;
-			for x: 7 {
-				int xx = -3 + x;
-				s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
-				if index.x < 0 || index.x >= c_max_tiles { continue; }
-				if index.y < 0 || index.y >= c_max_tiles { continue; }
-
-				s8 tile = tiles[index.y][index.x];
-				s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
-				if tile > 0 {
-					if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
-						if player.vel.x > 0 {
-							player.pos.x = tile_pos.x - player_size.x;
-						}
-						else {
-							player.pos.x = tile_pos.x + tile_size.x;
-						}
-					}
-				}
-			}
-		}
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		x collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-		player.vel.x = 0;
-		player.pos.y += player.vel.y;
-
-		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		player_center = get_center(player.pos, player_size);
-		player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
-		for y: 7 {
-			int yy = -3 + y;
-			for x: 7 {
-				int xx = -3 + x;
-				s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
-				if index.x < 0 || index.x >= c_max_tiles { continue; }
-				if index.y < 0 || index.y >= c_max_tiles { continue; }
-
-				s8 tile = tiles[index.y][index.x];
-				s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
-				if tile > 0 {
-					if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
-						if player.vel.y > 0 {
-							player.pos.y = tile_pos.y - player_size.y;
-						}
-						else {
-							player.pos.y = tile_pos.y + tile_size.y;
-						}
-						player.vel.y = 0;
-					}
-				}
-			}
-		}
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		y collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-		camera.offset.x = ww / 2 - player_size.x / 2;
-		camera.offset.y = wh / 2 - player_size.y / 2;
-		camera.pos.x = player.pos.x;
-		camera.pos.y = player.pos.y;
-
-		int right = (ww + camera.pos.x) / tile_size.x + 1;
-		int down = (wh + camera.pos.y) / tile_size.y + 1;
-		for y: down {
-			if y >= c_max_tiles { continue; }
-			for x: right {
-				if x >= c_max_tiles { continue; }
-				s8 tile = tiles[y][x];
-				s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
-				if tile == 0 {
-					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, DARK);
-				}
-				if tile == 1 {
-					// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
-					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
-				}
-				if tile == 2 {
-					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
-				}
-			}
-		}
-
-
-		// DrawRectangle(player.pos.x, player.pos.y, player_size.x, player_size.y, BLUE);
-		// DrawTexture(texture, player.pos.x, player.pos.y, WHITE);
-		{
-			DrawTextureEx(texture, to_screen(player.pos), 0, player_scale, WHITE);
-		}
-
-		{
-			s_v2 face_pos = player.pos;
-			face_pos.x += player_size.x / 4;
-			face_pos.y += player_size.y / 4;
-			DrawTextureEx(face, to_screen(face_pos), 0, player_scale, WHITE);
-		}
-
-		{
-			s_v2 hand_pos = player.pos;
-			hand_pos.x -= 80 * player_scale;
-			hand_pos.y += 20;
-			hand_pos.y += sinf(time * 6) * 5;
-			DrawTextureEx(hand, to_screen(hand_pos), 0, player_scale, WHITE);
-		}
-
-		{
-			s_v2 hand_pos = player.pos;
-			hand_pos.x += 200 * player_scale;
-			hand_pos.y += 20;
-			hand_pos.y += sinf(time * 6) * 5;
-			DrawTextureEx(hand, to_screen(hand_pos), 0, player_scale, WHITE);
-		}
-
-		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		for c_max_projectiles {
-			if !projectiles.active[it] { continue; }
-			projectiles.pos[it].x += projectiles.vel[it].x;
-			projectiles.pos[it].y += projectiles.vel[it].y;
-			s_v2 pos = to_screen(projectiles.pos[it]);
-			DrawRectangle(pos.x, pos.y, projectile_size.x, projectile_size.y, RED);
-		}
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-		DrawFPS(16, 16);
-
-		EndDrawing();
+		render();
 	}
 }
 
@@ -378,4 +226,182 @@ func s_v2 dir_from_to(s_v2 from, s_v2 to)
 	result.x -= from.x;
 	result.y -= from.y;
 	return v2_normalized(result);
+}
+
+func void update()
+{
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		create projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
+		for c_max_projectiles {
+			if !projectiles.active[it] {
+				projectiles.active[it] = 1;
+				s_v2 player_center = get_center(player.pos, player_size);
+				projectiles.pos[it] = player_center;
+				projectiles.pos[it].x -= projectile_size.x / 2;
+				projectiles.pos[it].y -= projectile_size.y / 2;
+				projectiles.vel[it] = dir_from_to(projectiles.pos[it], world_mouse);
+				projectiles.vel[it].x *= 10;
+				projectiles.vel[it].y *= 10;
+				break;
+			}
+		}
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		create projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	s_v2 dir;
+	if IsKeyDown(KEY_LEFT) {
+		dir.x -= 1;
+	}
+	if IsKeyDown(KEY_RIGHT) {
+		dir.x += 1;
+	}
+	player.vel.x += dir.x * 2;
+
+	player.vel.y += 0.09;
+	if IsKeyPressed(KEY_SPACE) {
+		player.vel.y = -3;
+	}
+
+	player.pos.x += player.vel.x;
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	s_v2 player_center = get_center(player.pos, player_size);
+	s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
+	for y: 7 {
+		int yy = -3 + y;
+		for x: 7 {
+			int xx = -3 + x;
+			s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
+			if index.x < 0 || index.x >= c_max_tiles { continue; }
+			if index.y < 0 || index.y >= c_max_tiles { continue; }
+
+			s8 tile = tiles[index.y][index.x];
+			s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
+			if tile > 0 {
+				if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
+					if player.vel.x > 0 {
+						player.pos.x = tile_pos.x - player_size.x;
+					}
+					else {
+						player.pos.x = tile_pos.x + tile_size.x;
+					}
+				}
+			}
+		}
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		x collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	player.vel.x = 0;
+	player.pos.y += player.vel.y;
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	player_center = get_center(player.pos, player_size);
+	player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
+	for y: 7 {
+		int yy = -3 + y;
+		for x: 7 {
+			int xx = -3 + x;
+			s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
+			if index.x < 0 || index.x >= c_max_tiles { continue; }
+			if index.y < 0 || index.y >= c_max_tiles { continue; }
+
+			s8 tile = tiles[index.y][index.x];
+			s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
+			if tile > 0 {
+				if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
+					if player.vel.y > 0 {
+						player.pos.y = tile_pos.y - player_size.y;
+					}
+					else {
+						player.pos.y = tile_pos.y + tile_size.y;
+					}
+					player.vel.y = 0;
+				}
+			}
+		}
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		y collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	camera.offset.x = ww / 2 - player_size.x / 2;
+	camera.offset.y = wh / 2 - player_size.y / 2;
+	camera.pos.x = player.pos.x;
+	camera.pos.y = player.pos.y;
+
+}
+
+func void render()
+{
+	BeginDrawing();
+	ClearBackground(BLACK);
+
+	float time = GetTime();
+
+	mouse = GetMousePosition();
+	world_mouse = to_world(mouse);
+
+
+	int right = (ww + camera.pos.x) / tile_size.x + 1;
+	int down = (wh + camera.pos.y) / tile_size.y + 1;
+	for y: down {
+		if y >= c_max_tiles { continue; }
+		for x: right {
+			if x >= c_max_tiles { continue; }
+			s8 tile = tiles[y][x];
+			s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
+			if tile == 0 {
+				DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, DARK);
+			}
+			if tile == 1 {
+				// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
+				DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
+			}
+			if tile == 2 {
+				DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
+			}
+		}
+	}
+
+
+	// DrawRectangle(player.pos.x, player.pos.y, player_size.x, player_size.y, BLUE);
+	// DrawTexture(texture, player.pos.x, player.pos.y, WHITE);
+	{
+		DrawTextureEx(texture, to_screen(player.pos), 0, player_scale, WHITE);
+	}
+
+	{
+		s_v2 face_pos = player.pos;
+		face_pos.x += player_size.x / 4;
+		face_pos.y += player_size.y / 4;
+		DrawTextureEx(face, to_screen(face_pos), 0, player_scale, WHITE);
+	}
+
+	{
+		s_v2 hand_pos = player.pos;
+		hand_pos.x -= 80 * player_scale;
+		hand_pos.y += 20;
+		hand_pos.y += sinf(time * 6) * 5;
+		DrawTextureEx(hand, to_screen(hand_pos), 0, player_scale, WHITE);
+	}
+
+	{
+		s_v2 hand_pos = player.pos;
+		hand_pos.x += 200 * player_scale;
+		hand_pos.y += 20;
+		hand_pos.y += sinf(time * 6) * 5;
+		DrawTextureEx(hand, to_screen(hand_pos), 0, player_scale, WHITE);
+	}
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	for c_max_projectiles {
+		if !projectiles.active[it] { continue; }
+		projectiles.pos[it].x += projectiles.vel[it].x;
+		projectiles.pos[it].y += projectiles.vel[it].y;
+		s_v2 pos = to_screen(projectiles.pos[it]);
+		DrawRectangle(pos.x, pos.y, projectile_size.x, projectile_size.y, RED);
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	DrawFPS(16, 16);
+
+	EndDrawing();
 }

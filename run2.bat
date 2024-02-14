@@ -1,3 +1,3 @@
 @echo off
 
-run.bat && build_generated.bat
+call run.bat && call build_generated.bat

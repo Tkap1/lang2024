@@ -84,7 +84,7 @@ void s_error_reporter::fatal(char* file, int line, char* str, ...)
 
 void s_error_reporter::recoverable_error(char* file, int line, char* str, ...)
 {
-	if(error_level >= e_error_level_recoverable) { return; }
+	if(error_level > e_error_level_recoverable) { return; }
 	error_level = e_error_level_recoverable;
 
 	if(!str) {

@@ -103,6 +103,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 	}
 
 	while(true) {
+		reporter->error_level = e_error_level_none;
 		b8 successfully_typechecked_something = false;
 		int not_type_checked_count = 0;
 		for_node(node, ast) {

@@ -426,9 +426,9 @@ func char* token_to_str(s_token token)
 	if(token.type == e_token_eof) { return "EOF"; }
 
 	static int index = 0;
-	static char buffers[64][128];
+	static char buffers[128][128];
 	char* buffer = buffers[index];
-	index = (index + 1) % 64;
+	index = (index + 1) % 128;
 	sprintf(buffer, "%.*s", ft(token));
 	return buffer;
 }
