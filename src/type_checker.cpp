@@ -612,6 +612,18 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			return true;
 		} break;
 
+		case e_node_greater_than_or_equal: {
+			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena, context)) {
+				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
 		case e_node_subtract: {
 			// @TODO(tkap, 10/02/2024):
 			node->type_checked = true;

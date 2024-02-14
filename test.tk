@@ -90,8 +90,8 @@ struct s_projectiles
 
 struct s_camera
 {
-	float x,
-	float y,
+	s_v2 pos,
+	s_v2 offset,
 }
 
 const int c_max_tiles = 64;
@@ -146,8 +146,6 @@ func int main()
 
 		float time = GetTime();
 
-		camera.x += 1.1;
-
 		s_v2 mouse = GetMousePosition();
 		s_v2 world_mouse = to_world(mouse);
 
@@ -181,25 +179,6 @@ func int main()
 		player.vel.y += 0.09;
 		if IsKeyPressed(KEY_SPACE) {
 			player.vel.y = -3;
-		}
-
-		int right = (ww + camera.x) / tile_size.x + 1;
-		int down = (wh + camera.y) / tile_size.y + 1;
-		for y: down {
-			for x: right {
-				s8 tile = tiles[y][x];
-				s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
-				if tile == 0 {
-					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, DARK);
-				}
-				if tile == 1 {
-					// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
-					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
-				}
-				if tile == 2 {
-					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
-				}
-			}
 		}
 
 		player.pos.x += player.vel.x;
@@ -262,6 +241,33 @@ func int main()
 		}
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		y collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+		camera.offset.x = ww / 2 - player_size.x / 2;
+		camera.offset.y = wh / 2 - player_size.y / 2;
+		camera.pos.x = player.pos.x;
+		camera.pos.y = player.pos.y;
+
+		int right = (ww + camera.pos.x) / tile_size.x + 1;
+		int down = (wh + camera.pos.y) / tile_size.y + 1;
+		for y: down {
+			if y >= c_max_tiles { continue; }
+			for x: right {
+				if x >= c_max_tiles { continue; }
+				s8 tile = tiles[y][x];
+				s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
+				if tile == 0 {
+					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, DARK);
+				}
+				if tile == 1 {
+					// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
+					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
+				}
+				if tile == 2 {
+					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
+				}
+			}
+		}
+
+
 		// DrawRectangle(player.pos.x, player.pos.y, player_size.x, player_size.y, BLUE);
 		// DrawTexture(texture, player.pos.x, player.pos.y, WHITE);
 		{
@@ -310,16 +316,20 @@ func int main()
 func s_v2 to_screen(s_v2 v)
 {
 	s_v2 result = v;
-	result.x -= camera.x;
-	result.y -= camera.y;
+	result.x -= camera.pos.x;
+	result.y -= camera.pos.y;
+	result.x += camera.offset.x;
+	result.y += camera.offset.y;
 	return result;
 }
 
 func s_v2 to_world(s_v2 v)
 {
 	s_v2 result = v;
-	result.x += camera.x;
-	result.y += camera.y;
+	result.x -= camera.offset.x;
+	result.y -= camera.offset.y;
+	result.x += camera.pos.x;
+	result.y += camera.pos.y;
 	return result;
 }
 
