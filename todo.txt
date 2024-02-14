@@ -22,3 +22,5 @@ typecheck struct members if  we are not doing it already
 if we already have a fatal error, do not overwrite the error string
 
 stop doing the fucking static buffer bullshit.
+
+have types enum?

@@ -18,7 +18,7 @@ func char* node_to_str(s_node* node);
 func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context);
 func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context);
 func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context);
-func s_maybe<int> get_compile_time_value(s_node* node, t_scope_arr* data);
+func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data);
 func void add_type_to_scope(t_scope_arr* data, s_node* type, s_lin_arena* arena);
 func void add_var_to_scope(t_scope_arr* data, s_node* var, s_lin_arena* arena);
 func s_node* get_struct_by_name_except(char* name, s_node* exclude, t_scope_arr* data);

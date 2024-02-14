@@ -183,6 +183,11 @@ struct s_node
 
 		struct
 		{
+			float value;
+		} nfloat;
+
+		struct
+		{
 			s_token iterator_index_name;
 			s_token iterator_name;
 			s_node* expr;

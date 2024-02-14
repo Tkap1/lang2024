@@ -13,6 +13,7 @@
 #define foreach_val(index_name, element_name, array) foreach_val_(__LINE__, index_name, element_name, array)
 
 #define invalid_default_case default: assert(!"Invalid default case");
+#define invalid_else else { assert(!"Invalid else"); }
 
 
 template <typename t, int n>

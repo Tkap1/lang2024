@@ -407,6 +407,15 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 					return false;
 				}
 			}
+			// @Hack(tkap, 14/02/2024): we need a better system. if we find "float foo = 7;", we have to turn that 7 into a float, because it is an int
+			if(node->var_type->type == e_node_type && strcmp(node->var_type->basic_type.name, "float") == 0 && node->var_decl.value && node->var_decl.value->type == e_node_integer) {
+				node->var_decl.value->type = e_node_float;
+				node->var_decl.value->nfloat.value = (float)node->var_decl.value->integer.value;
+			}
+			// @Fixme(tkap, 14/02/2024): we want this, but it removes arrays
+			// if(node->var_decl.type->ntype.is_const) {
+			// 	node->dont_generate = true;
+			// }
 			add_var_to_scope(data, node, arena);
 			node->type_checked = true;
 			return true;
@@ -487,6 +496,20 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 						assert(var->var_type);
 						node->var_type = var->var_type;
 						success = true;
+
+						if(var->var_type->type == e_node_type && var->var_decl.type->ntype.is_const) {
+							s_maybe<s_node> c = get_compile_time_value(var->var_decl.value, data);
+							assert(c.valid);
+							node->type = c.value.type;
+							if(c.value.type == e_node_integer) {
+								node->integer = c.value.integer;
+							}
+							else if(c.value.type == e_node_float) {
+								node->nfloat = c.value.nfloat;
+							}
+							invalid_else;
+						}
+
 						break;
 					}
 					s_node* nfunc = get_func_by_name(node->token.str(), data);
@@ -591,12 +614,24 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_greater_than: {
 			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena, context)) {
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
 
 		case e_node_less_than: {
 			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena, context)) {
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
@@ -627,24 +662,48 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_subtract: {
 			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena, context)) {
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
 
 		case e_node_logic_or: {
 			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena, context)) {
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
 
 		case e_node_logic_and: {
 			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena, context)) {
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
 
 		case e_node_comparison: {
 			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena, context)) {
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
@@ -656,15 +715,18 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_expr(node->array.size_expr, reporter, data, arena, context)) {
 				return false;
 			}
-			s_maybe<int> size = get_compile_time_value(node->array.size_expr, data);
-			if(!size.valid) {
+			s_maybe<s_node> c = get_compile_time_value(node->array.size_expr, data);
+			if(!c.valid) {
 				reporter->fatal(node->array.size_expr->token.file, node->array.size_expr->token.line, "Array size is not constant");
+				return false;
+			}
+			if(c.value.type != e_node_integer) {
+				reporter->fatal(node->array.size_expr->token.file, node->array.size_expr->token.line, "Array size is not an integer");
 				return false;
 			}
 			node->var_type = node;
 			node->array.size_expr->type = e_node_integer;
-			node->array.size_expr->integer.value = size.value;
-			// @Fixme(tkap, 12/02/2024):
+			node->array.size_expr->integer.value = c.value.integer.value;
 			node->type_checked = true;
 			return true;
 		} break;
@@ -737,12 +799,15 @@ func char* node_to_str(s_node* node)
 	return null;
 }
 
-func s_maybe<int> get_compile_time_value(s_node* node, t_scope_arr* data)
+func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data)
 {
 	switch(node->type) {
 
 		case e_node_integer: {
-			return maybe(node->integer.value);
+			s_node result = zero;
+			result.type = e_node_integer;
+			result.integer.value = node->integer.value;
+			return maybe(result);
 		} break;
 
 		case e_node_identifier: {
@@ -755,19 +820,93 @@ func s_maybe<int> get_compile_time_value(s_node* node, t_scope_arr* data)
 		} break;
 
 		case e_node_add: {
-			s_maybe<int> left = get_compile_time_value(node->left, data);
+			s_maybe<s_node> left = get_compile_time_value(node->left, data);
 			if(!left.valid) { return zero; }
-			s_maybe<int> right = get_compile_time_value(node->right, data);
+			s_maybe<s_node> right = get_compile_time_value(node->right, data);
 			if(!right.valid) { return zero; }
-			return maybe(left.value + right.value);
+
+			f64 left_val;
+			if(left.value.type == e_node_float) { left_val = left.value.nfloat.value; }
+			else { left_val = left.value.integer.value; }
+
+			f64 right_val;
+			if(right.value.type == e_node_float) { right_val = right.value.nfloat.value; }
+			else { right_val = right.value.integer.value; }
+
+			f64 val_result = left_val + right_val;
+			b8 is_int = left.value.type != e_node_float && right.value.type != e_node_float;
+			s_node result = zero;
+			if(is_int) {
+				result.type = e_node_integer;
+				result.integer.value = (int)val_result;
+			}
+			else {
+				result.type = e_node_float;
+				result.nfloat.value = (float)val_result;
+			}
+			return maybe(result);
+
 		} break;
 
 		case e_node_multiply: {
-			s_maybe<int> left = get_compile_time_value(node->left, data);
+			s_maybe<s_node> left = get_compile_time_value(node->left, data);
 			if(!left.valid) { return zero; }
-			s_maybe<int> right = get_compile_time_value(node->right, data);
+			s_maybe<s_node> right = get_compile_time_value(node->right, data);
 			if(!right.valid) { return zero; }
-			return maybe(left.value * right.value);
+			f64 left_val;
+			if(left.value.type == e_node_float) { left_val = left.value.nfloat.value; }
+			else { left_val = left.value.integer.value; }
+
+			f64 right_val;
+			if(right.value.type == e_node_float) { right_val = right.value.nfloat.value; }
+			else { right_val = right.value.integer.value; }
+
+			f64 val_result = left_val * right_val;
+			b8 is_int = left.value.type != e_node_float && right.value.type != e_node_float;
+			s_node result = zero;
+			if(is_int) {
+				result.type = e_node_integer;
+				result.integer.value = (int)val_result;
+			}
+			else {
+				result.type = e_node_float;
+				result.nfloat.value = (float)val_result;
+			}
+			return maybe(result);
+		} break;
+
+		case e_node_divide: {
+			s_maybe<s_node> left = get_compile_time_value(node->left, data);
+			if(!left.valid) { return zero; }
+			s_maybe<s_node> right = get_compile_time_value(node->right, data);
+			if(!right.valid) { return zero; }
+			f64 left_val;
+			if(left.value.type == e_node_float) { left_val = left.value.nfloat.value; }
+			else { left_val = left.value.integer.value; }
+
+			f64 right_val;
+			if(right.value.type == e_node_float) { right_val = right.value.nfloat.value; }
+			else { right_val = right.value.integer.value; }
+
+			f64 val_result = left_val / right_val;
+			b8 is_int = left.value.type != e_node_float && right.value.type != e_node_float;
+			s_node result = zero;
+			if(is_int) {
+				result.type = e_node_integer;
+				result.integer.value = (int)val_result;
+			}
+			else {
+				result.type = e_node_float;
+				result.nfloat.value = (float)val_result;
+			}
+			return maybe(result);
+		} break;
+
+		case e_node_float: {
+			s_node result = zero;
+			result.type = e_node_float;
+			result.nfloat.value = node->nfloat.value;
+			return maybe(result);
 		} break;
 
 		invalid_default_case;

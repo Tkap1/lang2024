@@ -193,7 +193,7 @@ func char* node_to_c_str(s_node* node, s_code_gen_context context)
 		} break;
 
 		case e_node_float: {
-			return format_str("%sf", node->token.str());
+			return format_str("%ff", node->nfloat.value);
 		} break;
 
 		case e_node_identifier: {
