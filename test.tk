@@ -193,7 +193,11 @@ struct s_input_data
 	int shoot,
 	int move_left,
 	int move_right,
+	int move_up,
+	int move_down,
 	int jump,
+	int place_tile,
+	int remove_tile,
 }
 
 const int c_max_projectiles = 128;
@@ -211,7 +215,19 @@ struct s_camera
 	s_v2 offset,
 }
 
-const int c_max_tiles = 512;
+const int c_max_tiles = 64;
+// @Note(tkap, 15/02/2024): For things that get undone/redone by undo system
+struct s_editor_data
+{
+	s8[c_max_tiles][c_max_tiles] tiles,
+}
+
+struct s_editor
+{
+	import s_editor_data data,
+	int curr_tile,
+}
+
 s8[c_max_tiles][c_max_tiles] tiles;
 s_camera camera;
 float delta;
@@ -238,12 +254,14 @@ const float c_max_walk_vel = 1;
 int state = 1;
 int next_state = 0;
 s_input_data input;
+s_editor editor;
 
 func int main()
 {
 
 	SetTraceLogLevel(LOG_WARNING);
 	SetConfigFlags(FLAG_VSYNC_HINT);
+
 	InitWindow(ww, wh, "AZEN");
 
 	texture = LoadTexture("assets/pink_body_square.png");
@@ -287,7 +305,6 @@ func void do_input()
 {
 	if state == 1 {
 		if IsKeyPressed(KEY_F1) {
-			printf("TO 2\n");
 			next_state = 2;
 		}
 
@@ -296,16 +313,26 @@ func void do_input()
 		input.move_right = IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D);
 		input.jump = IsKeyPressed(KEY_SPACE);
 	}
+
 	if state == 2 {
 		if IsKeyPressed(KEY_F1) {
 			next_state = 1;
-			printf("TO 1\n");
 		}
+
+		input.move_left = IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A);
+		input.move_right = IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D);
+		input.move_up = IsKeyDown(KEY_UP) || IsKeyDown(KEY_W);
+		input.move_down = IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S);
+		input.place_tile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+		input.remove_tile = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
 	}
 }
 
 func void update()
 {
+	mouse = GetMousePosition();
+	world_mouse = to_world(mouse);
+
 	if player.shoot_timer < c_shoot_delay {
 		player.shoot_timer += 1;
 	}
@@ -441,7 +468,6 @@ func void update()
 			projectiles.active[it] = 0;
 			s_v2 center = get_center(projectiles.pos[it], projectile_size);
 			s_v2 player_center = get_center(player.pos, player_size);
-			const float radius = 64;
 			float distance = v2_distance(center, player_center);
 			float strength = smoothstep(128, 16, distance) * 5;
 			s_v2 dir = dir_from_to(center, player_center);
@@ -459,6 +485,40 @@ func void update()
 
 
 	}
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	if state == 2 {
+
+		s_v2i index = pos_to_tile_index(world_mouse);
+		if input.place_tile {
+			if is_valid_tile_index(index) {
+				editor.tiles[index.y][index.x] = 1;
+			}
+		}
+		if input.remove_tile {
+			if is_valid_tile_index(index) {
+				editor.tiles[index.y][index.x] = 0;
+			}
+		}
+
+		camera.offset.x = ww / 2 - player_size.x / 2;
+		camera.offset.y = wh / 2 - player_size.y / 2;
+		const float cam_speed = 3;
+		if input.move_left {
+			camera.pos.x -= cam_speed;
+		}
+		if input.move_right {
+			camera.pos.x += cam_speed;
+		}
+		if input.move_up {
+			camera.pos.y -= cam_speed;
+		}
+		if input.move_down {
+			camera.pos.y += cam_speed;
+		}
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 }
 
 func void render()
@@ -499,8 +559,6 @@ func void render()
 	}
 
 
-	// DrawRectangle(player.x, player.y, player_size.x, player_size.y, BLUE);
-	// DrawTexture(texture, player.x, player.y, WHITE);
 	{
 		DrawTextureEx(texture, to_screen(player.pos), 0, player_scale, WHITE);
 	}
@@ -667,4 +725,15 @@ func s_v2 dir_from_to(s_v2 from, s_v2 to)
 	result.x -= from.x;
 	result.y -= from.y;
 	return v2_normalized(result);
+}
+
+func s_v2i pos_to_tile_index(s_v2 pos)
+{
+	return v2i(pos.x / tile_size.x, pos.y / tile_size.y);
+}
+
+func int is_valid_tile_index(s_v2i index) {
+	if index.x < 0 || index.x >= c_max_tiles { return 0; }
+	if index.y < 0 || index.y >= c_max_tiles { return 0; }
+	return 1;
 }

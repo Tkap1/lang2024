@@ -1,0 +1,16 @@
+
+
+struct s_bar
+{
+	int[32] arr,
+}
+
+struct s_foo
+{
+	import s_bar bar,
+}
+func void foo()
+{
+	s_foo foo;
+	foo.arr[0];
+}

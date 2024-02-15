@@ -166,6 +166,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/import2.tk", true},
 		// {"tests/import3.tk", false},
 		{"tests/import_nest.tk", true},
+		{"tests/array_in_struct.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

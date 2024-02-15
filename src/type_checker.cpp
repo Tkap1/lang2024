@@ -1113,6 +1113,7 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 		temp.type = e_node_member_access;
 		temp.left = alloc_node(*node, arena);
 		temp.right = old_right;
+		temp.var_type = member.node->var_type;
 		*node = temp;
 		maybe_fix_member_access(node, member.import_source->var_type, data, arena);
 	}
