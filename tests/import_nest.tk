@@ -1,0 +1,26 @@
+
+struct s_a
+{
+	int a_member,
+}
+
+struct s_b
+{
+	import s_a b_member,
+}
+
+struct s_c
+{
+	import s_b c_member,
+}
+
+struct s_d
+{
+	import s_c d_member,
+}
+
+func void foo()
+{
+	s_d d;
+	d.a_member;
+}

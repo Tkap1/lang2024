@@ -262,7 +262,7 @@ func void update()
 		player.vel.y = -3;
 	}
 
-	player.pos.x += player.vel.x;
+	player.x += player.vel.x;
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	s_v2 player_center = get_center(player.pos, player_size);
@@ -280,10 +280,10 @@ func void update()
 			if tile > 0 {
 				if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
 					if player.vel.x > 0 {
-						player.pos.x = tile_pos.x - player_size.x;
+						player.x = tile_pos.x - player_size.x;
 					}
 					else {
-						player.pos.x = tile_pos.x + tile_size.x;
+						player.x = tile_pos.x + tile_size.x;
 					}
 				}
 			}
@@ -292,7 +292,7 @@ func void update()
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		x collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	player.vel.x = 0;
-	player.pos.y += player.vel.y;
+	player.y += player.vel.y;
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	player_center = get_center(player.pos, player_size);
@@ -310,10 +310,10 @@ func void update()
 			if tile > 0 {
 				if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
 					if player.vel.y > 0 {
-						player.pos.y = tile_pos.y - player_size.y;
+						player.y = tile_pos.y - player_size.y;
 					}
 					else {
-						player.pos.y = tile_pos.y + tile_size.y;
+						player.y = tile_pos.y + tile_size.y;
 					}
 					player.vel.y = 0;
 				}
@@ -324,8 +324,8 @@ func void update()
 
 	camera.offset.x = ww / 2 - player_size.x / 2;
 	camera.offset.y = wh / 2 - player_size.y / 2;
-	camera.pos.x = player.pos.x;
-	camera.pos.y = player.pos.y;
+	camera.pos.x = player.x;
+	camera.pos.y = player.y;
 
 }
 
@@ -362,8 +362,8 @@ func void render()
 	}
 
 
-	// DrawRectangle(player.pos.x, player.pos.y, player_size.x, player_size.y, BLUE);
-	// DrawTexture(texture, player.pos.x, player.pos.y, WHITE);
+	// DrawRectangle(player.x, player.y, player_size.x, player_size.y, BLUE);
+	// DrawTexture(texture, player.x, player.y, WHITE);
 	{
 		DrawTextureEx(texture, to_screen(player.pos), 0, player_scale, WHITE);
 	}

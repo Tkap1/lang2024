@@ -481,9 +481,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			b8 success = false;
 			if(context.member_access) {
 				assert(context.member_access->type == e_node_struct);
-				s_node* member = get_struct_member(node->token.str(), context.member_access, data);
-				if(member) {
-					node->var_type = member->var_type;
+				s_get_struct_member member = get_struct_member(node->token.str(), context.member_access, data);
+				if(member.node) {
+					node->var_type = member.node->var_type;
 					success = true;
 				}
 			}
@@ -570,6 +570,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			}
 			node->var_type = node->right->var_type;
 			node->type_checked = true;
+			maybe_fix_member_access(node, node->left->var_type, data, arena);
 			return true;
 		} break;
 
@@ -1043,17 +1044,53 @@ func s_node* get_latest_func(t_scope_arr* data)
 	return null;
 }
 
-func s_node* get_struct_member(char* name, s_node* nstruct, t_scope_arr* data)
+func s_get_struct_member get_struct_member(char* name, s_node* nstruct, t_scope_arr* data)
 {
+	s_get_struct_member result = zero;
 	assert(nstruct->type == e_node_struct);
 	for_node(member, nstruct->nstruct.members) {
 		if(member->var_decl.name.equals(name)) {
-			return member;
+			result.node = member;
+			break;
 		}
 		if(member->var_decl.is_import) {
-			s_node* result = get_struct_member(name, member->var_type, data);
-			if(result) { return result; }
+			s_get_struct_member temp = get_struct_member(name, member->var_type, data);
+			if(temp.node) {
+				temp.is_imported = true;
+				temp.import_source = member;
+				result = temp;
+			}
 		}
 	}
-	return null;
+	return result;
+}
+
+
+func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* data, s_lin_arena* arena)
+{
+	assert(nstruct->type == e_node_struct);
+	assert(node->type == e_node_member_access);
+	assert(node->type_checked);
+
+	// @TODO(tkap, 15/02/2024): Do we need this???
+	// if(node->left->type == e_node_member_access) {
+	// 	maybe_fix_member_access(node->left, node->left->left->var_type, data, arena);
+	// }
+	s_get_struct_member member = get_struct_member(node->right->token.str(), nstruct, data);
+	assert(member.node);
+	if(member.is_imported) {
+		s_node new_right = zero;
+		s_node* old_right = node->right;
+		new_right.type = e_node_identifier;
+		new_right.token = member.import_source->var_decl.name;
+		node->right = alloc_node(new_right, arena);
+
+		s_node temp = zero;
+		temp.type_checked = true;
+		temp.type = e_node_member_access;
+		temp.left = alloc_node(*node, arena);
+		temp.right = old_right;
+		*node = temp;
+		maybe_fix_member_access(node, member.import_source->var_type, data, arena);
+	}
 }
