@@ -40,6 +40,7 @@ enum e_node
 	e_node_for,
 	e_node_struct_literal,
 	e_node_comparison,
+	e_node_not_equals,
 	e_node_subscript,
 	e_node_continue,
 	e_node_break,
@@ -74,6 +75,7 @@ global constexpr s_operator_data c_operator_data[] = {
 	{e_token_logic_or, e_node_logic_or, 3},
 	{e_token_logic_and, e_node_logic_and, 4},
 	{e_token_comparison, e_node_comparison, 8},
+	{e_token_not_equals, e_node_not_equals, 8},
 	{e_token_open_paren, e_node_func_call, 16},
 	{e_token_open_bracket, e_node_subscript, 16},
 };
@@ -85,7 +87,7 @@ struct s_scope
 	s_sarray<s_node*, 128> structs;
 	s_sarray<s_node*, 128> funcs;
 	s_sarray<s_node*, 128> types;
-	s_sarray<s_node*, 128> vars;
+	s_sarray<s_node*, 256> vars;
 };
 
 struct s_node

@@ -29,11 +29,116 @@ const s_color DARK = {50, 50, 50, 255};
 const int MOUSE_BUTTON_LEFT = 0;
 const int MOUSE_BUTTON_RIGHT = 1;
 
+const int KEY_NULL = 0;
+const int KEY_APOSTROPHE = 39;
+const int KEY_COMMA = 44;
+const int KEY_MINUS = 45;
+const int KEY_PERIOD = 46;
+const int KEY_SLASH = 47;
+const int KEY_ZERO = 48;
+const int KEY_ONE = 49;
+const int KEY_TWO = 50;
+const int KEY_THREE = 51;
+const int KEY_FOUR = 52;
+const int KEY_FIVE = 53;
+const int KEY_SIX = 54;
+const int KEY_SEVEN = 55;
+const int KEY_EIGHT = 56;
+const int KEY_NINE = 57;
+const int KEY_SEMICOLON = 59;
+const int KEY_EQUAL = 61;
+const int KEY_A = 65;
+const int KEY_B = 66;
+const int KEY_C = 67;
+const int KEY_D = 68;
+const int KEY_E = 69;
+const int KEY_F = 70;
+const int KEY_G = 71;
+const int KEY_H = 72;
+const int KEY_I = 73;
+const int KEY_J = 74;
+const int KEY_K = 75;
+const int KEY_L = 76;
+const int KEY_M = 77;
+const int KEY_N = 78;
+const int KEY_O = 79;
+const int KEY_P = 80;
+const int KEY_Q = 81;
+const int KEY_R = 82;
+const int KEY_S = 83;
+const int KEY_T = 84;
+const int KEY_U = 85;
+const int KEY_V = 86;
+const int KEY_W = 87;
+const int KEY_X = 88;
+const int KEY_Y = 89;
+const int KEY_Z = 90;
+const int KEY_LEFT_BRACKET = 91;
+const int KEY_BACKSLASH = 92;
+const int KEY_RIGHT_BRACKET = 93;
+const int KEY_GRAVE = 96;
+const int KEY_SPACE = 32;
+const int KEY_ESCAPE = 256;
+const int KEY_ENTER = 257;
+const int KEY_TAB = 258;
+const int KEY_BACKSPACE = 259;
+const int KEY_INSERT = 260;
+const int KEY_DELETE = 261;
 const int KEY_RIGHT = 262;
 const int KEY_LEFT = 263;
 const int KEY_DOWN = 264;
 const int KEY_UP = 265;
-const int KEY_SPACE = 32;
+const int KEY_PAGE_UP = 266;
+const int KEY_PAGE_DOWN = 267;
+const int KEY_HOME = 268;
+const int KEY_END = 269;
+const int KEY_CAPS_LOCK = 280;
+const int KEY_SCROLL_LOCK = 281;
+const int KEY_NUM_LOCK = 282;
+const int KEY_PRINT_SCREEN = 283;
+const int KEY_PAUSE = 284;
+const int KEY_F1 = 290;
+const int KEY_F2 = 291;
+const int KEY_F3 = 292;
+const int KEY_F4 = 293;
+const int KEY_F5 = 294;
+const int KEY_F6 = 295;
+const int KEY_F7 = 296;
+const int KEY_F8 = 297;
+const int KEY_F9 = 298;
+const int KEY_F10 = 299;
+const int KEY_F11 = 300;
+const int KEY_F12 = 301;
+const int KEY_LEFT_SHIFT = 340;
+const int KEY_LEFT_CONTROL = 341;
+const int KEY_LEFT_ALT = 342;
+const int KEY_LEFT_SUPER = 343;
+const int KEY_RIGHT_SHIFT = 344;
+const int KEY_RIGHT_CONTROL = 345;
+const int KEY_RIGHT_ALT = 346;
+const int KEY_RIGHT_SUPER = 347;
+const int KEY_KB_MENU = 348;
+const int KEY_KP_0 = 320;
+const int KEY_KP_1 = 321;
+const int KEY_KP_2 = 322;
+const int KEY_KP_3 = 323;
+const int KEY_KP_4 = 324;
+const int KEY_KP_5 = 325;
+const int KEY_KP_6 = 326;
+const int KEY_KP_7 = 327;
+const int KEY_KP_8 = 328;
+const int KEY_KP_9 = 329;
+const int KEY_KP_DECIMAL = 330;
+const int KEY_KP_DIVIDE = 331;
+const int KEY_KP_MULTIPLY = 332;
+const int KEY_KP_SUBTRACT = 333;
+const int KEY_KP_ADD = 334;
+const int KEY_KP_ENTER = 335;
+const int KEY_KP_EQUAL = 336;
+const int KEY_BACK = 4;
+const int KEY_MENU = 5;
+const int KEY_VOLUME_UP = 24;
+const int KEY_VOLUME_DOWN = 2;
 const int TEXTURE_FILTER_ANISOTROPIC_16X = 5;
 
 struct s_v2
@@ -73,11 +178,22 @@ external_func float sinf(float);
 external_func float sqrtf(float);
 external_func double GetTime();
 external_func float GetFrameTime();
+external_func int printf(char*);
+external_func void SetTargetFPS(int);
 
 struct s_player
 {
 	import s_v2 pos,
 	s_v2 vel,
+	int shoot_timer,
+}
+
+struct s_input_data
+{
+	int shoot,
+	int move_left,
+	int move_right,
+	int jump,
 }
 
 const int c_max_projectiles = 128;
@@ -117,12 +233,17 @@ s_projectiles projectiles;
 s_v2 projectile_size;
 s_v2 mouse;
 s_v2 world_mouse;
+const int c_shoot_delay = 20;
+const float c_max_walk_vel = 1;
+int state = 1;
+int next_state = 0;
+s_input_data input;
 
 func int main()
 {
 
-	SetTraceLogLevel(4);
-	SetConfigFlags(64);
+	SetTraceLogLevel(LOG_WARNING);
+	SetConfigFlags(FLAG_VSYNC_HINT);
 	InitWindow(ww, wh, "AZEN");
 
 	texture = LoadTexture("assets/pink_body_square.png");
@@ -152,6 +273,7 @@ func int main()
 	while !WindowShouldClose() {
 		delta = GetFrameTime();
 
+		do_input();
 		update_timer += delta;
 		while update_timer >= c_update_delay {
 			update_timer -= c_update_delay;
@@ -161,207 +283,182 @@ func int main()
 	}
 }
 
-func s_v2 to_screen(s_v2 v)
+func void do_input()
 {
-	s_v2 result = v;
-	result.x -= camera.pos.x;
-	result.y -= camera.pos.y;
-	result.x += camera.offset.x;
-	result.y += camera.offset.y;
-	return result;
-}
+	if state == 1 {
+		if IsKeyPressed(KEY_F1) {
+			printf("TO 2\n");
+			next_state = 2;
+		}
 
-func s_v2 to_world(s_v2 v)
-{
-	s_v2 result = v;
-	result.x -= camera.offset.x;
-	result.y -= camera.offset.y;
-	result.x += camera.pos.x;
-	result.y += camera.pos.y;
-	return result;
-}
-
-func s_v2 v2(float x, float y)
-{
-	return {x, y};
-}
-
-func s_v2i v2i(int x, int y)
-{
-	return {x, y};
-}
-
-func b8 rect_collides_rect(s_v2 pos1, s_v2 size1, s_v2 pos2, s_v2 size2)
-{
-	return pos1.x + size1.x > pos2.x && pos1.x < pos2.x + size2.x &&
-		pos1.y + size1.y > pos2.y && pos1.y < pos2.y + size2.y;
-}
-
-func s_v2 get_center(s_v2 pos, s_v2 size)
-{
-	s_v2 result = pos;
-	result.x += size.x / 2;
-	result.y += size.y / 2;
-	return result;
-}
-
-func float v2_length(s_v2 v)
-{
-	return sqrtf(v.x * v.x + v.y * v.y);
-}
-
-func s_v2 v2_normalized(s_v2 v)
-{
-	float length = v2_length(v);
-	if(length > 0) {
-		v.x /= length;
-		v.y /= length;
+		input.shoot = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+		input.move_left = IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A);
+		input.move_right = IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D);
+		input.jump = IsKeyPressed(KEY_SPACE);
 	}
-	return v;
-}
-
-func s_v2 dir_from_to(s_v2 from, s_v2 to)
-{
-	s_v2 result = to;
-	result.x -= from.x;
-	result.y -= from.y;
-	return v2_normalized(result);
+	if state == 2 {
+		if IsKeyPressed(KEY_F1) {
+			next_state = 1;
+			printf("TO 1\n");
+		}
+	}
 }
 
 func void update()
 {
-	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		create projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	if IsMouseButtonDown(MOUSE_BUTTON_LEFT) {
+	if player.shoot_timer < c_shoot_delay {
+		player.shoot_timer += 1;
+	}
+
+	if next_state != 0 {
+		state = next_state;
+		next_state = 0;
+	}
+
+	if state == 1 {
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		create projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		if player.shoot_timer >= c_shoot_delay && input.shoot {
+			player.shoot_timer -= c_shoot_delay;
+			for c_max_projectiles {
+				if !projectiles.active[it] {
+					projectiles.active[it] = 1;
+					s_v2 player_center = get_center(player.pos, player_size);
+					projectiles.pos[it] = player_center;
+					projectiles.pos[it].x -= projectile_size.x / 2;
+					projectiles.pos[it].y -= projectile_size.y / 2;
+					projectiles.vel[it] = dir_from_to(projectiles.pos[it], world_mouse);
+					projectiles.vel[it].x *= 10;
+					projectiles.vel[it].y *= 10;
+					break;
+				}
+			}
+		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		create projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+		{
+			s_v2 dir;
+			if input.move_left {
+				dir.x -= 1;
+			}
+			if input.move_right {
+				dir.x += 1;
+			}
+			if dir.x > 0 && player.vel.x < c_max_walk_vel {
+				player.vel.x = min(c_max_walk_vel, player.vel.x + dir.x);
+			}
+			if dir.x < 0 && player.vel.x > -c_max_walk_vel {
+				player.vel.x = max(-c_max_walk_vel, player.vel.x + dir.x);
+			}
+		}
+
+		player.vel.y += 0.09;
+
+		if input.jump {
+			input.jump = 0;
+			player.vel.y = -3;
+		}
+
+		player.x += player.vel.x;
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		{
+			s_v2 player_center = get_center(player.pos, player_size);
+			s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
+			for y: 7 {
+				int yy = -3 + y;
+				for x: 7 {
+					int xx = -3 + x;
+					s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
+					if index.x < 0 || index.x >= c_max_tiles { continue; }
+					if index.y < 0 || index.y >= c_max_tiles { continue; }
+
+					s8 tile = tiles[index.y][index.x];
+					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
+					if tile > 0 {
+						if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
+							if player.vel.x > 0 {
+								player.x = tile_pos.x - player_size.x;
+							}
+							else {
+								player.x = tile_pos.x + tile_size.x;
+							}
+						}
+					}
+				}
+			}
+		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		x collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+		player.y += player.vel.y;
+
+		int is_grounded = 0;
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		{
+			s_v2 player_center = get_center(player.pos, player_size);
+			s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
+			for y: 7 {
+				int yy = -3 + y;
+				for x: 7 {
+					int xx = -3 + x;
+					s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
+					if index.x < 0 || index.x >= c_max_tiles { continue; }
+					if index.y < 0 || index.y >= c_max_tiles { continue; }
+
+					s8 tile = tiles[index.y][index.x];
+					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
+					if tile > 0 {
+						if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
+							if player.vel.y > 0 {
+								player.y = tile_pos.y - player_size.y;
+								is_grounded = 1;
+							}
+							else {
+								player.y = tile_pos.y + tile_size.y;
+							}
+							player.vel.y = 0;
+						}
+					}
+				}
+			}
+		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		y collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+		if is_grounded {
+			player.vel.x *= 0.8;
+		}
+
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		for c_max_projectiles {
-			if !projectiles.active[it] {
-				projectiles.active[it] = 1;
-				s_v2 player_center = get_center(player.pos, player_size);
-				projectiles.pos[it] = player_center;
-				projectiles.pos[it].x -= projectile_size.x / 2;
-				projectiles.pos[it].y -= projectile_size.y / 2;
-				projectiles.vel[it] = dir_from_to(projectiles.pos[it], world_mouse);
-				projectiles.vel[it].x *= 10;
-				projectiles.vel[it].y *= 10;
-				break;
-			}
+			if !projectiles.active[it] { continue; }
+			projectiles.pos[it].x += projectiles.vel[it].x;
+			projectiles.pos[it].y += projectiles.vel[it].y;
+
+			s_v2i col = get_tile_collision(projectiles.pos[it], projectile_size);
+			if col.x == -1 { continue; }
+			projectiles.active[it] = 0;
+			s_v2 center = get_center(projectiles.pos[it], projectile_size);
+			s_v2 player_center = get_center(player.pos, player_size);
+			const float radius = 64;
+			float distance = v2_distance(center, player_center);
+			float strength = smoothstep(128, 16, distance) * 5;
+			s_v2 dir = dir_from_to(center, player_center);
+			s_v2 push = v2_scale(dir, strength);
+			player.vel.x += push.x;
+			player.vel.y += push.y;
 		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+		camera.offset.x = ww / 2 - player_size.x / 2;
+		camera.offset.y = wh / 2 - player_size.y / 2;
+		camera.pos.x = player.x;
+		camera.pos.y = player.y;
+
+
 	}
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		create projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-	{
-		s_v2 dir;
-		if IsKeyDown(KEY_LEFT) {
-			dir.x -= 1;
-		}
-		if IsKeyDown(KEY_RIGHT) {
-			dir.x += 1;
-		}
-		player.vel.x += dir.x * 0.5;
-	}
-
-	player.vel.y += 0.09;
-	if IsKeyPressed(KEY_SPACE) {
-		player.vel.y = -3;
-	}
-
-	player.x += player.vel.x;
-
-	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	{
-		s_v2 player_center = get_center(player.pos, player_size);
-		s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
-		for y: 7 {
-			int yy = -3 + y;
-			for x: 7 {
-				int xx = -3 + x;
-				s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
-				if index.x < 0 || index.x >= c_max_tiles { continue; }
-				if index.y < 0 || index.y >= c_max_tiles { continue; }
-
-				s8 tile = tiles[index.y][index.x];
-				s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
-				if tile > 0 {
-					if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
-						if player.vel.x > 0 {
-							player.x = tile_pos.x - player_size.x;
-						}
-						else {
-							player.x = tile_pos.x + tile_size.x;
-						}
-					}
-				}
-			}
-		}
-	}
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		x collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-	player.y += player.vel.y;
-
-	int is_grounded = 0;
-
-	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	{
-		s_v2 player_center = get_center(player.pos, player_size);
-		s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
-		for y: 7 {
-			int yy = -3 + y;
-			for x: 7 {
-				int xx = -3 + x;
-				s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
-				if index.x < 0 || index.x >= c_max_tiles { continue; }
-				if index.y < 0 || index.y >= c_max_tiles { continue; }
-
-				s8 tile = tiles[index.y][index.x];
-				s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
-				if tile > 0 {
-					if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
-						if player.vel.y > 0 {
-							player.y = tile_pos.y - player_size.y;
-							is_grounded = 1;
-						}
-						else {
-							player.y = tile_pos.y + tile_size.y;
-						}
-						player.vel.y = 0;
-					}
-				}
-			}
-		}
-	}
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		y collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-	if is_grounded {
-		player.vel.x *= 0.8;
-	}
-
-
-	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	for c_max_projectiles {
-		if !projectiles.active[it] { continue; }
-		projectiles.pos[it].x += projectiles.vel[it].x;
-		projectiles.pos[it].y += projectiles.vel[it].y;
-
-		s_v2i col = get_tile_collision(projectiles.pos[it], projectile_size);
-		if col.x == -1 { continue; }
-		projectiles.active[it] = 0;
-		s_v2 center = get_center(projectiles.pos[it], projectile_size);
-		s_v2 player_center = get_center(player.pos, player_size);
-		const float radius = 64;
-		float distance = v2_distance(center, player_center);
-		float strength = smoothstep(64, 16, distance);
-		s_v2 dir = dir_from_to(center, player_center);
-		s_v2 push = v2_scale(dir, strength);
-		player.vel.x += push.x;
-		player.vel.y += push.y;
-	}
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-	camera.offset.x = ww / 2 - player_size.x / 2;
-	camera.offset.y = wh / 2 - player_size.y / 2;
-	camera.pos.x = player.x;
-	camera.pos.y = player.y;
-
 }
 
 func void render()
@@ -375,7 +472,6 @@ func void render()
 	world_mouse = to_world(mouse);
 
 	{
-		int tile_type = 0;
 		int right = (ww + camera.pos.x) / tile_size.x + 1;
 		int down = (wh + camera.pos.y) / tile_size.y + 1;
 		for y: down {
@@ -386,11 +482,10 @@ func void render()
 				s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
 				if tile == 0 {
 					s_color color = DARK;
-					if tile_type == 1 {
+					if x % 2 == 0 {
 						color = {100, 25, 25, 255};
 					}
 					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, color);
-					tile_type = (tile_type + 1) % 2;
 				}
 				if tile == 1 {
 					// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
@@ -505,4 +600,71 @@ func float max(float a, float b)
 {
 	if a <= b { return b; }
 	return a;
+}
+
+func s_v2 to_screen(s_v2 v)
+{
+	s_v2 result = v;
+	result.x -= camera.pos.x;
+	result.y -= camera.pos.y;
+	result.x += camera.offset.x;
+	result.y += camera.offset.y;
+	return result;
+}
+
+func s_v2 to_world(s_v2 v)
+{
+	s_v2 result = v;
+	result.x -= camera.offset.x;
+	result.y -= camera.offset.y;
+	result.x += camera.pos.x;
+	result.y += camera.pos.y;
+	return result;
+}
+
+func s_v2 v2(float x, float y)
+{
+	return {x, y};
+}
+
+func s_v2i v2i(int x, int y)
+{
+	return {x, y};
+}
+
+func b8 rect_collides_rect(s_v2 pos1, s_v2 size1, s_v2 pos2, s_v2 size2)
+{
+	return pos1.x + size1.x > pos2.x && pos1.x < pos2.x + size2.x &&
+		pos1.y + size1.y > pos2.y && pos1.y < pos2.y + size2.y;
+}
+
+func s_v2 get_center(s_v2 pos, s_v2 size)
+{
+	s_v2 result = pos;
+	result.x += size.x / 2;
+	result.y += size.y / 2;
+	return result;
+}
+
+func float v2_length(s_v2 v)
+{
+	return sqrtf(v.x * v.x + v.y * v.y);
+}
+
+func s_v2 v2_normalized(s_v2 v)
+{
+	float length = v2_length(v);
+	if(length > 0) {
+		v.x /= length;
+		v.y /= length;
+	}
+	return v;
+}
+
+func s_v2 dir_from_to(s_v2 from, s_v2 to)
+{
+	s_v2 result = to;
+	result.x -= from.x;
+	result.y -= from.y;
+	return v2_normalized(result);
 }

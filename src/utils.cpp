@@ -79,12 +79,12 @@ t& s_sarray<t, n>::get(int index)
 func char* format_str(char* str, ...)
 {
 	static int index = 0;
-	static char buffers[128][1024];
+	static char buffers[c_static_buffers][c_static_buffer_len];
 	char* buffer = buffers[index];
-	index = (index + 1) % 128;
+	index = (index + 1) % c_static_buffers;
 	va_list args;
 	va_start(args, str);
-	vsnprintf(buffer, 1024, str, args);
+	vsnprintf(buffer, c_static_buffer_len, str, args);
 	va_end(args);
 	return buffer;
 }

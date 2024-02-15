@@ -266,6 +266,10 @@ func char* node_to_c_str(s_node* node, s_code_gen_context context)
 			return format_str("(%s == %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;
 
+		case e_node_not_equals: {
+			return format_str("(%s != %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+		} break;
+
 		case e_node_multiply: {
 			return format_str("(%s * %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;

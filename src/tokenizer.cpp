@@ -124,6 +124,13 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 		at += 2;
 	}
 
+	else if(*at == '!' && at[1] == '=') {
+		token.type = e_token_not_equals;
+		token.at = at;
+		token.len = 2;
+		at += 2;
+	}
+
 	else if(*at == '&' && at[1] == '&') {
 		token.type = e_token_logic_and;
 		token.at = at;
@@ -426,9 +433,9 @@ func char* token_to_str(s_token token)
 	if(token.type == e_token_eof) { return "EOF"; }
 
 	static int index = 0;
-	static char buffers[128][128];
+	static char buffers[c_static_buffers][128];
 	char* buffer = buffers[index];
-	index = (index + 1) % 128;
+	index = (index + 1) % c_static_buffers;
 	sprintf(buffer, "%.*s", ft(token));
 	return buffer;
 }
