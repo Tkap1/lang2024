@@ -780,6 +780,16 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			return true;
 		} break;
 
+		case e_node_address_of: {
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			// @Note(tkap, 15/02/2024): Can't really do that here. We want to say pointer_level += 1 somehow
+			// node->var_type = node->left->var_type;
+			node->type_checked = true;
+			return true;
+		} break;
+
 		invalid_default_case;
 	}
 	return false;

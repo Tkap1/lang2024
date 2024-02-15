@@ -1,0 +1,6 @@
+
+func void foo()
+{
+	int[32][32] bar;
+	int[32][32] baz = bar;
+}

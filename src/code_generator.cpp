@@ -221,6 +221,11 @@ func char* node_to_c_str(s_node* node, s_code_gen_context context)
 			return format_str("(-%s)", str);
 		} break;
 
+		case e_node_address_of: {
+			char* str = node_to_c_str(node->left, context);
+			return format_str("(&%s)", str);
+		} break;
+
 		case e_node_member_access: {
 			return format_str("%s.%s", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
 		} break;

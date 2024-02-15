@@ -228,7 +228,7 @@ struct s_editor
 	int curr_tile,
 }
 
-s8[c_max_tiles][c_max_tiles] tiles;
+s8[c_max_tiles][c_max_tiles] g_tiles;
 s_camera camera;
 float delta;
 float update_timer;
@@ -283,7 +283,7 @@ func int main()
 
 	int bottom_tile = wh / tile_size.x;
 	for x: c_max_tiles {
-		tiles[bottom_tile][x] = 1;
+		g_tiles[bottom_tile][x] = 1;
 	}
 
 	projectile_size = v2(32, 32);
@@ -297,7 +297,11 @@ func int main()
 			update_timer -= c_update_delay;
 			update();
 		}
-		render();
+		int[c_max_tiles][c_max_tiles]* tiles = &g_tiles;
+		if(state == 2) {
+			tiles = &editor.tiles;
+		}
+		render(tiles);
 	}
 }
 
@@ -400,7 +404,7 @@ func void update()
 					if index.x < 0 || index.x >= c_max_tiles { continue; }
 					if index.y < 0 || index.y >= c_max_tiles { continue; }
 
-					s8 tile = tiles[index.y][index.x];
+					s8 tile = g_tiles[index.y][index.x];
 					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 					if tile > 0 {
 						if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
@@ -433,7 +437,7 @@ func void update()
 					if index.x < 0 || index.x >= c_max_tiles { continue; }
 					if index.y < 0 || index.y >= c_max_tiles { continue; }
 
-					s8 tile = tiles[index.y][index.x];
+					s8 tile = g_tiles[index.y][index.x];
 					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 					if tile > 0 {
 						if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
@@ -521,7 +525,7 @@ func void update()
 
 }
 
-func void render()
+func void render(int[c_max_tiles][c_max_tiles]* tiles)
 {
 	BeginDrawing();
 	ClearBackground(BLACK);
@@ -611,7 +615,7 @@ func s_v2i get_tile_collision(s_v2 pos, s_v2 size)
 			if index.x < 0 || index.x >= c_max_tiles { continue; }
 			if index.y < 0 || index.y >= c_max_tiles { continue; }
 
-			s8 tile = tiles[index.y][index.x];
+			s8 tile = g_tiles[index.y][index.x];
 			s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 			if tile > 0 {
 				if rect_collides_rect(pos, size, tile_pos, tile_size) {
