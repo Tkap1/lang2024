@@ -379,6 +379,11 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			if(!type_check_statement(node->nif.body, reporter, data, arena, context)) {
 				return false;
 			}
+			if(node->nif.nelse) {
+				if(!type_check_statement(node->nif.nelse, reporter, data, arena, context)) {
+					return false;
+				}
+			}
 			node->type_checked = true;
 			return true;
 		} break;
@@ -388,7 +393,13 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
-			if(!type_check_expr(node->right, reporter, data, arena, context)) {
+			s_type_check_context temp = context;
+
+			// @TODO(tkap, 15/02/2024): We shouldnt need this first check. Everything should have a var_type. Fix
+			if(node->left->var_type && node->left->var_type->type == e_node_struct) {
+				temp.expected_literal_type = node->left->var_type;
+			}
+			if(!type_check_expr(node->right, reporter, data, arena, temp)) {
 				return false;
 			}
 			node->type_checked = true;

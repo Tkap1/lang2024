@@ -94,7 +94,10 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 		} break;
 
 		case e_node_assign: {
-			builder->add_line_tabs("%s = %s;", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add_tabs("%s = ", node_to_c_str(node->left, context));
+			s_code_gen_context temp = context;
+			temp.prefix_struct_literal = true;
+			builder->add_line("%s;", node_to_c_str(node->right, temp));
 		} break;
 
 		case e_node_return: {

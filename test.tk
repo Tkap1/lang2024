@@ -95,7 +95,7 @@ struct s_camera
 	s_v2 offset,
 }
 
-const int c_max_tiles = 64;
+const int c_max_tiles = 512;
 s8[c_max_tiles][c_max_tiles] tiles;
 s_camera camera;
 float delta;
@@ -248,14 +248,16 @@ func void update()
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		create projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-	s_v2 dir;
-	if IsKeyDown(KEY_LEFT) {
-		dir.x -= 1;
+	{
+		s_v2 dir;
+		if IsKeyDown(KEY_LEFT) {
+			dir.x -= 1;
+		}
+		if IsKeyDown(KEY_RIGHT) {
+			dir.x += 1;
+		}
+		player.vel.x += dir.x * 0.5;
 	}
-	if IsKeyDown(KEY_RIGHT) {
-		dir.x += 1;
-	}
-	player.vel.x += dir.x * 2;
 
 	player.vel.y += 0.09;
 	if IsKeyPressed(KEY_SPACE) {
@@ -265,25 +267,27 @@ func void update()
 	player.x += player.vel.x;
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	s_v2 player_center = get_center(player.pos, player_size);
-	s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
-	for y: 7 {
-		int yy = -3 + y;
-		for x: 7 {
-			int xx = -3 + x;
-			s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
-			if index.x < 0 || index.x >= c_max_tiles { continue; }
-			if index.y < 0 || index.y >= c_max_tiles { continue; }
+	{
+		s_v2 player_center = get_center(player.pos, player_size);
+		s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
+		for y: 7 {
+			int yy = -3 + y;
+			for x: 7 {
+				int xx = -3 + x;
+				s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
+				if index.x < 0 || index.x >= c_max_tiles { continue; }
+				if index.y < 0 || index.y >= c_max_tiles { continue; }
 
-			s8 tile = tiles[index.y][index.x];
-			s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
-			if tile > 0 {
-				if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
-					if player.vel.x > 0 {
-						player.x = tile_pos.x - player_size.x;
-					}
-					else {
-						player.x = tile_pos.x + tile_size.x;
+				s8 tile = tiles[index.y][index.x];
+				s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
+				if tile > 0 {
+					if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
+						if player.vel.x > 0 {
+							player.x = tile_pos.x - player_size.x;
+						}
+						else {
+							player.x = tile_pos.x + tile_size.x;
+						}
 					}
 				}
 			}
@@ -291,36 +295,67 @@ func void update()
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		x collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-	player.vel.x = 0;
 	player.y += player.vel.y;
 
-	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	player_center = get_center(player.pos, player_size);
-	player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
-	for y: 7 {
-		int yy = -3 + y;
-		for x: 7 {
-			int xx = -3 + x;
-			s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
-			if index.x < 0 || index.x >= c_max_tiles { continue; }
-			if index.y < 0 || index.y >= c_max_tiles { continue; }
+	int is_grounded = 0;
 
-			s8 tile = tiles[index.y][index.x];
-			s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
-			if tile > 0 {
-				if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
-					if player.vel.y > 0 {
-						player.y = tile_pos.y - player_size.y;
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	{
+		s_v2 player_center = get_center(player.pos, player_size);
+		s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
+		for y: 7 {
+			int yy = -3 + y;
+			for x: 7 {
+				int xx = -3 + x;
+				s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
+				if index.x < 0 || index.x >= c_max_tiles { continue; }
+				if index.y < 0 || index.y >= c_max_tiles { continue; }
+
+				s8 tile = tiles[index.y][index.x];
+				s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
+				if tile > 0 {
+					if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
+						if player.vel.y > 0 {
+							player.y = tile_pos.y - player_size.y;
+							is_grounded = 1;
+						}
+						else {
+							player.y = tile_pos.y + tile_size.y;
+						}
+						player.vel.y = 0;
 					}
-					else {
-						player.y = tile_pos.y + tile_size.y;
-					}
-					player.vel.y = 0;
 				}
 			}
 		}
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		y collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	if is_grounded {
+		player.vel.x *= 0.8;
+	}
+
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	for c_max_projectiles {
+		if !projectiles.active[it] { continue; }
+		projectiles.pos[it].x += projectiles.vel[it].x;
+		projectiles.pos[it].y += projectiles.vel[it].y;
+
+		s_v2i col = get_tile_collision(projectiles.pos[it], projectile_size);
+		if col.x == -1 { continue; }
+		projectiles.active[it] = 0;
+		s_v2 center = get_center(projectiles.pos[it], projectile_size);
+		s_v2 player_center = get_center(player.pos, player_size);
+		const float radius = 64;
+		float distance = v2_distance(center, player_center);
+		float strength = smoothstep(64, 16, distance);
+		s_v2 dir = dir_from_to(center, player_center);
+		s_v2 push = v2_scale(dir, strength);
+		player.vel.x += push.x;
+		player.vel.y += push.y;
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 
 	camera.offset.x = ww / 2 - player_size.x / 2;
 	camera.offset.y = wh / 2 - player_size.y / 2;
@@ -339,24 +374,31 @@ func void render()
 	mouse = GetMousePosition();
 	world_mouse = to_world(mouse);
 
-
-	int right = (ww + camera.pos.x) / tile_size.x + 1;
-	int down = (wh + camera.pos.y) / tile_size.y + 1;
-	for y: down {
-		if y >= c_max_tiles { continue; }
-		for x: right {
-			if x >= c_max_tiles { continue; }
-			s8 tile = tiles[y][x];
-			s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
-			if tile == 0 {
-				DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, DARK);
-			}
-			if tile == 1 {
-				// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
-				DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
-			}
-			if tile == 2 {
-				DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
+	{
+		int tile_type = 0;
+		int right = (ww + camera.pos.x) / tile_size.x + 1;
+		int down = (wh + camera.pos.y) / tile_size.y + 1;
+		for y: down {
+			if y >= c_max_tiles { continue; }
+			for x: right {
+				if x >= c_max_tiles { continue; }
+				s8 tile = tiles[y][x];
+				s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
+				if tile == 0 {
+					s_color color = DARK;
+					if tile_type == 1 {
+						color = {100, 25, 25, 255};
+					}
+					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, color);
+					tile_type = (tile_type + 1) % 2;
+				}
+				if tile == 1 {
+					// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
+					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
+				}
+				if tile == 2 {
+					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
+				}
 			}
 		}
 	}
@@ -394,8 +436,6 @@ func void render()
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	for c_max_projectiles {
 		if !projectiles.active[it] { continue; }
-		projectiles.pos[it].x += projectiles.vel[it].x;
-		projectiles.pos[it].y += projectiles.vel[it].y;
 		s_v2 pos = to_screen(projectiles.pos[it]);
 		DrawRectangle(pos.x, pos.y, projectile_size.x, projectile_size.y, RED);
 	}
@@ -404,4 +444,65 @@ func void render()
 	DrawFPS(16, 16);
 
 	EndDrawing();
+}
+
+func s_v2i get_tile_collision(s_v2 pos, s_v2 size)
+{
+	s_v2 center = get_center(pos, size);
+	s_v2i base_index = v2i(floorf(center.x / tile_size.x), floorf(center.y / tile_size.y));
+	for y: 7 {
+		int yy = -3 + y;
+		for x: 7 {
+			int xx = -3 + x;
+			s_v2i index = v2i(base_index.x + xx, base_index.y + yy);
+			if index.x < 0 || index.x >= c_max_tiles { continue; }
+			if index.y < 0 || index.y >= c_max_tiles { continue; }
+
+			s8 tile = tiles[index.y][index.x];
+			s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
+			if tile > 0 {
+				if rect_collides_rect(pos, size, tile_pos, tile_size) {
+					return index;
+				}
+			}
+		}
+	}
+	return v2i(-1, -1);
+}
+
+func float smoothstep(float edge0, float edge1, float val)
+{
+	float t = clamp((val - edge0) / (edge1 - edge0), 0.0, 1.0);
+	return t * t * (3.0 - 2.0 * t);
+}
+
+func s_v2 v2_scale(s_v2 v, float scalar)
+{
+	v.x *= scalar;
+	v.y *= scalar;
+	return v;
+}
+
+func float v2_distance(s_v2 a, s_v2 b)
+{
+	a.x -= b.x;
+	a.y -= b.y;
+	return v2_length(a);
+}
+
+func float clamp(float val, float min_val, float max_val)
+{
+	return max(min(val, max_val), min_val);
+}
+
+func float min(float a, float b)
+{
+	if a >= b { return b; }
+	return a;
+}
+
+func float max(float a, float b)
+{
+	if a <= b { return b; }
+	return a;
 }
