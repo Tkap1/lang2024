@@ -1,4 +1,6 @@
 
+external_func void* memcpy(void*, void*, u64);
+
 func void foo()
 {
 	int[32][32] bar;

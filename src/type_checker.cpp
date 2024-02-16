@@ -1128,3 +1128,24 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 		maybe_fix_member_access(node, member.import_source->var_type, data, arena);
 	}
 }
+
+
+func int get_size_in_bytes(s_node* node, t_scope_arr* data)
+{
+	assert(node->type_checked);
+	int result = 0;
+	switch(node->type) {
+		case e_node_array: {
+			assert(node->array.size_expr->type == e_node_integer);
+			result = get_size_in_bytes(node->left, data) * node->array.size_expr->integer.value;
+		} break;
+
+		case e_node_type: {
+			s_node* type = get_type_by_name(node->token.str(), data);
+			assert(type);
+			return type->basic_type.size_in_bytes;
+		} break;
+		invalid_default_case;
+	}
+	return result;
+}

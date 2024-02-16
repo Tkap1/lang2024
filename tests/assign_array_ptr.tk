@@ -1,0 +1,9 @@
+
+// @Note(tkap, 15/02/2024): Doesn't generate the correct code!
+func void foo()
+{
+	int[32][32] bar;
+	int[32][32]* baz = &bar;
+}
+
+
