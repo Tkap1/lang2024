@@ -45,6 +45,7 @@ enum e_node
 	e_node_subscript,
 	e_node_continue,
 	e_node_break,
+	e_node_enum,
 };
 
 enum e_context
@@ -206,6 +207,12 @@ struct s_node
 		{
 			s_node* expressions;
 		} struct_literal;
+
+		struct
+		{
+			int member_count;
+			s_node* members;
+		} nenum;
 	};
 };
 
@@ -234,3 +241,4 @@ func s_parse_result parse_external_func_decl(s_tokenizer tokenizer, s_error_repo
 func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* reporter, int context, s_lin_arena* arena);
 func s_node statement_str_to_node(char* str, s_error_reporter* reporter, s_lin_arena* arena);
+func s_parse_result parse_enum(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);

@@ -14,6 +14,13 @@ func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_aren
 			continue;
 		}
 
+		pr = parse_enum(tokenizer, reporter, arena);
+		if(pr.success) {
+			tokenizer = pr.tokenizer;
+			current = advance_node(current, pr.node, arena);
+			continue;
+		}
+
 		pr = parse_func_decl(tokenizer, reporter, arena);
 		if(pr.success) {
 			tokenizer = pr.tokenizer;
@@ -88,6 +95,41 @@ func s_parse_result parse_struct(s_tokenizer tokenizer, s_error_reporter* report
 		if(!tokenizer.consume_token(e_token_close_brace, reporter)) {
 			reporter->fatal(tokenizer.file, result.node.token.line, "Struct '%s' missing closing brace", result.node.token.str());
 		}
+
+		result.tokenizer = tokenizer;
+		result.success = true;
+	}
+
+	return result;
+}
+
+func s_parse_result parse_enum(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
+{
+	s_parse_result result = zero;
+	s_token token = zero;
+
+	breakable_block {
+		if(!tokenizer.consume_token("enum", reporter)) { break; }
+		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Enum missing name"); }
+		if(!tokenizer.consume_token(e_token_open_brace, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected '{' after 'enum'"); }
+
+		result.node.token = token;
+		result.node.type = e_node_enum;
+		s_node** curr_member = &result.node.nenum.members;
+
+		while(true) {
+			if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
+			s_node member = zero;
+			member.token = token;
+			curr_member = advance_node(curr_member, member, arena);
+			result.node.nenum.member_count += 1;
+			if(!tokenizer.consume_token(e_token_comma, &token, reporter)) { break; }
+		}
+		if(result.node.nenum.member_count <= 0) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Enums must have at least 1 member");
+		}
+
+		if(!tokenizer.consume_token(e_token_close_brace, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected '}' after 'enum'"); }
 
 		result.tokenizer = tokenizer;
 		result.success = true;
