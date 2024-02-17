@@ -172,6 +172,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/assign_array.tk", true},
 		{"tests/assign_array_ptr.tk", true},
 		{"tests/address_of_array_in_struct.tk", true},
+		{"tests/assign_to_array_element.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

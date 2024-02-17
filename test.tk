@@ -297,7 +297,7 @@ func int main()
 			update_timer -= c_update_delay;
 			update();
 		}
-		int[c_max_tiles][c_max_tiles]* tiles = &g_tiles;
+		s8[c_max_tiles][c_max_tiles]* tiles = &g_tiles;
 		if(state == 2) {
 			tiles = &editor.tiles;
 		}
@@ -525,7 +525,7 @@ func void update()
 
 }
 
-func void render(int[c_max_tiles][c_max_tiles]* tiles)
+func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 {
 	BeginDrawing();
 	ClearBackground(BLACK);

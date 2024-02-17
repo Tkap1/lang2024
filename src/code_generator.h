@@ -3,6 +3,7 @@
 
 struct s_code_gen_context
 {
+	b8 is_func_arg;
 	b8 prefix_struct_literal;
 };
 

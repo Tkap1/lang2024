@@ -67,6 +67,7 @@ func b8 generate_code(s_node* ast, s_lin_arena* arena)
 func void generate_func_decl_arg(s_node* node, t_code_builder* builder, b8 is_external)
 {
 	s_code_gen_context context = zero;
+	context.is_func_arg = true;
 	if(is_external) {
 		node_to_c_str(node, builder, context);
 		get_suffix_str(node, builder);
@@ -75,7 +76,7 @@ func void generate_func_decl_arg(s_node* node, t_code_builder* builder, b8 is_ex
 		assert(node->type == e_node_var_decl);
 		node_to_c_str(node->var_decl.type, builder, context);
 		builder->add(" %s", node->var_decl.name.str());
-		get_suffix_str(node->var_decl.type, builder);
+		// get_suffix_str(node->var_decl.type, builder);
 	}
 }
 
@@ -251,7 +252,12 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 
 		// @TODO(tkap, 17/02/2024): I dont get this
 		case e_node_array: {
-			node_to_c_str(node->left, builder, context);
+			if(context.is_func_arg) {
+				generate_array_base_type(node, builder);
+			}
+			else {
+				node_to_c_str(node->left, builder, context);
+			}
 		} break;
 
 		case e_node_string: {
@@ -486,6 +492,9 @@ func void get_subscript_str(s_node* node, int level, t_code_builder* builder, s_
 		return;
 	}
 	if(level > 0 && node->left->type != e_node_subscript) {
+		builder->add("(");
+		generate_array_base_type(node->left, builder);
+		builder->add(")");
 		node_to_c_str(node->left, builder, context);
 		builder->add(" + (");
 		node_to_c_str(node->right, builder, context);
