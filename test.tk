@@ -268,10 +268,6 @@ const int ww = 1280;
 const int wh = 900;
 s_v2 tile_size;
 s_v2 player_size;
-s_texture texture;
-s_texture tile0;
-s_texture face;
-s_texture hand;
 float player_scale = 0.4;
 float tile_scale = 0.25;
 s_player player;
@@ -289,27 +285,22 @@ s_editor editor;
 func int main()
 {
 
-	int foo = e_animation.explosion;
-
 	SetTraceLogLevel(LOG_WARNING);
 	SetConfigFlags(FLAG_VSYNC_HINT);
 
 	InitWindow(ww, wh, "AZEN");
 
-	texture = LoadTexture("assets/pink_body_square.png");
-	SetTextureFilter(texture, TEXTURE_FILTER_ANISOTROPIC_16X);
+	g_textures[e_texture.player_body] = load_texture("assets/pink_body_square.png");
+	g_textures[e_texture.tile] = load_texture("assets/tile_grey.png");
+	g_textures[e_texture.player_face] = load_texture("assets/face_h.png");
+	g_textures[e_texture.player_hand] = load_texture("assets/pink_hand_open.png");
 
-	tile0 = LoadTexture("assets/tile_grey.png");
-	SetTextureFilter(tile0, TEXTURE_FILTER_ANISOTROPIC_16X);
+	// for e_texture.count {
+	// 	printf("%i\n", g_textures[it].width);
+	// }
 
-	face = LoadTexture("assets/face_h.png");
-	SetTextureFilter(face, TEXTURE_FILTER_ANISOTROPIC_16X);
-
-	hand = LoadTexture("assets/pink_hand_open.png");
-	SetTextureFilter(hand, TEXTURE_FILTER_ANISOTROPIC_16X);
-
-	tile_size = v2(tile0.width * tile_scale, tile0.height * tile_scale);
-	player_size = v2(texture.width * player_scale, texture.height * player_scale);
+	tile_size = v2(g_textures[e_texture.tile].width * tile_scale, g_textures[e_texture.tile].height * tile_scale);
+	player_size = v2(g_textures[e_texture.player_body].width * player_scale, g_textures[e_texture.player_body].height * player_scale);
 
 	player.pos = v2(32, 32);
 
@@ -589,14 +580,14 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 					if x % 2 == 0 {
 						color = {100, 25, 25, 255};
 					}
-					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, color);
+					DrawTextureEx(g_textures[e_texture.tile], to_screen(tile_pos), 0, tile_scale, color);
 				}
 				if tile == 1 {
 					// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
-					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
+					DrawTextureEx(g_textures[e_texture.tile], to_screen(tile_pos), 0, tile_scale, WHITE);
 				}
 				if tile == 2 {
-					DrawTextureEx(tile0, to_screen(tile_pos), 0, tile_scale, WHITE);
+					DrawTextureEx(g_textures[e_texture.tile], to_screen(tile_pos), 0, tile_scale, WHITE);
 				}
 			}
 		}
@@ -604,14 +595,14 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 
 
 	{
-		DrawTextureEx(texture, to_screen(player.pos), 0, player_scale, WHITE);
+		DrawTextureEx(g_textures[e_texture.player_body], to_screen(player.pos), 0, player_scale, WHITE);
 	}
 
 	{
 		s_v2 face_pos = player.pos;
 		face_pos.x += player_size.x / 4;
 		face_pos.y += player_size.y / 4;
-		DrawTextureEx(face, to_screen(face_pos), 0, player_scale, WHITE);
+		DrawTextureEx(g_textures[e_texture.player_face], to_screen(face_pos), 0, player_scale, WHITE);
 	}
 
 	{
@@ -619,7 +610,7 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 		hand_pos.x -= 80 * player_scale;
 		hand_pos.y += 20;
 		hand_pos.y += sinf(time * 6) * 5;
-		DrawTextureEx(hand, to_screen(hand_pos), 0, player_scale, WHITE);
+		DrawTextureEx(g_textures[e_texture.player_hand], to_screen(hand_pos), 0, player_scale, WHITE);
 	}
 
 	{
@@ -627,7 +618,7 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 		hand_pos.x += 200 * player_scale;
 		hand_pos.y += 20;
 		hand_pos.y += sinf(time * 6) * 5;
-		DrawTextureEx(hand, to_screen(hand_pos), 0, player_scale, WHITE);
+		DrawTextureEx(g_textures[e_texture.player_hand], to_screen(hand_pos), 0, player_scale, WHITE);
 	}
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -780,4 +771,11 @@ func int is_valid_tile_index(s_v2i index) {
 	if index.x < 0 || index.x >= c_max_tiles { return 0; }
 	if index.y < 0 || index.y >= c_max_tiles { return 0; }
 	return 1;
+}
+
+func s_texture load_texture(char* path)
+{
+	s_texture texture = LoadTexture(path);
+	SetTextureFilter(texture, TEXTURE_FILTER_ANISOTROPIC_16X);
+	return texture;
 }

@@ -1,0 +1,16 @@
+
+
+
+enum e_foo
+{
+	a,
+	b,
+	c,
+}
+
+func void bar()
+{
+	for e_foo.count {
+
+	}
+}

@@ -1,0 +1,14 @@
+
+
+struct s_foo
+{
+	int x,
+}
+
+func void bar()
+{
+	s_foo foo;
+	for foo.x {
+
+	}
+}

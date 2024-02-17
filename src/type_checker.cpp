@@ -102,6 +102,15 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
+	{
+		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 4, .at = "char"};
+		node.basic_type.name = "char";
+		node.size_in_bytes = 1;
+		add_type_to_scope(data, alloc_node(node, arena), arena);
+	}
+
 	while(true) {
 		reporter->error_level = e_error_level_none;
 		b8 successfully_typechecked_something = false;
@@ -376,7 +385,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 				node->nfor.upper_bound = node->nfor.expr;
 			}
 			assert(iter_type);
-			assert(iter_type->type == e_node_type);
+			// assert(iter_type->type == e_node_type);
 
 			// @TODO(tkap, 12/02/2024): This is fucked. we are going to add the "it" variable to the scope the for loop is in, rather than inside the for loop
 			// @TODO(tkap, 12/02/2024): We are going to add this multiple times!!!
@@ -438,7 +447,8 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 				}
 			}
 			// @Hack(tkap, 14/02/2024): we need a better system. if we find "float foo = 7;", we have to turn that 7 into a float, because it is an int
-			if(node->var_type->type == e_node_type && strcmp(node->var_type->basic_type.name, "float") == 0 && node->var_decl.value && node->var_decl.value->type == e_node_integer) {
+			// @TODO(tkap, 17/02/2024): DISASTER!
+			if(node->var_type && node->var_type->type == e_node_type && strcmp(node->var_type->basic_type.name, "float") == 0 && node->var_decl.value && node->var_decl.value->type == e_node_integer) {
 				node->var_decl.value->type = e_node_float;
 				node->var_decl.value->nfloat.value = (float)node->var_decl.value->integer.value;
 			}
