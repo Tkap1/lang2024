@@ -150,6 +150,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/foo.tk", false},
 		{"tests/bar.tk", true},
 		{"tests/subscript0.tk", true},
+		{"tests/subscript_2d.tk", true},
 		{"tests/semicolon_instead_of_comma.tk", false},
 		{"tests/two_member_access.tk", true},
 		{"tests/for_int.tk", true},
@@ -164,12 +165,13 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/no_forward_decl.tk", true},
 		{"tests/import.tk", true},
 		{"tests/import2.tk", true},
-		// {"tests/import3.tk", false},
+		// // {"tests/import3.tk", false},
 		{"tests/import_nest.tk", true},
 		{"tests/array_in_struct.tk", true},
 		{"tests/import_nest.tk", true},
 		{"tests/assign_array.tk", true},
 		{"tests/assign_array_ptr.tk", true},
+		{"tests/address_of_array_in_struct.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

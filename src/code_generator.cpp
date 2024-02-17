@@ -19,8 +19,8 @@ func b8 generate_code(s_node* ast, s_lin_arena* arena)
 	for_node(node, ast) {
 		switch(node->type) {
 			case e_node_func_decl: {
-				builder->add("%s ", node_to_c_str(node->func_decl.return_type, context));
-				builder->add("%s(", node->func_decl.name.str());
+				node_to_c_str(node->func_decl.return_type, builder, context);
+				builder->add(" %s(", node->func_decl.name.str());
 				if(node->func_decl.argument_count <= 0) {
 					builder->add("void");
 				}
@@ -68,11 +68,14 @@ func void generate_func_decl_arg(s_node* node, t_code_builder* builder, b8 is_ex
 {
 	s_code_gen_context context = zero;
 	if(is_external) {
-		builder->add("%s%s", node_to_c_str(node, context), get_suffix_str(node));
+		node_to_c_str(node, builder, context);
+		get_suffix_str(node, builder);
 	}
 	else {
 		assert(node->type == e_node_var_decl);
-		builder->add("%s %s%s", node_to_c_str(node->var_decl.type, context), node->var_decl.name.str(), get_suffix_str(node->var_decl.type));
+		node_to_c_str(node->var_decl.type, builder, context);
+		builder->add(" %s", node->var_decl.name.str());
+		get_suffix_str(node->var_decl.type, builder);
 	}
 }
 
@@ -82,39 +85,74 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 
 	s_code_gen_context context = zero;
 	switch(node->type) {
-		case e_node_func_call: {
-			builder->add_tabs("%s(", node_to_c_str(node->left, context));
-			for_node(arg, node->func_call.arguments) {
-				builder->add("%s", node_to_c_str(arg, context));
-				if(arg->next) {
-					builder->add(", ");
-				}
-			}
-			builder->add_line(");");
-		} break;
+		// case e_node_func_call: {
+		// 	node_to_c_str(node->left, builder, context);
+		// 	builder->add_tabs("(");
+		// 	for_node(arg, node->func_call.arguments) {
+		// 		node_to_c_str(arg, builder, context);
+		// 		if(arg->next) {
+		// 			builder->add(", ");
+		// 		}
+		// 	}
+		// 	builder->add_line(");");
+		// } break;
 
 		case e_node_assign: {
-			builder->add_tabs("%s = ", node_to_c_str(node->left, context));
+			builder->add_tabs("");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" = ");
 			s_code_gen_context temp = context;
 			temp.prefix_struct_literal = true;
-			builder->add_line("%s;", node_to_c_str(node->right, temp));
+			node_to_c_str(node->right, builder, temp);
+			builder->add_line(";");
 		} break;
 
 		case e_node_return: {
-			builder->add_line_tabs("return %s;", node_to_c_str(node->nreturn.expression, {.prefix_struct_literal = true}));
+			builder->add_tabs("return ");
+			node_to_c_str(node->nreturn.expression, builder, {.prefix_struct_literal = true});
+			builder->add_line(";");
 		} break;
 
 		case e_node_var_decl: {
-			builder->add_tabs("%s %s%s", node_to_c_str(node->var_decl.type, context), node->var_decl.name.str(), get_suffix_str(node->var_decl.type));
-
-			if(node->var_decl.value) {
-				builder->add(" = %s", node_to_c_str(node->var_decl.value, context));
+			if(node->var_decl.type->type == e_node_array) {
+				if(node->var_decl.type->pointer_level <= 0) {
+					builder->add_tabs("");
+					node_to_c_str(node->var_decl.type, builder, context);
+					builder->add(" %s", node->var_decl.name.str());
+					get_suffix_str(node->var_decl.type, builder);
+					builder->add_line(";");
+					if(node->var_decl.value) {
+						builder->add_tabs("memcpy(%s, ", node->var_decl.name.str());
+						node_to_c_str(node->var_decl.value, builder, context);
+						builder->add_line(", %i);", node->var_type->size_in_bytes);
+					}
+				}
+				else {
+					builder->add_tabs("%s", get_name(node->var_decl.type));
+					for(int i = 0; i < node->var_decl.type->pointer_level; i++) {
+						builder->add("*");
+					}
+					builder->add(" %s = ", node->var_decl.name.str());
+					node_to_c_str(node->var_decl.value, builder, context);
+					builder->add_line(";");
+				}
 			}
 			else {
-				// @TODO(tkap, 10/02/2024): we need to know if this is a struct or not
-				builder->add(" = {0}");
+				builder->add_tabs("");
+				node_to_c_str(node->var_decl.type, builder, context);
+				builder->add(" %s", node->var_decl.name.str());
+				get_suffix_str(node->var_decl.type, builder);
+
+				if(node->var_decl.value) {
+					builder->add(" = ");
+					node_to_c_str(node->var_decl.value, builder, context);
+				}
+				else {
+					// @TODO(tkap, 10/02/2024): we need to know if this is a struct or not
+					builder->add(" = {0}");
+				}
+				builder->add_line(";");
 			}
-			builder->add_line(";");
 		} break;
 
 		case e_node_while: {
@@ -123,7 +161,7 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 				builder->add("1");
 			}
 			else {
-				builder->add("%s", node_to_c_str(node->nwhile.condition, context));
+				node_to_c_str(node->nwhile.condition, builder, context);
 			}
 			builder->add_line(")");
 			generate_statement(node->nwhile.body, builder);
@@ -131,7 +169,9 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 
 		case e_node_for: {
 			char* iterator_name = node->nfor.iterator_index_name.str();
-			builder->add_line_tabs("for(int %s = 0; %s < %s; %s += 1)", iterator_name, iterator_name, node_to_c_str(node->nfor.upper_bound, context), iterator_name);
+			builder->add_tabs("for(int %s = 0; %s < ", iterator_name, iterator_name, iterator_name);
+			node_to_c_str(node->nfor.upper_bound, builder, context);
+			builder->add_line("; %s += 1)", iterator_name);
 			generate_statement(node->nfor.body, builder);
 		} break;
 
@@ -144,7 +184,9 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 		} break;
 
 		case e_node_if: {
-			builder->add_line_tabs("if(%s)", node_to_c_str(node->nwhile.condition, context));
+			builder->add_tabs("if(");
+			node_to_c_str(node->nwhile.condition, builder, context);
+			builder->add_line(")");
 			generate_statement(node->nif.body, builder);
 			if(node->nif.nelse) {
 				builder->add_line_tabs("else");
@@ -161,7 +203,9 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 		} break;
 
 		default: {
-			builder->add_line_tabs("%s;", node_to_c_str(node, context));
+			builder->add_tabs("");
+			node_to_c_str(node, builder, context);
+			builder->add_line(";");
 		}
 	}
 }
@@ -171,166 +215,322 @@ func void generate_struct_member(s_node* node, t_code_builder* builder)
 	s_code_gen_context context = zero;
 	switch(node->type) {
 		case e_node_var_decl: {
-			builder->add_line_tabs("%s %s%s;", node_to_c_str(node->var_decl.type, context), node->var_decl.name.str(), get_suffix_str(node->var_decl.type));
+			builder->add_tabs("");
+			node_to_c_str(node->var_decl.type, builder, context);
+			builder->add(" %s", node->var_decl.name.str());
+			get_suffix_str(node->var_decl.type, builder);
+			builder->add_line(";");
 		} break;
 		invalid_default_case;
 	}
 }
 
-func char* node_to_c_str(s_node* node, s_code_gen_context context)
+func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_context context)
 {
-	if(node->dont_generate) { return ""; }
+	if(node->dont_generate) { return; }
 
 	switch(node->type) {
 		case e_node_type: {
-			s_str_builder<1024> builder;
-			builder.add("%s", node->token.str());
+			builder->add("%s", node->token.str());
 			for(int i = 0; i < node->pointer_level; i++) {
-				builder.add("*");
+				builder->add("*");
 			}
-			return format_str(builder.data);
 		} break;
 
 		case e_node_integer: {
-			return format_str("%i", node->integer.value);
+			builder->add("%i", node->integer.value);
 		} break;
 
 		case e_node_float: {
-			return format_str("%ff", node->nfloat.value);
+			builder->add("%ff", node->nfloat.value);
 		} break;
 
 		case e_node_identifier: {
-			return node->token.str();
+			builder->add("%s", node->token.str());
 		} break;
 
+		// @TODO(tkap, 17/02/2024): I dont get this
 		case e_node_array: {
-			return node_to_c_str(node->left, context);
+			node_to_c_str(node->left, builder, context);
 		} break;
 
 		case e_node_string: {
-			return format_str("\"%s\"", node->token.str());
+			builder->add("\"%s\"", node->token.str());
 		} break;
 
 		case e_node_logic_not: {
-			char* str = node_to_c_str(node->left, context);
-			return format_str("!%s", str);
+			builder->add("!");
+			node_to_c_str(node->left, builder, context);
 		} break;
 
 		case e_node_unary_minus: {
-			char* str = node_to_c_str(node->left, context);
-			return format_str("(-%s)", str);
+			builder->add("(-");
+			node_to_c_str(node->left, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_address_of: {
-			char* str = node_to_c_str(node->left, context);
-			return format_str("(&%s)", str);
+			if(node->left->var_type->type == e_node_array) {
+				builder->add("(");
+				generate_array_base_type(node->left, builder);
+				builder->add(")");
+				node_to_c_str(node->left, builder, context);
+			}
+			else {
+				builder->add("(&");
+				node_to_c_str(node->left, builder, context);
+				builder->add(")");
+			}
 		} break;
 
 		case e_node_member_access: {
-			return format_str("%s.%s", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			node_to_c_str(node->left, builder, context);
+			builder->add(".");
+			node_to_c_str(node->right, builder, context);
 		} break;
 
 		case e_node_func_call: {
-			s_str_builder<1024> builder = zero;
-			builder.add("%s(", node_to_c_str(node->left, context));
+			node_to_c_str(node->left, builder, context);
+			builder->add("(");
 			for_node(arg, node->func_call.arguments) {
-				builder.add("%s", node_to_c_str(arg, context));
+				node_to_c_str(arg, builder, context);
 				if(arg->next) {
-					builder.add(", ");
+					builder->add(", ");
 				}
 			}
-			builder.add(")", node_to_c_str(node->left, context));
-			return format_str("%s", builder.data);
+			builder->add(")");
 		} break;
 
 		case e_node_modulo: {
-			return format_str("(%s %% %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" %% ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_add: {
-			return format_str("(%s + %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" + ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_divide: {
-			return format_str("(%s / %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" / ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_subtract: {
-			return format_str("(%s - %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" - ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_logic_or: {
-			return format_str("(%s || %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" || ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_logic_and: {
-			return format_str("(%s && %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" && ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_comparison: {
-			return format_str("(%s == %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" == ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_not_equals: {
-			return format_str("(%s != %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" != ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_multiply: {
-			return format_str("(%s * %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" * ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_greater_than: {
-			return format_str("(%s > %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" > ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_greater_than_or_equal: {
-			return format_str("(%s >= %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" >= ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_less_than_or_equal: {
-			return format_str("(%s <= %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" <= ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_less_than: {
-			return format_str("(%s < %s)", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(");
+			node_to_c_str(node->left, builder, context);
+			builder->add(" < ");
+			node_to_c_str(node->right, builder, context);
+			builder->add(")");
 		} break;
 
 		case e_node_struct_literal: {
-			s_str_builder<1024> builder;
 			if(context.prefix_struct_literal) {
-				builder.add("(%s)", node_to_c_str(node->var_type, context));
+				builder->add("(");
+				node_to_c_str(node->var_type, builder, context);
+				builder->add(")");
 			}
-			builder.add("{");
+			builder->add("{");
 			for_node(expr, node->struct_literal.expressions) {
-				builder.add("%s", node_to_c_str(expr, context));
+				node_to_c_str(expr, builder, context);
 				if(expr->next) {
-					builder.add(", ");
+					builder->add(", ");
 				}
 			}
-			builder.add("}");
-			return format_str("%s", builder.data);
+			builder->add("}");
 		} break;
 
 		case e_node_struct: {
-			return node->token.str();
+			builder->add("%s", node->token.str());
 		} break;
 
 		case e_node_subscript: {
-			return format_str("%s[%s]", node_to_c_str(node->left, context), node_to_c_str(node->right, context));
+			builder->add("(*(");
+			get_subscript_str(node, 0, builder, context);
+			builder->add("))");
+		} break;
+
+		invalid_default_case;
+	}
+}
+
+// @TODO(tkap, 17/02/2024): bad name
+func void get_suffix_str(s_node* node, t_code_builder* builder)
+{
+	s_code_gen_context context = zero;
+	switch(node->type) {
+		case e_node_array: {
+			get_suffix_str(node->left, builder);
+			builder->add("[");
+			node_to_c_str(node->array.size_expr, builder, context);
+			builder->add("]");
+		} break;
+		default: return;
+	}
+}
+
+func void generate_array_base_type(s_node* node, t_code_builder* builder)
+{
+	switch(node->type) {
+		case e_node_array: {
+			generate_array_base_type(node->left, builder);
+		} break;
+
+		case e_node_type: {
+			builder->add("%s*", node->token.str());
+		} break;
+
+		// @TODO(tkap, 17/02/2024): Questionable that this is here given the function name
+		case e_node_identifier: {
+			generate_array_base_type(node->var_type, builder);
+		} break;
+
+		case e_node_member_access: {
+			generate_array_base_type(node->var_type, builder);
+		} break;
+
+		invalid_default_case;
+	}
+}
+
+func void get_subscript_str(s_node* node, int level, t_code_builder* builder, s_code_gen_context context)
+{
+	assert(node->type == e_node_subscript);
+
+	if(level > 0 && node->left->type == e_node_subscript) {
+		get_subscript_str(node->left, level + 1, builder, context);
+		builder->add(" + (");
+		node_to_c_str(node->right, builder, context);
+		builder->add(" * %i)", node->array_capacity);
+		return;
+	}
+	if(level > 0 && node->left->type != e_node_subscript) {
+		node_to_c_str(node->left, builder, context);
+		builder->add(" + (");
+		node_to_c_str(node->right, builder, context);
+		builder->add(" * %i)", node->array_capacity);
+		return;
+	}
+	if(node->left->type == e_node_subscript) {
+		get_subscript_str(node->left, level + 1, builder, context);
+		builder->add(" + ");
+		node_to_c_str(node->right, builder, context);
+		return;
+	}
+	if(node->left->type != e_node_subscript) {
+		node_to_c_str(node->left, builder, context);
+		builder->add(" + ");
+		node_to_c_str(node->right, builder, context);
+		return;
+	}
+
+	// char* result = node_to_c_str(node->right, builder, context);
+
+	// if(level > 0) {
+	// 	result = format_str("(%s*%i)", result, node->array_capacity);
+	// }
+	// if(node->left->type == e_node_subscript) {
+	// 	result = format_str("%s+%s", get_subscript_str(node->left, level + 1, context), result);
+	// }
+	// else {
+	// 	result = format_str("%s+%s", node_to_c_str(node->left, context), result);
+	// }
+	// return result;
+}
+
+func char* get_name(s_node* node)
+{
+	switch(node->type) {
+		case e_node_array: {
+			return get_name(node->left);
+		} break;
+
+		case e_node_type: {
+			return node->token.str();
 		} break;
 
 		invalid_default_case;
 	}
 	return null;
-}
-
-func char* get_suffix_str(s_node* node)
-{
-	s_code_gen_context context = zero;
-	switch(node->type) {
-		case e_node_array: {
-			return format_str("%s[%s]", get_suffix_str(node->left), node_to_c_str(node->array.size_expr, context));
-		} break;
-		default: return "";
-	}
 }

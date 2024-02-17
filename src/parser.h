@@ -100,6 +100,9 @@ struct s_node
 	s_token token;
 	int pointer_level;
 	b8 dont_generate;
+	int size_in_bytes;
+	int array_capacity; // @Note(tkap, 17/02/2024): For e_node_subscript
+	s_node* temp_var_decl;
 
 	// @TODO(tkap, 10/02/2024): probably dont want this
 	s_node* left;
@@ -143,7 +146,6 @@ struct s_node
 		struct
 		{
 			b8 is_unsigned;
-			int size_in_bytes;
 			char* name;
 		} basic_type;
 

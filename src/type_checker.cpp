@@ -15,7 +15,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 4, .at = "void"};
 		node.basic_type.name = "void";
-		node.basic_type.size_in_bytes = 0;
+		node.size_in_bytes = 0;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
@@ -24,7 +24,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 3, .at = "int"};
 		node.basic_type.name = "int";
-		node.basic_type.size_in_bytes = 4;
+		node.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
@@ -33,7 +33,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 3, .at = "s32"};
 		node.basic_type.name = "s32";
-		node.basic_type.size_in_bytes = 4;
+		node.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
@@ -43,7 +43,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.token = {.type = e_token_identifier, .len = 3, .at = "u32"};
 		node.basic_type.is_unsigned = true;
 		node.basic_type.name = "u32";
-		node.basic_type.size_in_bytes = 4;
+		node.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
@@ -52,7 +52,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 3, .at = "b32"};
 		node.basic_type.name = "b32";
-		node.basic_type.size_in_bytes = 4;
+		node.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
@@ -61,7 +61,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 2, .at = "b8"};
 		node.basic_type.name = "b8";
-		node.basic_type.size_in_bytes = 1;
+		node.size_in_bytes = 1;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
@@ -70,7 +70,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 2, .at = "s8"};
 		node.basic_type.name = "s8";
-		node.basic_type.size_in_bytes = 1;
+		node.size_in_bytes = 1;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
@@ -80,7 +80,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.token = {.type = e_token_identifier, .len = 2, .at = "u8"};
 		node.basic_type.name = "u8";
 		node.basic_type.is_unsigned = true;
-		node.basic_type.size_in_bytes = 1;
+		node.size_in_bytes = 1;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
@@ -89,7 +89,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 5, .at = "float"};
 		node.basic_type.name = "float";
-		node.basic_type.size_in_bytes = 4;
+		node.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
@@ -98,7 +98,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 6, .at = "double"};
 		node.basic_type.name = "double";
-		node.basic_type.size_in_bytes = 8;
+		node.size_in_bytes = 8;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
@@ -503,6 +503,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 					s_node* var = get_var_by_name(node->token.str(), data);
 					if(var) {
 						assert(var->var_type);
+						node->temp_var_decl = var->var_decl.type;
 						node->var_type = var->var_type;
 						success = true;
 
@@ -580,6 +581,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				return false;
 			}
 			node->var_type = node->right->var_type;
+			node->temp_var_decl = node->var_type;
 			node->type_checked = true;
 			maybe_fix_member_access(node, node->left->var_type, data, arena);
 			return true;
@@ -600,14 +602,23 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_subscript: {
-			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+			s_type_check_context temp = context;
+			temp.subscript_level += 1;
+			if(!type_check_expr(node->left, reporter, data, arena, temp)) {
 				return false;
 			}
-			if(!type_check_expr(node->right, reporter, data, arena, context)) {
+			if(!type_check_expr(node->right, reporter, data, arena, temp)) {
 				return false;
 			}
+			// @TODO(tkap, 17/02/2024): Should be temp_var_decl
+			node->temp_var_decl = node->left->temp_var_decl;
 			// @TODO(tkap, 14/02/2024): Not sure about this
 			node->var_type = node->left->var_type->left->var_type;
+			s_node* temp_array = node->temp_var_decl;
+			for(int i = 0; i < context.subscript_level; i++) {
+				temp_array = temp_array->left;
+			}
+			node->array_capacity = temp_array->array.size_expr->integer.value;
 			// @TODO(tkap, 12/02/2024): check that left is array
 			node->type_checked = true;
 			return true;
@@ -746,9 +757,10 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				reporter->fatal(node->array.size_expr->token.file, node->array.size_expr->token.line, "Array size is not an integer");
 				return false;
 			}
-			node->var_type = node;
 			node->array.size_expr->type = e_node_integer;
 			node->array.size_expr->integer.value = c.value.integer.value;
+			node->var_type = node;
+			node->var_type->size_in_bytes = node->left->var_type->size_in_bytes * node->array.size_expr->integer.value;
 			node->type_checked = true;
 			return true;
 		} break;
@@ -809,6 +821,7 @@ func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_report
 		return false;
 	}
 	member->var_type = member->var_decl.type->var_type;
+	member->temp_var_decl = member->var_decl.type;
 
 	member->type_checked = true;
 	return true;
@@ -1123,6 +1136,7 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 		temp.type = e_node_member_access;
 		temp.left = alloc_node(*node, arena);
 		temp.right = old_right;
+		temp.temp_var_decl = member.node->temp_var_decl;
 		temp.var_type = member.node->var_type;
 		*node = temp;
 		maybe_fix_member_access(node, member.import_source->var_type, data, arena);
@@ -1143,7 +1157,7 @@ func int get_size_in_bytes(s_node* node, t_scope_arr* data)
 		case e_node_type: {
 			s_node* type = get_type_by_name(node->token.str(), data);
 			assert(type);
-			return type->basic_type.size_in_bytes;
+			return type->var_type->size_in_bytes;
 		} break;
 		invalid_default_case;
 	}
