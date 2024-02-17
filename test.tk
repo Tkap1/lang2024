@@ -233,9 +233,19 @@ enum e_texture
 	player_body,
 	player_hand,
 	tile,
+	explosion1,
+	explosion2,
+	explosion3,
+	explosion4,
+	explosion5,
+	explosion6,
+	explosion7,
+	explosion8,
+	explosion9,
+	explosion10,
+	explosion11,
+	explosion12,
 }
-
-
 
 struct s_editor
 {
@@ -245,8 +255,10 @@ struct s_editor
 
 struct s_animation
 {
+	s_v2 pos,
+	int id,
 	float time,
-	int curr_sprite,
+	int curr_frame,
 }
 
 struct s_animation_data
@@ -281,6 +293,8 @@ int state = 1;
 int next_state = 0;
 s_input_data input;
 s_editor editor;
+int animation_count = 0;
+s_animation[128] animations;
 
 func int main()
 {
@@ -294,6 +308,33 @@ func int main()
 	g_textures[e_texture.tile] = load_texture("assets/tile_grey.png");
 	g_textures[e_texture.player_face] = load_texture("assets/face_h.png");
 	g_textures[e_texture.player_hand] = load_texture("assets/pink_hand_open.png");
+	g_textures[e_texture.explosion1] = load_texture("assets/explosion-d1.png");
+	g_textures[e_texture.explosion2] = load_texture("assets/explosion-d2.png");
+	g_textures[e_texture.explosion3] = load_texture("assets/explosion-d3.png");
+	g_textures[e_texture.explosion4] = load_texture("assets/explosion-d4.png");
+	g_textures[e_texture.explosion5] = load_texture("assets/explosion-d5.png");
+	g_textures[e_texture.explosion6] = load_texture("assets/explosion-d6.png");
+	g_textures[e_texture.explosion7] = load_texture("assets/explosion-d7.png");
+	g_textures[e_texture.explosion8] = load_texture("assets/explosion-d8.png");
+	g_textures[e_texture.explosion9] = load_texture("assets/explosion-d9.png");
+	g_textures[e_texture.explosion10] = load_texture("assets/explosion-d10.png");
+	g_textures[e_texture.explosion11] = load_texture("assets/explosion-d11.png");
+	g_textures[e_texture.explosion12] = load_texture("assets/explosion-d12.png");
+
+	g_animations[e_animation.explosion].delay = 0.1;
+	g_animations[e_animation.explosion].frame_count = 12;
+	g_animations[e_animation.explosion].frames[0] = e_texture.explosion1;
+	g_animations[e_animation.explosion].frames[1] = e_texture.explosion2;
+	g_animations[e_animation.explosion].frames[2] = e_texture.explosion3;
+	g_animations[e_animation.explosion].frames[3] = e_texture.explosion4;
+	g_animations[e_animation.explosion].frames[4] = e_texture.explosion5;
+	g_animations[e_animation.explosion].frames[5] = e_texture.explosion6;
+	g_animations[e_animation.explosion].frames[6] = e_texture.explosion7;
+	g_animations[e_animation.explosion].frames[7] = e_texture.explosion8;
+	g_animations[e_animation.explosion].frames[8] = e_texture.explosion9;
+	g_animations[e_animation.explosion].frames[9] = e_texture.explosion10;
+	g_animations[e_animation.explosion].frames[10] = e_texture.explosion11;
+	g_animations[e_animation.explosion].frames[11] = e_texture.explosion12;
 
 	// for e_texture.count {
 	// 	printf("%i\n", g_textures[it].width);
@@ -509,6 +550,11 @@ func void update()
 			s_v2 push = v2_scale(dir, strength);
 			player.vel.x += push.x;
 			player.vel.y += push.y;
+			s_animation anim;
+			anim.id = e_animation.explosion;
+			anim.pos = projectiles.pos[it];
+			animations[animation_count] = anim;
+			animation_count += 1;
 		}
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -589,6 +635,22 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 				if tile == 2 {
 					DrawTextureEx(g_textures[e_texture.tile], to_screen(tile_pos), 0, tile_scale, WHITE);
 				}
+			}
+		}
+	}
+
+	for animation_count {
+		s_animation* anim = &animations[it];
+		s_animation_data data = g_animations[anim.id];
+		DrawTextureEx(g_textures[data.frames[anim.curr_frame]], to_screen(anim.pos), 0, player_scale * 2, WHITE);
+		anim.time += delta;
+		if anim.time > data.delay {
+			anim.time -= data.delay;
+			anim.curr_frame = (anim.curr_frame + 1) % data.frame_count;
+			if anim.curr_frame == 0 {
+				animation_count -= 1;
+				animations[it] = animations[animation_count];
+				continue;
 			}
 		}
 	}

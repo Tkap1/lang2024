@@ -1,0 +1,18 @@
+
+
+
+struct s_foo
+{
+	int[32] foo,
+}
+
+struct s_bar
+{
+	s_foo[64] foos,
+}
+
+func void baz()
+{
+	s_bar[128] bar;
+	bar[4].foos[9];
+}

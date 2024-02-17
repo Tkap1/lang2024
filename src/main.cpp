@@ -176,6 +176,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/enum.tk", true},
 		{"tests/for_member_access.tk", true},
 		{"tests/for_enum_member_access.tk", true},
+		{"tests/double_subscript.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

@@ -657,7 +657,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_subscript: {
 			s_type_check_context temp = context;
-			temp.subscript_level += 1;
+			if(node->left->type == e_node_subscript) {
+				temp.subscript_level += 1;
+			}
 			if(!type_check_expr(node->left, reporter, data, arena, temp)) {
 				return false;
 			}
