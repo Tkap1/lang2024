@@ -222,6 +222,19 @@ struct s_editor_data
 	s8[c_max_tiles][c_max_tiles] tiles,
 }
 
+enum e_animation
+{
+	explosion,
+}
+
+enum e_texture
+{
+	player_face,
+	player_body,
+	player_hand,
+	tile,
+}
+
 struct s_editor
 {
 	import s_editor_data data,
@@ -265,6 +278,8 @@ s_editor editor;
 
 func int main()
 {
+
+	int foo = e_animation.explosion;
 
 	SetTraceLogLevel(LOG_WARNING);
 	SetConfigFlags(FLAG_VSYNC_HINT);

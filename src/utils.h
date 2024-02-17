@@ -42,7 +42,7 @@ struct s_str_builder
 	void add_line(char* str, ...);
 	void add_line_tabs(char* str, ...);
 	void push_scope();
-	void pop_scope(char* str = "");
+	void pop_scope(char* str = "", ...);
 	void add_(char* str, b8 add_newline, b8 add_tabs, va_list args);
 };
 

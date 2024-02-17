@@ -57,6 +57,17 @@ func b8 generate_code(s_node* ast, s_lin_arena* arena)
 			case e_node_var_decl: {
 				generate_statement(node, builder);
 			} break;
+
+			case e_node_enum: {
+				builder->add_line("typedef enum %s", node->token.str());
+				builder->push_scope();
+				for_node(member, node->nenum.members) {
+					builder->add_line_tabs("%s_%s,", node->token.str(), member->token.str());
+				}
+				builder->pop_scope(" %s;", node->token.str());
+			} break;
+
+			invalid_default_case;
 		}
 	}
 
@@ -319,9 +330,16 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 		} break;
 
 		case e_node_member_access: {
-			node_to_c_str(node->left, builder, context);
-			builder->add(".");
-			node_to_c_str(node->right, builder, context);
+			if(node->var_type->type == e_node_enum) {
+				node_to_c_str(node->left, builder, context);
+				builder->add("_");
+				node_to_c_str(node->right, builder, context);
+			}
+			else {
+				node_to_c_str(node->left, builder, context);
+				builder->add(".");
+				node_to_c_str(node->right, builder, context);
+			}
 		} break;
 
 		case e_node_func_call: {

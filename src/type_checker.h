@@ -40,3 +40,5 @@ func s_node* get_latest_func(t_scope_arr* data);
 func s_get_struct_member get_struct_member(char* name, s_node* nstruct, t_scope_arr* data);
 func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* data, s_lin_arena* arena);
 func int get_size_in_bytes(s_node* node, t_scope_arr* data);
+func void add_enum_to_scope(t_scope_arr* data, s_node* nenum, s_lin_arena* arena);
+func s_node* get_enum_by_name(char* name, t_scope_arr* data);

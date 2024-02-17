@@ -111,6 +111,7 @@ func s_parse_result parse_enum(s_tokenizer tokenizer, s_error_reporter* reporter
 	breakable_block {
 		if(!tokenizer.consume_token("enum", reporter)) { break; }
 		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Enum missing name"); }
+		if(is_keyword(token)) {reporter->fatal(tokenizer.file, tokenizer.line, "Enum name cannot be a reserved keyword"); }
 		if(!tokenizer.consume_token(e_token_open_brace, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected '{' after 'enum'"); }
 
 		result.node.token = token;
@@ -121,6 +122,7 @@ func s_parse_result parse_enum(s_tokenizer tokenizer, s_error_reporter* reporter
 			if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
 			s_node member = zero;
 			member.token = token;
+			if(is_keyword(token)) {reporter->fatal(tokenizer.file, tokenizer.line, "Enum member name cannot be a reserved keyword"); }
 			curr_member = advance_node(curr_member, member, arena);
 			result.node.nenum.member_count += 1;
 			if(!tokenizer.consume_token(e_token_comma, &token, reporter)) { break; }

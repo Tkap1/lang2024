@@ -165,10 +165,14 @@ void s_str_builder<n>::push_scope()
 }
 
 template <int n>
-void s_str_builder<n>::pop_scope(char* str)
+void s_str_builder<n>::pop_scope(char* str, ...)
 {
 	scope -= 1;
-	add_line_tabs("}%s", str);
+	add_tabs("}");
+	va_list args;
+	va_start(args, str);
+	add_(str, true, true, args);
+	va_end(args);
 }
 
 template <typename t>

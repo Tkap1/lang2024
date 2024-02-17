@@ -163,6 +163,12 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			return type_check_struct(node, reporter, data, arena, context);
 		} break;
 
+		case e_node_enum: {
+			node->type_checked = true;
+			add_enum_to_scope(data, node, arena);
+			return true;
+		} break;
+
 		case e_node_func_decl: {
 			if(!type_check_func_decl(node, reporter, data, arena, context)) {
 				return false;
@@ -491,12 +497,24 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			// @TODO(tkap, 12/02/2024):
 			b8 success = false;
 			if(context.member_access) {
-				assert(context.member_access->type == e_node_struct);
-				s_get_struct_member member = get_struct_member(node->token.str(), context.member_access, data);
-				if(member.node) {
-					node->var_type = member.node->var_type;
-					success = true;
+				if(context.member_access->type == e_node_struct) {
+					s_get_struct_member member = get_struct_member(node->token.str(), context.member_access, data);
+					if(member.node) {
+						node->var_type = member.node->var_type;
+						success = true;
+					}
 				}
+				else if(context.member_access->type == e_node_enum) {
+					s_node* nenum = context.member_access;
+					for_node(member, nenum->nenum.members) {
+						if(member->token.equals(node->token)) {
+							node->var_type = nenum;
+							success = true;
+							break;
+						}
+					}
+				}
+				invalid_else;
 			}
 			else {
 				breakable_block {
@@ -526,6 +544,13 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 					if(nfunc) {
 						assert(nfunc->var_type);
 						node->var_type = nfunc->var_type;
+						success = true;
+						break;
+					}
+
+					s_node* nenum = get_enum_by_name(node->token.str(), data);
+					if(nenum) {
+						node->var_type = nenum;
 						success = true;
 						break;
 					}
@@ -569,7 +594,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
-			if(!node->left->var_type || node->left->var_type->type != e_node_struct) {
+			if(!node->left->var_type || (node->left->var_type->type != e_node_struct) && node->left->var_type->type != e_node_enum) {
 				reporter->fatal(node->token.file, node->token.line, "todo bad member access");
 				return false;
 			}
@@ -583,7 +608,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			node->var_type = node->right->var_type;
 			node->temp_var_decl = node->var_type;
 			node->type_checked = true;
-			maybe_fix_member_access(node, node->left->var_type, data, arena);
+			if(node->left->var_type->type == e_node_struct) {
+				maybe_fix_member_access(node, node->left->var_type, data, arena);
+			}
 			return true;
 		} break;
 
@@ -979,6 +1006,16 @@ func void add_struct_to_scope(t_scope_arr* data, s_node* nstruct, s_lin_arena* a
 	scope1->structs.add(nstruct);
 }
 
+func void add_enum_to_scope(t_scope_arr* data, s_node* nenum, s_lin_arena* arena)
+{
+	s_scope** scope2 = data->get(data->count - 1);
+	if(!*scope2) {
+		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
+	}
+	s_scope* scope1 = *scope2;
+	scope1->enums.add(nenum);
+}
+
 func void add_func_to_scope(t_scope_arr* data, s_node* nfunc, s_lin_arena* arena)
 {
 	s_scope** scope2 = data->get(data->count - 1);
@@ -1058,6 +1095,23 @@ func s_node* get_func_by_name(char* name, t_scope_arr* data)
 				assert(nfunc->type == e_node_func_decl);
 				if(nfunc->func_decl.name.equals(name)) {
 					return nfunc;
+				}
+			}
+		}
+	}
+	return null;
+}
+
+func s_node* get_enum_by_name(char* name, t_scope_arr* data)
+{
+	for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
+		s_scope** scope2 = data->get(scope2_i);
+		if(*scope2) {
+			s_scope* scope1 = *scope2;
+			foreach_val(nenum_i, nenum, scope1->enums) {
+				assert(nenum->type == e_node_enum);
+				if(nenum->token.equals(name)) {
+					return nenum;
 				}
 			}
 		}

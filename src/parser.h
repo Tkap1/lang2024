@@ -89,6 +89,7 @@ struct s_scope
 {
 	s_sarray<s_node*, 128> structs;
 	s_sarray<s_node*, 128> funcs;
+	s_sarray<s_node*, 128> enums;
 	s_sarray<s_node*, 128> types;
 	s_sarray<s_node*, 256> vars;
 };
