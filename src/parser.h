@@ -104,6 +104,7 @@ struct s_node
 	b8 dont_generate;
 	int size_in_bytes;
 	int array_capacity; // @Note(tkap, 17/02/2024): For e_node_subscript
+	int enum_value;
 	s_node* temp_var_decl;
 
 	// @TODO(tkap, 10/02/2024): probably dont want this

@@ -331,9 +331,12 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 
 		case e_node_member_access: {
 			if(node->var_type->type == e_node_enum) {
-				node_to_c_str(node->left, builder, context);
-				builder->add("_");
-				node_to_c_str(node->right, builder, context);
+				assert(node->right->type == e_node_identifier);
+				// @TODO(tkap, 17/02/2024): We want the enum member somewhere
+				builder->add("%i", node->right->temp_var_decl->enum_value);
+				// node_to_c_str(node->left, builder, context);
+				// builder->add("_");
+				// node_to_c_str(node->right, builder, context);
 			}
 			else {
 				node_to_c_str(node->left, builder, context);

@@ -24,3 +24,7 @@ if we already have a fatal error, do not overwrite the error string
 stop doing the fucking static buffer bullshit.
 
 have types enum?
+
+do we want to add a count member to enums in type checking?? it would prevent some if checks
+
+maybe dont generate enums in c code?

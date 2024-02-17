@@ -165,6 +165,19 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_enum: {
 			node->type_checked = true;
+
+			int member_index = 0;
+			s_node* last_member = null;
+			for_node(member, node->nenum.members) {
+				member->enum_value = member_index;
+				member_index += 1;
+				last_member = member;
+			}
+			s_node count_member = zero;
+			count_member.enum_value = member_index;
+			count_member.token = {.type = e_token_identifier, .len = 5, .at = "count"};
+			last_member->next = alloc_node(count_member, arena);
+
 			add_enum_to_scope(data, node, arena);
 			return true;
 		} break;
@@ -509,10 +522,14 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 					for_node(member, nenum->nenum.members) {
 						if(member->token.equals(node->token)) {
 							node->var_type = nenum;
+							node->temp_var_decl = member;
 							success = true;
 							break;
 						}
 					}
+					// if(!success && node->token.equals("count")) {
+					// 	success = true;
+					// }
 				}
 				invalid_else;
 			}
@@ -979,6 +996,15 @@ func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data)
 			result.type = e_node_float;
 			result.nfloat.value = node->nfloat.value;
 			return maybe(result);
+		} break;
+
+		case e_node_member_access: {
+			if(node->left->var_type->type == e_node_enum) {
+				s_node result = zero;
+				result.type = e_node_integer;
+				result.integer.value = node->right->temp_var_decl->enum_value;
+				return maybe(result);
+			}
 		} break;
 
 		invalid_default_case;
