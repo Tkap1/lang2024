@@ -228,6 +228,13 @@ struct s_editor
 	int curr_tile,
 }
 
+struct s_animation
+{
+	float time,
+	int curr_sprite,
+}
+
+
 s8[c_max_tiles][c_max_tiles] g_tiles;
 s_camera camera;
 float delta;
@@ -341,10 +348,18 @@ func void update()
 		player.shoot_timer += 1;
 	}
 
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		change state start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	if next_state != 0 {
 		state = next_state;
+		if next_state == 1 {
+			g_tiles = editor.tiles;
+		}
+		if next_state == 2 {
+			editor.tiles = g_tiles;
+		}
 		next_state = 0;
 	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		change state end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	if state == 1 {
 

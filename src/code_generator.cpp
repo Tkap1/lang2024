@@ -15,6 +15,7 @@ func b8 generate_code(s_node* ast, s_lin_arena* arena)
 	builder->add_line("typedef uint64_t u64;");
 	builder->add_line("typedef uint8_t b8;");
 	builder->add_line("typedef uint32_t b32;");
+	builder->add_line("void* memcpy(void* restrict dest, const void* restrict src, size_t n);");
 	s_code_gen_context context = zero;
 	for_node(node, ast) {
 		switch(node->type) {
@@ -99,13 +100,41 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 		// } break;
 
 		case e_node_assign: {
-			builder->add_tabs("");
-			node_to_c_str(node->left, builder, context);
-			builder->add(" = ");
-			s_code_gen_context temp = context;
-			temp.prefix_struct_literal = true;
-			node_to_c_str(node->right, builder, temp);
-			builder->add_line(";");
+			// @TODO(tkap, 17/02/2024): Massive copy paste from var_decl:
+
+			if(node->left->var_type->type == e_node_array) {
+				if(node->left->var_type->pointer_level <= 0) {
+					builder->add_tabs("memcpy(");
+					node_to_c_str(node->left, builder, context);
+					builder->add(", ");
+					node_to_c_str(node->right, builder, context);
+					builder->add(", %i)", node->left->var_type->size_in_bytes);
+					builder->add_line(";");
+				}
+				else {
+					builder->add_tabs("");
+					node_to_c_str(node->left, builder, context);
+					builder->add(" = ");
+					node_to_c_str(node->right, builder, context);
+					builder->add_line(";");
+					// builder->add_tabs("%s", get_name(node->var_decl.type));
+					// for(int i = 0; i < node->var_decl.type->pointer_level; i++) {
+					// 	builder->add("*");
+					// }
+					// builder->add(" %s = ", node->var_decl.name.str());
+					// node_to_c_str(node->var_decl.value, builder, context);
+					// builder->add_line(";");
+				}
+			}
+			else {
+				builder->add_tabs("");
+				node_to_c_str(node->left, builder, context);
+				builder->add(" = ");
+				s_code_gen_context temp = context;
+				temp.prefix_struct_literal = true;
+				node_to_c_str(node->right, builder, temp);
+				builder->add_line(";");
+			}
 		} break;
 
 		case e_node_return: {

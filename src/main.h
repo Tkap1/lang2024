@@ -1,6 +1,6 @@
 
 
-global constexpr int c_static_buffers = 256;
+global constexpr int c_static_buffers = 512;
 global constexpr int c_static_buffer_len = 1024;
 
 enum e_error_level
