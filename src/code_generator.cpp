@@ -340,7 +340,12 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 			}
 			else {
 				node_to_c_str(node->left, builder, context);
-				builder->add(".");
+				if(node->left->temp_var_decl->pointer_level > 0) {
+					builder->add("->");
+				}
+				else {
+					builder->add(".");
+				}
 				node_to_c_str(node->right, builder, context);
 			}
 		} break;

@@ -321,7 +321,7 @@ func int main()
 	g_textures[e_texture.explosion11] = load_texture("assets/explosion-d11.png");
 	g_textures[e_texture.explosion12] = load_texture("assets/explosion-d12.png");
 
-	g_animations[e_animation.explosion].delay = 0.1;
+	g_animations[e_animation.explosion].delay = 0.025;
 	g_animations[e_animation.explosion].frame_count = 12;
 	g_animations[e_animation.explosion].frames[0] = e_texture.explosion1;
 	g_animations[e_animation.explosion].frames[1] = e_texture.explosion2;

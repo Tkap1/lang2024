@@ -28,3 +28,7 @@ have types enum?
 do we want to add a count member to enums in type checking?? it would prevent some if checks
 
 maybe dont generate enums in c code?
+
+generate -> instead of . when using pointers
+
+redo for loop nonsense. try to not add things to the AST. make code gen smarter
