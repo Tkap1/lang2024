@@ -153,6 +153,12 @@ struct s_v2i
 	int y,
 }
 
+struct s_rect
+{
+	import s_v2 pos,
+	s_v2 size,
+}
+
 
 external_func void SetTraceLogLevel(s32);
 external_func void SetConfigFlags(u32);
@@ -172,14 +178,13 @@ external_func b32 IsKeyDown(int);
 external_func b32 IsKeyPressed(int);
 external_func s_texture LoadTexture(char*);
 external_func void SetTextureFilter(s_texture, int);
-external_func void DrawTexture(s_texture, int, int, s_color);
-external_func void DrawTextureEx(s_texture, s_v2, float, float, s_color);
 external_func float sinf(float);
 external_func float sqrtf(float);
 external_func double GetTime();
 external_func float GetFrameTime();
 external_func int printf(char*);
 external_func void SetTargetFPS(int);
+external_func void DrawTexturePro(s_texture, s_rect, s_rect, s_v2, float, s_color);
 
 struct s_player
 {
@@ -245,6 +250,7 @@ enum e_texture
 	explosion10,
 	explosion11,
 	explosion12,
+	projectile,
 }
 
 struct s_editor
@@ -280,8 +286,6 @@ const int ww = 1280;
 const int wh = 900;
 s_v2 tile_size;
 s_v2 player_size;
-float player_scale = 0.4;
-float tile_scale = 0.25;
 s_player player;
 s_projectiles projectiles;
 s_v2 projectile_size;
@@ -320,6 +324,7 @@ func int main()
 	g_textures[e_texture.explosion10] = load_texture("assets/explosion-d10.png");
 	g_textures[e_texture.explosion11] = load_texture("assets/explosion-d11.png");
 	g_textures[e_texture.explosion12] = load_texture("assets/explosion-d12.png");
+	g_textures[e_texture.projectile] = load_texture("assets/blue_body_circle.png");
 
 	g_animations[e_animation.explosion].delay = 0.025;
 	g_animations[e_animation.explosion].frame_count = 12;
@@ -340,8 +345,9 @@ func int main()
 	// 	printf("%i\n", g_textures[it].width);
 	// }
 
-	tile_size = v2(g_textures[e_texture.tile].width * tile_scale, g_textures[e_texture.tile].height * tile_scale);
-	player_size = v2(g_textures[e_texture.player_body].width * player_scale, g_textures[e_texture.player_body].height * player_scale);
+	tile_size = v2(g_textures[e_texture.tile].width * 0.25, g_textures[e_texture.tile].height * 0.25);
+	player_size = v2(g_textures[e_texture.player_body].width * 0.4, g_textures[e_texture.player_body].height * 0.4);
+	projectile_size = v2(16, 16);
 
 	player.pos = v2(32, 32);
 
@@ -350,7 +356,6 @@ func int main()
 		g_tiles[bottom_tile][x] = 1;
 	}
 
-	projectile_size = v2(32, 32);
 
 	while !WindowShouldClose() {
 		delta = GetFrameTime();
@@ -426,10 +431,7 @@ func void update()
 			for c_max_projectiles {
 				if !projectiles.active[it] {
 					projectiles.active[it] = 1;
-					s_v2 player_center = get_center(player.pos, player_size);
-					projectiles.pos[it] = player_center;
-					projectiles.pos[it].x -= projectile_size.x / 2;
-					projectiles.pos[it].y -= projectile_size.y / 2;
+					projectiles.pos[it] = player.pos;
 					projectiles.vel[it] = dir_from_to(projectiles.pos[it], world_mouse);
 					projectiles.vel[it].x *= 10;
 					projectiles.vel[it].y *= 10;
@@ -466,8 +468,7 @@ func void update()
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		{
-			s_v2 player_center = get_center(player.pos, player_size);
-			s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
+			s_v2i player_index = v2i(floorf(player.x / tile_size.x), floorf(player.y / tile_size.y));
 			for y: 7 {
 				int yy = -3 + y;
 				for x: 7 {
@@ -479,12 +480,12 @@ func void update()
 					s8 tile = g_tiles[index.y][index.x];
 					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 					if tile > 0 {
-						if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
+						if rect_collides_rect(get_topleft(player.pos, player_size), player_size, tile_pos, tile_size) {
 							if player.vel.x > 0 {
-								player.x = tile_pos.x - player_size.x;
+								player.x = tile_pos.x - player_size.x / 2;
 							}
 							else {
-								player.x = tile_pos.x + tile_size.x;
+								player.x = tile_pos.x + tile_size.x + player_size.x / 2;
 							}
 						}
 					}
@@ -499,8 +500,7 @@ func void update()
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		{
-			s_v2 player_center = get_center(player.pos, player_size);
-			s_v2i player_index = v2i(floorf(player_center.x / tile_size.x), floorf(player_center.y / tile_size.y));
+			s_v2i player_index = v2i(floorf(player.x / tile_size.x), floorf(player.y / tile_size.y));
 			for y: 7 {
 				int yy = -3 + y;
 				for x: 7 {
@@ -512,13 +512,13 @@ func void update()
 					s8 tile = g_tiles[index.y][index.x];
 					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 					if tile > 0 {
-						if rect_collides_rect(player.pos, player_size, tile_pos, tile_size) {
+						if rect_collides_rect(get_topleft(player.pos, player_size), player_size, tile_pos, tile_size) {
 							if player.vel.y > 0 {
-								player.y = tile_pos.y - player_size.y;
+								player.y = tile_pos.y - player_size.y / 2;
 								is_grounded = 1;
 							}
 							else {
-								player.y = tile_pos.y + tile_size.y;
+								player.y = tile_pos.y + tile_size.y + player_size.y / 2;
 							}
 							player.vel.y = 0;
 						}
@@ -539,20 +539,19 @@ func void update()
 			projectiles.pos[it].x += projectiles.vel[it].x;
 			projectiles.pos[it].y += projectiles.vel[it].y;
 
-			s_v2i col = get_tile_collision(projectiles.pos[it], projectile_size);
+			s_v2 pos = projectiles.pos[it];
+			s_v2i col = get_tile_collision(pos, projectile_size);
 			if col.x == -1 { continue; }
 			projectiles.active[it] = 0;
-			s_v2 center = get_center(projectiles.pos[it], projectile_size);
-			s_v2 player_center = get_center(player.pos, player_size);
-			float distance = v2_distance(center, player_center);
-			float strength = smoothstep(128, 16, distance) * 5;
-			s_v2 dir = dir_from_to(center, player_center);
+			float distance = v2_distance(pos, player.pos);
+			float strength = smoothstep(128, 32, distance) * 5;
+			s_v2 dir = dir_from_to(pos, player.pos);
 			s_v2 push = v2_scale(dir, strength);
 			player.vel.x += push.x;
 			player.vel.y += push.y;
 			s_animation anim;
 			anim.id = e_animation.explosion;
-			anim.pos = projectiles.pos[it];
+			anim.pos = pos;
 			animations[animation_count] = anim;
 			animation_count += 1;
 		}
@@ -621,20 +620,16 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 				if x >= c_max_tiles { continue; }
 				s8 tile = tiles[y][x];
 				s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
+				s_color color = DARK;
 				if tile == 0 {
-					s_color color = DARK;
 					if x % 2 == 0 {
 						color = {100, 25, 25, 255};
 					}
-					DrawTextureEx(g_textures[e_texture.tile], to_screen(tile_pos), 0, tile_scale, color);
 				}
 				if tile == 1 {
-					// DrawRectangle(x * tile_size.x, y * tile_size.x, tile_size.x, tile_size.x, RED);
-					DrawTextureEx(g_textures[e_texture.tile], to_screen(tile_pos), 0, tile_scale, WHITE);
+					color = WHITE;
 				}
-				if tile == 2 {
-					DrawTextureEx(g_textures[e_texture.tile], to_screen(tile_pos), 0, tile_scale, WHITE);
-				}
+				draw_texture(g_textures[e_texture.tile], to_screen(tile_pos), tile_size, color, 0);
 			}
 		}
 	}
@@ -642,7 +637,7 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 	for animation_count {
 		s_animation* anim = &animations[it];
 		s_animation_data data = g_animations[anim.id];
-		DrawTextureEx(g_textures[data.frames[anim.curr_frame]], to_screen(anim.pos), 0, player_scale * 2, WHITE);
+		draw_texture(g_textures[data.frames[anim.curr_frame]], to_screen(anim.pos), v2_scale(player_size, 2), WHITE, 1);
 		anim.time += delta;
 		if anim.time > data.delay {
 			anim.time -= data.delay;
@@ -656,38 +651,32 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 	}
 
 
-	{
-		DrawTextureEx(g_textures[e_texture.player_body], to_screen(player.pos), 0, player_scale, WHITE);
-	}
+	draw_texture(g_textures[e_texture.player_body], to_screen(player.pos), player_size, WHITE, 1);
 
 	{
 		s_v2 face_pos = player.pos;
-		face_pos.x += player_size.x / 4;
-		face_pos.y += player_size.y / 4;
-		DrawTextureEx(g_textures[e_texture.player_face], to_screen(face_pos), 0, player_scale, WHITE);
+		draw_texture_scaled(g_textures[e_texture.player_face], to_screen(face_pos), 0.5, WHITE, 1);
 	}
 
 	{
 		s_v2 hand_pos = player.pos;
-		hand_pos.x -= 80 * player_scale;
-		hand_pos.y += 20;
+		hand_pos.x -= player_size.x * 0.9;
 		hand_pos.y += sinf(time * 6) * 5;
-		DrawTextureEx(g_textures[e_texture.player_hand], to_screen(hand_pos), 0, player_scale, WHITE);
+		draw_texture_scaled(g_textures[e_texture.player_hand], to_screen(hand_pos), 0.5, WHITE, 1);
 	}
 
 	{
 		s_v2 hand_pos = player.pos;
-		hand_pos.x += 200 * player_scale;
-		hand_pos.y += 20;
+		hand_pos.x += player_size.x * 0.9;
 		hand_pos.y += sinf(time * 6) * 5;
-		DrawTextureEx(g_textures[e_texture.player_hand], to_screen(hand_pos), 0, player_scale, WHITE);
+		draw_texture_scaled(g_textures[e_texture.player_hand], to_screen(hand_pos), 0.5, WHITE, 1);
 	}
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	for c_max_projectiles {
 		if !projectiles.active[it] { continue; }
 		s_v2 pos = to_screen(projectiles.pos[it]);
-		DrawRectangle(pos.x, pos.y, projectile_size.x, projectile_size.y, RED);
+		draw_texture(g_textures[e_texture.projectile], pos, projectile_size, WHITE, 1);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -698,8 +687,7 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 
 func s_v2i get_tile_collision(s_v2 pos, s_v2 size)
 {
-	s_v2 center = get_center(pos, size);
-	s_v2i base_index = v2i(floorf(center.x / tile_size.x), floorf(center.y / tile_size.y));
+	s_v2i base_index = v2i(floorf(pos.x / tile_size.x), floorf(pos.y / tile_size.y));
 	for y: 7 {
 		int yy = -3 + y;
 		for x: 7 {
@@ -840,4 +828,44 @@ func s_texture load_texture(char* path)
 	s_texture texture = LoadTexture(path);
 	SetTextureFilter(texture, TEXTURE_FILTER_ANISOTROPIC_16X);
 	return texture;
+}
+
+func void draw_texture(s_texture texture, s_v2 pos, s_v2 size, s_color color, int centered)
+{
+	s_rect dst;
+	dst.pos = pos;
+	dst.size = size;
+	s_rect src;
+	src.size.x = texture.width;
+	src.size.y = texture.height;
+	s_v2 origin = v2(0, 0);
+	if centered {
+		origin.x = size.x / 2;
+		origin.y = size.y / 2;
+	}
+	DrawTexturePro(texture, src, dst, origin, 0, color);
+}
+
+func void draw_texture_scaled(s_texture texture, s_v2 pos, float scale, s_color color, int centered)
+{
+	s_rect src;
+	src.size.x = texture.width;
+	src.size.y = texture.height;
+	s_rect dst;
+	dst.pos = pos;
+	dst.size.x = texture.width * scale;
+	dst.size.y = texture.height * scale;
+	s_v2 origin = v2(0, 0);
+	if centered {
+		origin.x = dst.size.x / 2;
+		origin.y = dst.size.y / 2;
+	}
+	DrawTexturePro(texture, src, dst, origin, 0, color);
+}
+
+func s_v2 get_topleft(s_v2 pos, s_v2 size)
+{
+	pos.x -= size.x / 2;
+	pos.y -= size.y / 2;
+	return pos;
 }
