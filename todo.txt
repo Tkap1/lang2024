@@ -32,3 +32,5 @@ maybe dont generate enums in c code?
 generate -> instead of . when using pointers
 
 redo for loop nonsense. try to not add things to the AST. make code gen smarter
+
+error if external func is operator overload

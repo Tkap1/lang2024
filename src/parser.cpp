@@ -151,12 +151,26 @@ func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* rep
 		s_parse_result pr = parse_type(tokenizer, reporter, arena);
 		if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected a type after 'func'"); }
 		tokenizer = pr.tokenizer;
-		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected function name"); }
+		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected function name"); return result; }
 		result.node.func_decl.name = token;
 		result.node.func_decl.return_type = alloc_node(pr.node, arena);
-		if(is_keyword(token)) { reporter->fatal(token.file, token.line, "Function name cannot be a reserved keyword"); }
 
-		if(!tokenizer.consume_token(e_token_open_paren, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected '('"); }
+		if(token.equals("operator")) {
+			result.node.func_decl.is_operator_overload = true;
+			pr = parse_operator(tokenizer, reporter, arena);
+			if(!pr.success) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "Expected operator");
+				return result;
+			}
+			tokenizer = pr.tokenizer;
+			result.node.func_decl.operator_overload = pr.operator_data.node_type;
+		}
+		else if(is_keyword(token)) {
+			reporter->fatal(token.file, token.line, "Function name cannot be a reserved keyword");
+			return result;
+		}
+
+		if(!tokenizer.consume_token(e_token_open_paren, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected '('"); return result; }
 
 		s_node** curr_argument = &result.node.func_decl.arguments;
 		while(true) {
@@ -173,6 +187,11 @@ func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* rep
 			result.node.func_decl.argument_count += 1;
 
 			if(!tokenizer.consume_token(e_token_comma, reporter)) { break; }
+		}
+
+		if(result.node.func_decl.is_operator_overload && result.node.func_decl.argument_count != 2) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "An operator overload must have exactly 2 arguments");
+			return result;
 		}
 
 		if(!tokenizer.consume_token(e_token_close_paren, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ')'"); }
@@ -775,7 +794,7 @@ func b8 is_keyword(s_token token)
 {
 	// @TODO(tkap, 10/02/2024):
 	constexpr char* c_keywords[] = {
-		"if", "struct", "for", "while", "enum", "else", "import"
+		"if", "struct", "for", "while", "enum", "else", "import", "operator",
 	};
 	for(int keyword_i = 0; keyword_i < array_count(c_keywords); keyword_i++) {
 		if(token.equals(c_keywords[keyword_i])) { return true; }

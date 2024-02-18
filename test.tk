@@ -869,3 +869,10 @@ func s_v2 get_topleft(s_v2 pos, s_v2 size)
 	pos.y -= size.y / 2;
 	return pos;
 }
+
+func s_v2 operator*(s_v2 a, float b)
+{
+	a.x *= b;
+	a.y *= b;
+	return a;
+}

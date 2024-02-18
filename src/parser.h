@@ -133,6 +133,8 @@ struct s_node
 		struct
 		{
 			b8 is_external;
+			b8 is_operator_overload;
+			e_node operator_overload;
 			int argument_count;
 			s_node* return_type;
 			s_token name;
@@ -244,3 +246,4 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* reporter, int context, s_lin_arena* arena);
 func s_node statement_str_to_node(char* str, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_enum(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
+func s_parse_result parse_operator(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
