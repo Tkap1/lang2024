@@ -1,0 +1,7 @@
+
+
+func void foo()
+{
+	int* bar;
+	*bar;
+}

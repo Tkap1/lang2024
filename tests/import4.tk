@@ -1,0 +1,22 @@
+
+struct s_foo
+{
+	int x,
+}
+
+struct s_bar
+{
+	import s_foo foo,
+	int y,
+}
+
+func void func_a()
+{
+	s_bar bar;
+	func_b(bar.x, 420);
+}
+
+func void func_b(int a, int b)
+{
+
+}

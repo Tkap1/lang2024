@@ -485,9 +485,9 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 				if(!type_check_expr(node->nreturn.expression, reporter, data, arena, temp)) {
 					return false;
 				}
+				node->var_type = node->nreturn.expression->var_type;
 			}
 			// @TODO(tkap, 12/02/2024): check that types are the same
-			node->var_type = node->nreturn.expression->var_type;
 			node->type_checked = true;
 			return true;
 		} break;
@@ -756,6 +756,21 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			return true;
 		} break;
 
+		case e_node_dereference: {
+			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			if(node->left->var_type->pointer_level <= 0) {
+				reporter->fatal(node->left->token.file, node->left->token.line, "Can't dereference a non-pointer");
+				return false;
+			}
+			node->var_type = alloc_node(*node->left->var_type, arena);
+			node->var_type->pointer_level -= 1;
+			node->type_checked = true;
+			return true;
+		} break;
+
 		case e_node_greater_than: {
 			// @TODO(tkap, 10/02/2024):
 			if(!type_check_expr(node->left, reporter, data, arena, context)) {
@@ -895,7 +910,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			// @TODO(tkap, 11/02/2024):
 			s_node* type = get_type_by_name(node->token.str(), data);
 			if(type) {
-				node->var_type = type;
+				// @TODO(tkap, 18/02/2024): Questionable.
+				node->var_type = alloc_node(*type, arena);
+				node->var_type->pointer_level = node->pointer_level;
 				node->type_checked = true;
 				return true;
 			}
@@ -1307,6 +1324,7 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 	if(member.is_imported) {
 		s_node new_right = zero;
 		s_node* old_right = node->right;
+		s_node* old_next = node->next;
 		new_right.type = e_node_identifier;
 		new_right.token = member.import_source->var_decl.name;
 		node->right = alloc_node(new_right, arena);
@@ -1318,6 +1336,7 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 		temp.right = old_right;
 		temp.temp_var_decl = member.node->temp_var_decl;
 		temp.var_type = member.node->var_type;
+		temp.next = old_next;
 		*node = temp;
 		maybe_fix_member_access(node, member.import_source->var_type, data, arena);
 	}

@@ -67,6 +67,7 @@ enum e_node
 	e_node_continue,
 	e_node_break,
 	e_node_enum,
+	e_node_dereference,
 };
 
 enum e_context
@@ -90,6 +91,7 @@ global constexpr s_operator_data c_operator_data[] = {
 	{e_token_forward_slash, e_node_divide, 13},
 	{e_token_percent, e_node_modulo, 13},
 	{e_token_logic_not, e_node_logic_not, 15},
+	{e_token_asterisk, e_node_dereference, 15},
 	{e_token_address_of, e_node_address_of, 15},
 	{e_token_dot, e_node_member_access, 16},
 	{e_token_greater_than, e_node_greater_than, 9},

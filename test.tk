@@ -172,6 +172,7 @@ external_func void ClearBackground(s_color);
 external_func int rand();
 external_func s_v2 GetMousePosition();
 external_func b32 IsMouseButtonPressed(int);
+external_func b32 IsMouseButtonReleased(int);
 external_func b32 IsMouseButtonDown(int);
 external_func float floorf(float);
 external_func b32 IsKeyDown(int);
@@ -185,6 +186,17 @@ external_func float GetFrameTime();
 external_func int printf(char*);
 external_func void SetTargetFPS(int);
 external_func void DrawTexturePro(s_texture, s_rect, s_rect, s_v2, float, s_color);
+external_func void SetExitKey(int);
+external_func void DrawText(char*, int, int, int, s_color);
+external_func void DrawRectangleLines(int, int, int, int, s_color);
+external_func void* memset(void*, int, size_t);
+
+enum e_editor_state
+{
+	invalid,
+	select,
+	paint,
+}
 
 struct s_player
 {
@@ -200,9 +212,19 @@ struct s_input_data
 	int move_right,
 	int move_up,
 	int move_down,
+	int move_tile_left,
+	int move_tile_right,
+	int move_tile_up,
+	int move_tile_down,
 	int jump,
 	int place_tile,
-	int remove_tile,
+	int one,
+	int cancel,
+	int left_click_down,
+	int left_click_pressed,
+	int left_click_released,
+	int remove_tiles,
+	int undo,
 }
 
 const int c_max_projectiles = 128;
@@ -225,6 +247,7 @@ const int c_max_tiles = 64;
 struct s_editor_data
 {
 	s8[c_max_tiles][c_max_tiles] tiles,
+	int[c_max_tiles][c_max_tiles] tiles_selected,
 }
 
 enum e_animation
@@ -253,9 +276,23 @@ enum e_texture
 	projectile,
 }
 
+struct s_state
+{
+	int curr,
+	int next,
+}
+
+const int c_editor_max_undo = 16;
 struct s_editor
 {
 	import s_editor_data data,
+	int painting,
+	int undo_count,
+	int undo_index,
+	s_editor_data[c_editor_max_undo] undo_stack,
+	s_v2 selection_start,
+	int selecting,
+	s_state state,
 	int curr_tile,
 }
 
@@ -293,8 +330,7 @@ s_v2 mouse;
 s_v2 world_mouse;
 const int c_shoot_delay = 20;
 const float c_max_walk_vel = 1;
-int state = 1;
-int next_state = 0;
+s_state game_state;
 s_input_data input;
 s_editor editor;
 int animation_count = 0;
@@ -303,10 +339,13 @@ s_animation[128] animations;
 func int main()
 {
 
+	game_state.curr = 1;
+	editor.state.curr = 1;
 	SetTraceLogLevel(LOG_WARNING);
 	SetConfigFlags(FLAG_VSYNC_HINT);
 
 	InitWindow(ww, wh, "AZEN");
+	SetExitKey(0);
 
 	g_textures[e_texture.player_body] = load_texture("assets/pink_body_square.png");
 	g_textures[e_texture.tile] = load_texture("assets/tile_grey.png");
@@ -367,7 +406,7 @@ func int main()
 			update();
 		}
 		s8[c_max_tiles][c_max_tiles]* tiles = &g_tiles;
-		if(state == 2) {
+		if(game_state.curr == 2) {
 			tiles = &editor.tiles;
 		}
 		render(tiles);
@@ -376,9 +415,15 @@ func int main()
 
 func void do_input()
 {
-	if state == 1 {
+
+	input.left_click_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+	input.left_click_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+	input.left_click_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+
+	// @Note(tkap, 18/02/2024): Game
+	if game_state.curr == 1 {
 		if IsKeyPressed(KEY_F1) {
-			next_state = 2;
+			set_next_state(&game_state, 2);
 		}
 
 		input.shoot = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
@@ -387,17 +432,28 @@ func void do_input()
 		input.jump = IsKeyPressed(KEY_SPACE);
 	}
 
-	if state == 2 {
+	// @Note(tkap, 18/02/2024): Editor
+	if game_state.curr == 2 {
 		if IsKeyPressed(KEY_F1) {
-			next_state = 1;
+			set_next_state(&game_state, 1);
 		}
 
-		input.move_left = IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A);
-		input.move_right = IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D);
-		input.move_up = IsKeyDown(KEY_UP) || IsKeyDown(KEY_W);
-		input.move_down = IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_S);
+		input.move_tile_left = IsKeyPressed(KEY_LEFT);
+		input.move_tile_right = IsKeyPressed(KEY_RIGHT);
+		input.move_tile_up = IsKeyPressed(KEY_UP);
+		input.move_tile_down = IsKeyPressed(KEY_DOWN);
+		input.move_left = IsKeyDown(KEY_A);
+		input.move_right = IsKeyDown(KEY_D);
+		input.move_up = IsKeyDown(KEY_W);
+		input.move_down = IsKeyDown(KEY_S);
 		input.place_tile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-		input.remove_tile = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
+		input.one = IsKeyPressed(KEY_ONE);
+		input.cancel = IsKeyPressed(KEY_ESCAPE);
+		input.remove_tiles = IsKeyPressed(KEY_DELETE);
+
+		if IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_Z) {
+			input.undo = 1;
+		}
 	}
 }
 
@@ -411,19 +467,19 @@ func void update()
 	}
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		change state start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	if next_state != 0 {
-		state = next_state;
-		if next_state == 1 {
+	if game_state.next != 0 {
+		game_state.curr = game_state.next;
+		if game_state.next == 1 {
 			g_tiles = editor.tiles;
 		}
-		if next_state == 2 {
+		if game_state.next == 2 {
 			editor.tiles = g_tiles;
 		}
-		next_state = 0;
+		game_state.next = 0;
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		change state end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-	if state == 1 {
+	if game_state.curr == 1 {
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		create projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		if player.shoot_timer >= c_shoot_delay && input.shoot {
@@ -567,19 +623,7 @@ func void update()
 	}
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	if state == 2 {
-
-		s_v2i index = pos_to_tile_index(world_mouse);
-		if input.place_tile {
-			if is_valid_tile_index(index) {
-				editor.tiles[index.y][index.x] = 1;
-			}
-		}
-		if input.remove_tile {
-			if is_valid_tile_index(index) {
-				editor.tiles[index.y][index.x] = 0;
-			}
-		}
+	if game_state.curr == 2 {
 
 		camera.offset.x = ww / 2 - player_size.x / 2;
 		camera.offset.y = wh / 2 - player_size.y / 2;
@@ -595,6 +639,109 @@ func void update()
 		}
 		if input.move_down {
 			camera.pos.y += cam_speed;
+		}
+
+		if editor.state.next > 0 {
+			editor.state.curr = editor.state.next;
+			if editor.state.next == e_editor_state.paint {
+				memset(editor.tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+			}
+			editor.state.next = 0;
+		}
+
+		if consume_input(&input.undo) {
+			editor_undo();
+		}
+
+		if editor.state.curr == e_editor_state.select {
+			if consume_input(&input.one) {
+				set_next_state(&editor.state, 2);
+			}
+			if consume_input(&input.left_click_pressed) {
+				editor.selecting = 1;
+				editor.selection_start = world_mouse;
+			}
+
+			if editor.selecting && consume_input(&input.left_click_released) {
+				editor.selecting = 0;
+				memset(editor.tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+				s_rect rect = get_editor_selection_rectangle();
+				for y: c_max_tiles {
+					for x: c_max_tiles {
+						if editor.tiles[y][x] <= 0 { continue; }
+						s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.y);
+						if rect_collides_rect(rect.pos, rect.size, tile_pos, tile_size) {
+							editor.tiles_selected[y][x] = 1;
+						}
+					}
+				}
+			}
+
+			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		move tiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+			{
+				int first_move = 1;
+				s8[c_max_tiles][c_max_tiles] tiles = editor.tiles;
+				int[c_max_tiles][c_max_tiles] tiles_selected = editor.tiles_selected;
+				int exit_loop = 0;
+				if consume_input(&input.move_tile_up) {
+					for y: c_max_tiles {
+						if exit_loop { break; }
+						for x: c_max_tiles {
+							if tiles_selected[y][x] {
+								s_v2i index = v2i(x, y - 1);
+								if !is_valid_tile_index(index) { exit_loop = 1; break; }
+								if first_move {
+									first_move = 0;
+									editor_save_undo();
+								}
+								editor.tiles[index.y][index.x] = tiles[y][x];
+								editor.tiles[y][x] = 0;
+								editor.tiles_selected[index.y][index.x] = 1;
+								editor.tiles_selected[y][x] = 0;
+							}
+						}
+					}
+				}
+			}
+			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		move tiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+			if consume_input(&input.remove_tiles) {
+				int deleted_something = 0;
+				for y: c_max_tiles {
+					for x: c_max_tiles {
+						if editor.tiles_selected[y][x] {
+							if !deleted_something {
+								editor_save_undo();
+								deleted_something = 1;
+							}
+							editor.tiles[y][x] = 0;
+							editor.tiles_selected[y][x] = 0;
+						}
+					}
+				}
+				memset(editor.tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+			}
+		}
+
+		if editor.state.curr == e_editor_state.paint {
+			if consume_input(&input.cancel) {
+				set_next_state(&editor.state, 1);
+			}
+
+			if editor.painting && consume_input(&input.left_click_released) {
+				editor.painting = 0;
+			}
+
+			if input.place_tile {
+				s_v2i index = pos_to_tile_index(world_mouse);
+				if is_valid_tile_index(index) {
+					if editor.tiles[index.y][index.x] != 1 && !editor.painting {
+						editor.painting = 1;
+						editor_save_undo();
+					}
+					editor.tiles[index.y][index.x] = 1;
+				}
+			}
 		}
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -630,6 +777,12 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 					color = WHITE;
 				}
 				draw_texture(g_textures[e_texture.tile], to_screen(tile_pos), tile_size, color, 0);
+				if tile > 0 && game_state.curr == 2 && editor.tiles_selected[y][x] {
+					float size = sin2(time * 10) * tile_size.x;
+					s_color temp_color = GREEN;
+					temp_color.a = 150;
+					draw_texture(g_textures[e_texture.tile], to_screen(get_center(tile_pos, tile_size)), v2(size, size), temp_color, 1);
+				}
 			}
 		}
 	}
@@ -679,6 +832,22 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 		draw_texture(g_textures[e_texture.projectile], pos, projectile_size, WHITE, 1);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	if game_state.curr == 2 {
+		if editor.state.curr == e_editor_state.select {
+			draw_text("select", v2(400, 100));
+
+			if editor.selecting {
+				s_rect rect = get_editor_selection_rectangle();
+				rect.pos = to_screen(rect.pos);
+				DrawRectangleLines(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, WHITE);
+			}
+		}
+
+		if editor.state.curr == e_editor_state.paint {
+			draw_text("paint", v2(400, 100));
+		}
+	}
 
 	DrawFPS(16, 16);
 
@@ -868,4 +1037,69 @@ func s_v2 operator*(s_v2 a, float b)
 	a.x *= b;
 	a.y *= b;
 	return a;
+}
+
+func void set_next_state(s_state* state, int next)
+{
+	state.next = next;
+}
+
+func void draw_text(char* text, s_v2 pos)
+{
+	DrawText(text, pos.x, pos.y, 32, WHITE);
+}
+
+func int consume_input(int* i)
+{
+	int result = 0;
+	if *i > 0 {
+		*i = 0;
+		result = 1;
+	}
+	return result;
+}
+
+func s_rect rect_from_points(s_v2 a, s_v2 b)
+{
+	s_rect rect;
+	rect.pos = a;
+	rect.size.x = b.x - a.x;
+	rect.size.y = b.y - a.y;
+	return rect;
+}
+
+func s_rect get_editor_selection_rectangle()
+{
+	s_v2 min_bounds = v2(
+		min(editor.selection_start.x, world_mouse.x),
+		min(editor.selection_start.y, world_mouse.y)
+	);
+	s_v2 max_bounds = v2(
+		max(editor.selection_start.x, world_mouse.x),
+		max(editor.selection_start.y, world_mouse.y)
+	);
+	return rect_from_points(min_bounds, max_bounds);
+}
+
+func float sin2(float t)
+{
+	return sinf(t) * 0.5 + 0.5;
+}
+
+func void editor_save_undo()
+{
+	editor.undo_stack[editor.undo_index] = editor.data;
+	editor.undo_index = (editor.undo_index + 1) % c_editor_max_undo;
+	editor.undo_count = min(editor.undo_count + 1, c_editor_max_undo);
+}
+
+func void editor_undo()
+{
+	if editor.undo_count <= 0 { return; }
+	editor.undo_index -= 1;
+	if editor.undo_index < 0 {
+		editor.undo_index = c_editor_max_undo - 1;
+	}
+	editor.data = editor.undo_stack[editor.undo_index];
+	editor.undo_count -= 1;
 }

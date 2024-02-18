@@ -36,3 +36,8 @@ redo for loop nonsense. try to not add things to the AST. make code gen smarter
 error if external func is operator overload
 
 separate the idea of a mutable variable and a constant expression???
+
+we need a better system for types...
+
+this shouldnt be allowed! editor.tiles is an s8!!
+int[c_max_tiles][c_max_tiles] tiles = editor.tiles;

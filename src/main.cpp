@@ -180,6 +180,10 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/operator_overload.tk", true},
 		{"tests/operator_overload2.tk", true},
 		{"tests/operator_overload3.tk", true},
+		{"tests/dereference.tk", true},
+		{"tests/dereference2.tk", true},
+		{"tests/dereference3.tk", true},
+		{"tests/import4.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

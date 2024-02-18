@@ -149,8 +149,11 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 		} break;
 
 		case e_node_return: {
-			builder->add_tabs("return ");
-			node_to_c_str(node->nreturn.expression, builder, {.prefix_struct_literal = true});
+			builder->add_tabs("return");
+			if(node->nreturn.expression) {
+				builder->add(" ");
+				node_to_c_str(node->nreturn.expression, builder, {.prefix_struct_literal = true});
+			}
 			builder->add_line(";");
 		} break;
 
@@ -306,6 +309,11 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 
 		case e_node_logic_not: {
 			builder->add("!");
+			node_to_c_str(node->left, builder, context);
+		} break;
+
+		case e_node_dereference: {
+			builder->add("*");
 			node_to_c_str(node->left, builder, context);
 		} break;
 

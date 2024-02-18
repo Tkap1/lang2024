@@ -429,6 +429,10 @@ func s_parse_result parse_sub_expression(s_tokenizer tokenizer, s_error_reporter
 			node_type = e_node_address_of;
 			pr.operator_data.precedence = 15;
 		}
+		else if(pr.operator_data.node_type == e_node_multiply) {
+			node_type = e_node_dereference;
+			pr.operator_data.precedence = 15;
+		}
 		else {
 			goto end;
 		}
