@@ -427,11 +427,21 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 		} break;
 
 		case e_node_multiply: {
-			builder->add("(");
-			node_to_c_str(node->left, builder, context);
-			builder->add(" * ");
-			node_to_c_str(node->right, builder, context);
-			builder->add(")");
+			s_node* nfunc = node->operator_overload_func;
+			if(nfunc) {
+				builder->add("%s(", nfunc->func_decl.name.str());
+				node_to_c_str(node->left, builder, context);
+				builder->add(", ");
+				node_to_c_str(node->right, builder, context);
+				builder->add(")");
+			}
+			else {
+				builder->add("(");
+				node_to_c_str(node->left, builder, context);
+				builder->add(" * ");
+				node_to_c_str(node->right, builder, context);
+				builder->add(")");
+			}
 		} break;
 
 		case e_node_greater_than: {

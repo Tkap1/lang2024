@@ -1,7 +1,10 @@
 
+// @TODO(tkap, 18/02/2024): Global alert
+global int overload_id = 0;
 
 func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
 {
+	overload_id = 0;
 	s_node* ast = null;
 	s_node** current = &ast;
 	while(true) {
@@ -203,6 +206,11 @@ func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* rep
 		tokenizer = pr.tokenizer;
 		result.node.func_decl.body = alloc_node(pr.node, arena);
 
+		if(result.node.func_decl.is_operator_overload) {
+			char* name = alloc_str(arena, "__overload%i__", overload_id++);
+			result.node.func_decl.name = {.type = e_token_identifier, .len = (int)strlen(name), .at = name};
+		}
+
 		result.tokenizer = tokenizer;
 		result.success = true;
 	}
@@ -260,7 +268,7 @@ func s_parse_result parse_type(s_tokenizer tokenizer, s_error_reporter* reporter
 	breakable_block {
 
 		if(tokenizer.consume_token("const", reporter)) {
-			result.node.ntype.is_const = true;
+			result.is_const = true;
 		}
 
 		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
@@ -524,6 +532,7 @@ func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* repo
 
 		s_parse_result pr = parse_type(tokenizer, reporter, arena);
 		if(!pr.success) { break; }
+		result.node.var_decl.is_const = pr.is_const;
 		tokenizer = pr.tokenizer;
 		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
 

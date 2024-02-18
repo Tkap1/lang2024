@@ -15,6 +15,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 4, .at = "void"};
 		node.basic_type.name = "void";
+		node.basic_type.id = e_type_void;
 		node.size_in_bytes = 0;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -24,6 +25,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 3, .at = "int"};
 		node.basic_type.name = "int";
+		node.basic_type.id = e_type_s32;
 		node.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -33,6 +35,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 3, .at = "s32"};
 		node.basic_type.name = "s32";
+		node.basic_type.id = e_type_s32;
 		node.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -43,6 +46,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.token = {.type = e_token_identifier, .len = 3, .at = "u32"};
 		node.basic_type.is_unsigned = true;
 		node.basic_type.name = "u32";
+		node.basic_type.id = e_type_u32;
 		node.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -52,6 +56,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 3, .at = "b32"};
 		node.basic_type.name = "b32";
+		node.basic_type.id = e_type_b32;
 		node.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -61,6 +66,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 2, .at = "b8"};
 		node.basic_type.name = "b8";
+		node.basic_type.id = e_type_b8;
 		node.size_in_bytes = 1;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -70,6 +76,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 2, .at = "s8"};
 		node.basic_type.name = "s8";
+		node.basic_type.id = e_type_s8;
 		node.size_in_bytes = 1;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -79,6 +86,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 2, .at = "u8"};
 		node.basic_type.name = "u8";
+		node.basic_type.id = e_type_u8;
 		node.basic_type.is_unsigned = true;
 		node.size_in_bytes = 1;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
@@ -89,6 +97,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 5, .at = "float"};
 		node.basic_type.name = "float";
+		node.basic_type.id = e_type_f32;
 		node.size_in_bytes = 4;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -98,6 +107,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 6, .at = "double"};
 		node.basic_type.name = "double";
+		node.basic_type.id = e_type_f64;
 		node.size_in_bytes = 8;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -107,6 +117,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 4, .at = "char"};
 		node.basic_type.name = "char";
+		node.basic_type.id = e_type_char;
 		node.size_in_bytes = 1;
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
@@ -195,7 +206,7 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_func_decl(node, reporter, data, arena, context)) {
 				return false;
 			}
-			node->var_type = node->func_decl.return_type;
+			// node->var_type = node->func_decl.return_type;
 			return true;
 		} break;
 
@@ -552,7 +563,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 						node->var_type = var->var_type;
 						success = true;
 
-						if(var->var_type->type == e_node_type && var->var_decl.type->ntype.is_const) {
+						if(var->var_type->type == e_node_type && var->var_decl.is_const) {
 							s_maybe<s_node> c = get_compile_time_value(var->var_decl.value, data);
 							assert(c.valid);
 							node->type = c.value.type;
@@ -595,21 +606,69 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_add:
 		case e_node_divide:
+		case e_node_subtract:
+		case e_node_multiply:
 		case e_node_modulo: {
 			// @TODO(tkap, 11/02/2024):
 			if(!type_check_expr(node->left, reporter, data, arena, context)) { return false; }
 			if(!type_check_expr(node->right, reporter, data, arena, context)) { return false; }
+			if(!type_check_arithmetic(node, reporter, data, arena, context)) {
+				reporter->recoverable_error(node->token.file, node->token.line, "Bad arithmetic TODO");
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
 
-		case e_node_multiply: {
-			// @TODO(tkap, 11/02/2024):
-			if(!type_check_expr(node->left, reporter, data, arena, context)) { return false; }
-			if(!type_check_expr(node->right, reporter, data, arena, context)) { return false; }
-			node->type_checked = true;
-			return true;
-		} break;
+		// case e_node_multiply: {
+		// 	// @TODO(tkap, 11/02/2024):
+		// 	if(!type_check_expr(node->left, reporter, data, arena, context)) { return false; }
+		// 	if(!type_check_expr(node->right, reporter, data, arena, context)) { return false; }
+
+		// 	b8 success = false;
+		// 	if(node->left->var_type->type != e_node_type || node->right->var_type->type != e_node_type) {
+		// 		// @Note(tkap, 18/02/2024): Look for operator overloads
+		// 		for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
+		// 			s_scope** scope2 = data->get(scope2_i);
+		// 			if(*scope2) {
+		// 				s_scope* scope1 = *scope2;
+		// 				foreach_val(nfunc_i, nfunc, scope1->funcs) {
+		// 					assert(nfunc->type == e_node_func_decl);
+		// 					if(nfunc->func_decl.argument_count != 2) { continue; }
+		// 					if(nfunc->func_decl.is_external) { continue; }
+		// 					s_node* first_arg = nfunc->func_decl.arguments;
+		// 					s_node* second_arg = first_arg->next;
+		// 					if(is_same_type(first_arg->var_type, node->left->var_type) && is_same_type(second_arg->var_type, node->right->var_type)) {
+		// 						node->operator_overload_func = nfunc;
+		// 						success = true;
+		// 						break;
+		// 					}
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// 	else {
+		// 		e_type left = node->left->var_type->basic_type.id;
+		// 		e_type right = node->right->var_type->basic_type.id;
+		// 		for(int i = 0; i < array_count(c_op_table); i++) {
+		// 			s_op_table table = c_op_table[i];
+		// 			if(
+		// 				(table.left == left && table.right == right) ||
+		// 				(table.left == right && table.right == left)
+		// 			) {
+		// 				node->var_type = get_type_by_id(table.result, data);
+		// 				success = true;
+		// 				break;
+		// 			}
+		// 		}
+		// 	}
+		// 	if(!success) {
+		// 		reporter->recoverable_error(node->token.file, node->token.line, "Bad multiply");
+		// 		return false;
+		// 	}
+		// 	node->type_checked = true;
+		// 	return true;
+		// } break;
 
 		case e_node_string: {
 			node->type_checked = true;
@@ -657,6 +716,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 					return false;
 				}
 			}
+			node->var_type = node->left->var_type;
 			// @TODO(tkap, 10/02/2024): check that function exists
 			node->type_checked = true;
 			return true;
@@ -744,17 +804,20 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			return true;
 		} break;
 
-		case e_node_subtract: {
-			// @TODO(tkap, 10/02/2024):
-			if(!type_check_expr(node->left, reporter, data, arena, context)) {
-				return false;
-			}
-			if(!type_check_expr(node->right, reporter, data, arena, context)) {
-				return false;
-			}
-			node->type_checked = true;
-			return true;
-		} break;
+		// case e_node_subtract: {
+		// 	// @TODO(tkap, 10/02/2024):
+		// 	if(!type_check_expr(node->left, reporter, data, arena, context)) {
+		// 		return false;
+		// 	}
+		// 	if(!type_check_expr(node->right, reporter, data, arena, context)) {
+		// 		return false;
+		// 	}
+		// 	if(!type_check_arithmetic(node, reporter, data, arena, context)) {
+		// 		return false;
+		// 	}
+		// 	node->type_checked = true;
+		// 	return true;
+		// } break;
 
 		case e_node_logic_or: {
 			// @TODO(tkap, 10/02/2024):
@@ -1097,6 +1160,7 @@ func s_node* get_struct_by_name_except(char* name, s_node* exclude, t_scope_arr*
 	return null;
 }
 
+// @TODO(tkap, 18/02/2024): Delete? just query by id, it's faster
 func s_node* get_type_by_name(char* name, t_scope_arr* data)
 {
 	for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
@@ -1105,6 +1169,22 @@ func s_node* get_type_by_name(char* name, t_scope_arr* data)
 			s_scope* scope1 = *scope2;
 			foreach_val(type_i, type, scope1->types) {
 				if(strcmp(type->basic_type.name, name) == 0) {
+					return type;
+				}
+			}
+		}
+	}
+	return null;
+}
+
+func s_node* get_type_by_id(e_type id, t_scope_arr* data)
+{
+	for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
+		s_scope** scope2 = data->get(scope2_i);
+		if(*scope2) {
+			s_scope* scope1 = *scope2;
+			foreach_val(type_i, type, scope1->types) {
+				if(type->basic_type.id == id) {
 					return type;
 				}
 			}
@@ -1164,13 +1244,14 @@ func s_node* get_enum_by_name(char* name, t_scope_arr* data)
 	return null;
 }
 
+// @TODO(tkap, 18/02/2024): What to do about this?
 func b8 is_const(s_node* node, t_scope_arr* data)
 {
 	unreferenced(data);
 	switch(node->type) {
-		case e_node_type: {
-			return node->ntype.is_const;
-		} break;
+		// case e_node_type: {
+		// 	return node->ntype.is_const;
+		// } break;
 		invalid_default_case;
 	}
 	return false;
@@ -1261,4 +1342,106 @@ func int get_size_in_bytes(s_node* node, t_scope_arr* data)
 		invalid_default_case;
 	}
 	return result;
+}
+
+func b8 is_same_type(s_node* a, s_node* b)
+{
+	if(a->type != b->type) { return false; }
+	if(a->pointer_level != b->pointer_level) { return false; }
+	if(a->type == e_node_struct) {
+		if(!a->token.equals(b->token)) { return false; }
+	}
+	if(a->type == e_node_type) {
+		if(a->basic_type.id != b->basic_type.id) { return false; }
+	}
+	return true;
+}
+
+// @TODO(tkap, 18/02/2024): Dogshit?
+func b8 is_compatible_type(s_node* a, s_node* b, e_type target_type)
+{
+	if(a->type != b->type) { return false; }
+	if(a->pointer_level != b->pointer_level) { return false; }
+	if(a->type == e_node_struct) {
+		if(!a->token.equals(b->token)) { return false; }
+	}
+	if(a->type == e_node_type) {
+		// @TODO(tkap, 18/02/2024): Copy paste
+		e_type left = a->basic_type.id;
+		e_type right = b->basic_type.id;
+		for(int i = 0; i < array_count(c_op_table); i++) {
+			s_op_table table = c_op_table[i];
+			if(
+				(table.left == left && table.right == right) ||
+				(table.left == right && table.right == left)
+			) {
+				if(target_type == table.result) { return true; }
+			}
+		}
+		return false;
+	}
+	return true;
+}
+
+func b8 type_check_arithmetic(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context)
+{
+	unreferenced(reporter);
+	unreferenced(arena);
+	unreferenced(context);
+	b8 success = false;
+	if(node->left->var_type->type != e_node_type || node->right->var_type->type != e_node_type) {
+		// @Note(tkap, 18/02/2024): Look for operator overloads
+		for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
+			s_scope** scope2 = data->get(scope2_i);
+			if(*scope2) {
+				s_scope* scope1 = *scope2;
+				foreach_val(nfunc_i, nfunc, scope1->funcs) {
+					assert(nfunc->type == e_node_func_decl);
+					if(nfunc->func_decl.is_external) { continue; }
+					if(nfunc->func_decl.argument_count != 2) { continue; }
+					if(!nfunc->func_decl.is_operator_overload) { continue; }
+					if(nfunc->func_decl.operator_overload != node->type) { continue; }
+					s_node* first_arg = nfunc->func_decl.arguments;
+					s_node* second_arg = first_arg->next;
+
+					// @TODO(tkap, 18/02/2024): TERRIBLE! copy paste, not complete
+					// @TODO(tkap, 18/02/2024): We actually want something like can_type_be_converted_to_whatever()
+					if(second_arg->var_type->type == e_node_type) {
+						if(is_same_type(first_arg->var_type, node->left->var_type) && is_compatible_type(second_arg->var_type, node->right->var_type, second_arg->var_type->basic_type.id)) {
+							// @TODO(tkap, 18/02/2024): Or do we want return_type->var_type?
+							node->var_type = nfunc->func_decl.return_type;
+							node->operator_overload_func = nfunc;
+							success = true;
+							break;
+						}
+					}
+					else {
+						if(is_same_type(first_arg->var_type, node->left->var_type) && is_same_type(second_arg->var_type, node->right->var_type)) {
+							// @TODO(tkap, 18/02/2024): Or do we want return_type->var_type?
+							node->var_type = nfunc->func_decl.return_type;
+							node->operator_overload_func = nfunc;
+							success = true;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+	else {
+		e_type left = node->left->var_type->basic_type.id;
+		e_type right = node->right->var_type->basic_type.id;
+		for(int i = 0; i < array_count(c_op_table); i++) {
+			s_op_table table = c_op_table[i];
+			if(
+				(table.left == left && table.right == right) ||
+				(table.left == right && table.right == left)
+			) {
+				node->var_type = get_type_by_id(table.result, data);
+				success = true;
+				break;
+			}
+		}
+	}
+	return success;
 }

@@ -4,6 +4,27 @@
 
 #define for_node(iter, base) for(s_node* iter = base; iter; iter = iter->next)
 
+
+enum e_type
+{
+	e_type_invalid,
+	e_type_void,
+	e_type_char,
+	e_type_s8,
+	e_type_s16,
+	e_type_s32,
+	e_type_s64,
+	e_type_u8,
+	e_type_u16,
+	e_type_u32,
+	e_type_u64,
+	e_type_f32,
+	e_type_f64,
+	e_type_b8,
+	e_type_b32,
+};
+
+
 enum e_node
 {
 	e_node_invalid,
@@ -106,6 +127,7 @@ struct s_node
 	int array_capacity; // @Note(tkap, 17/02/2024): For e_node_subscript
 	int enum_value;
 	s_node* temp_var_decl;
+	s_node* operator_overload_func;
 
 	// @TODO(tkap, 10/02/2024): probably dont want this
 	s_node* left;
@@ -124,6 +146,7 @@ struct s_node
 
 		struct
 		{
+			b8 is_const;
 			b8 is_import; // @Note(tkap, 14/02/2024): Used by struct members
 			s_node* type;
 			s_node* value;
@@ -150,6 +173,7 @@ struct s_node
 
 		struct
 		{
+			e_type id;
 			b8 is_unsigned;
 			char* name;
 		} basic_type;
@@ -182,11 +206,6 @@ struct s_node
 			s_node* body;
 			s_node* nelse;
 		} nif;
-
-		struct
-		{
-			b8 is_const;
-		} ntype;
 
 		struct
 		{
@@ -224,6 +243,7 @@ struct s_node
 struct s_parse_result
 {
 	b8 success;
+	b8 is_const; // @TODO(tkap, 18/02/2024): parse_type() sets this. We don't use it everywhere where we should currently...
 	s_tokenizer tokenizer;
 	s_node node;
 

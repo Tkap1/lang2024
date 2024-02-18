@@ -15,6 +15,21 @@ struct s_get_struct_member
 	s_node* import_source;
 };
 
+struct s_op_table
+{
+	e_type left;
+	e_type right;
+	e_type result;
+};
+
+global constexpr s_op_table c_op_table[] = {
+	{e_type_s32, e_type_f32, e_type_f32},
+	{e_type_s32, e_type_s32, e_type_s32},
+	{e_type_f32, e_type_f32, e_type_f32},
+};
+
+
+
 
 typedef s_sarray<s_scope**, 64> t_scope_arr;
 
@@ -42,3 +57,6 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 func int get_size_in_bytes(s_node* node, t_scope_arr* data);
 func void add_enum_to_scope(t_scope_arr* data, s_node* nenum, s_lin_arena* arena);
 func s_node* get_enum_by_name(char* name, t_scope_arr* data);
+func s_node* get_type_by_id(e_type id, t_scope_arr* data);
+func b8 is_same_type(s_node* a, s_node* b);
+func b8 type_check_arithmetic(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context);
