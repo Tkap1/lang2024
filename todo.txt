@@ -41,3 +41,5 @@ we need a better system for types...
 
 this shouldnt be allowed! editor.tiles is an s8!!
 int[c_max_tiles][c_max_tiles] tiles = editor.tiles;
+
+#include or equivalent

@@ -13,6 +13,14 @@ typedef double f64;
 
 global constexpr u64 c_kb = 1024;
 global constexpr u64 c_mb = 1024 * c_kb;
+global constexpr u64 c_gb = 1024 * c_mb;
+
+#ifdef __clang__
+#define printf_warnings(a, b) __attribute__((format(printf, (a), (b))))
+#else // __clang__
+#define printf_warnings(a, b)
+#endif // __clang__
+
 
 #define assert(condition) if(!(condition)) { on_failed_assert(#condition, __FILE__, __LINE__); }
 

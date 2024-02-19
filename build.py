@@ -160,6 +160,8 @@ def compile(files, name="main", do_dll=False, pdb_name=None, include_dirs=[], li
 		"-Wno-format-nonliteral",
 		"-Wno-missing-variable-declarations",
 		"-Wno-deprecated-declarations",
+
+		"-Wno-microsoft-goto",
 	]
 
 	if sanitize:

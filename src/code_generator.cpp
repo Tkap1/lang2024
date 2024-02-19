@@ -51,7 +51,7 @@ func b8 generate_code(s_node* ast, s_lin_arena* arena)
 				for_node(member, node->nstruct.members) {
 					generate_struct_member(member, builder);
 				}
-				builder->pop_scope(format_str(" %s;", node->token.str()));
+				builder->pop_scope("%s", format_str(" %s;", node->token.str()));
 			} break;
 
 			case e_node_var_decl: {
@@ -213,7 +213,7 @@ func void generate_statement(s_node* node, t_code_builder* builder)
 
 		case e_node_for: {
 			char* iterator_name = node->nfor.iterator_index_name.str();
-			builder->add_tabs("for(int %s = 0; %s < ", iterator_name, iterator_name, iterator_name);
+			builder->add_tabs("for(int %s = 0; %s < ", iterator_name, iterator_name);
 			node_to_c_str(node->nfor.upper_bound, builder, context);
 			builder->add_line("; %s += 1)", iterator_name);
 			generate_statement(node->nfor.body, builder);

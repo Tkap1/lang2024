@@ -76,6 +76,7 @@ t& s_sarray<t, n>::get(int index)
 	return elements[index];
 }
 
+printf_warnings(1, 2)
 func char* format_str(char* str, ...)
 {
 	static int index = 0;
@@ -89,6 +90,7 @@ func char* format_str(char* str, ...)
 	return buffer;
 }
 
+printf_warnings(2, 3)
 func char* alloc_str(s_lin_arena* arena, char* str, ...)
 {
 	char* buffer = (char*)arena->alloc_zero(1024);
@@ -122,6 +124,7 @@ void s_str_builder<n>::add_(char* str, b8 add_newline, b8 add_tabs, va_list args
 }
 
 template <int n>
+printf_warnings(2, 3)
 void s_str_builder<n>::add(char* str, ...)
 {
 	va_list args;
@@ -131,6 +134,7 @@ void s_str_builder<n>::add(char* str, ...)
 }
 
 template <int n>
+printf_warnings(2, 3)
 void s_str_builder<n>::add_tabs(char* str, ...)
 {
 	va_list args;
@@ -140,6 +144,7 @@ void s_str_builder<n>::add_tabs(char* str, ...)
 }
 
 template <int n>
+printf_warnings(2, 3)
 void s_str_builder<n>::add_line(char* str, ...)
 {
 	va_list args;
@@ -149,6 +154,7 @@ void s_str_builder<n>::add_line(char* str, ...)
 }
 
 template <int n>
+printf_warnings(2, 3)
 void s_str_builder<n>::add_line_tabs(char* str, ...)
 {
 	va_list args;
@@ -165,6 +171,7 @@ void s_str_builder<n>::push_scope()
 }
 
 template <int n>
+printf_warnings(2, 3)
 void s_str_builder<n>::pop_scope(char* str, ...)
 {
 	scope -= 1;

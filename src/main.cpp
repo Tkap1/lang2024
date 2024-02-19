@@ -41,9 +41,21 @@ int main(int argc, char** argv)
 	s_error_reporter reporter = zero;
 	if(compile(file_name, &arena, false, &reporter)) {
 		printf("Success!\n");
+		u64 data[] = {c_gb, c_mb, c_kb, 1};
+		char* data_str[] = {"gb", "mb", "kb", "b"};
+		u64 used = arena.used;
+		for(int i = 0; i < array_count(data); i++) {
+			u64 val = used / data[i];
+			if(val > 0) {
+				printf("%llu%s ", val, data_str[i]);
+				used -= val * data[i];
+			}
+		}
+		printf("\n");
 	}
 }
 
+printf_warnings(4, 5)
 void s_error_reporter::fatal(char* file, int line, char* str, ...)
 {
 	if(error_level >= e_error_level_fatal) { return; }
@@ -82,6 +94,7 @@ void s_error_reporter::fatal(char* file, int line, char* str, ...)
 	exit(1);
 }
 
+printf_warnings(4, 5)
 void s_error_reporter::recoverable_error(char* file, int line, char* str, ...)
 {
 	if(error_level > e_error_level_recoverable) { return; }

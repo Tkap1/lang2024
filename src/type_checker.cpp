@@ -1264,13 +1264,15 @@ func s_node* get_enum_by_name(char* name, t_scope_arr* data)
 // @TODO(tkap, 18/02/2024): What to do about this?
 func b8 is_const(s_node* node, t_scope_arr* data)
 {
+	unreferenced(node);
 	unreferenced(data);
-	switch(node->type) {
+	assert(false);
+	// switch(node->type) {
 		// case e_node_type: {
 		// 	return node->ntype.is_const;
 		// } break;
-		invalid_default_case;
-	}
+		// invalid_default_case;
+	// }
 	return false;
 }
 

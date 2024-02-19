@@ -301,7 +301,6 @@ func s_parse_result parse_type(s_tokenizer tokenizer, s_error_reporter* reporter
 func s_parse_result parse_array(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
 {
 	s_parse_result result = zero;
-	s_token token = zero;
 
 	breakable_block {
 
@@ -459,7 +458,6 @@ func s_parse_result parse_sub_expression(s_tokenizer tokenizer, s_error_reporter
 func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* reporter, int in_operator_level, s_lin_arena* arena)
 {
 	s_parse_result result = zero;
-	s_token token = zero;
 
 	breakable_block {
 

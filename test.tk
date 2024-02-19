@@ -243,12 +243,6 @@ struct s_camera
 }
 
 const int c_max_tiles = 64;
-// @Note(tkap, 15/02/2024): For things that get undone/redone by undo system
-struct s_editor_data
-{
-	s8[c_max_tiles][c_max_tiles] tiles,
-	int[c_max_tiles][c_max_tiles] tiles_selected,
-}
 
 enum e_animation
 {
@@ -283,6 +277,14 @@ struct s_state
 }
 
 const int c_editor_max_undo = 16;
+
+// @Note(tkap, 15/02/2024): For things that get undone/redone by undo system
+struct s_editor_data
+{
+	s8[c_max_tiles][c_max_tiles] tiles,
+	int[c_max_tiles][c_max_tiles] tiles_selected,
+}
+
 struct s_editor
 {
 	import s_editor_data data,
