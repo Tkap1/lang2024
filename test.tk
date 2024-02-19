@@ -679,28 +679,54 @@ func void update()
 
 			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		move tiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 			{
-				int first_move = 1;
-				s8[c_max_tiles][c_max_tiles] tiles = editor.tiles;
-				int[c_max_tiles][c_max_tiles] tiles_selected = editor.tiles_selected;
-				int exit_loop = 0;
-				if consume_input(&input.move_tile_up) {
+				int[4] move;
+				s_v2i[4] offsets;
+				move[0] = consume_input(&input.move_tile_up);
+				move[1] = consume_input(&input.move_tile_left);
+				move[2] = consume_input(&input.move_tile_right);
+				move[3] = consume_input(&input.move_tile_down);
+				offsets[0] = v2i(0, -1);
+				offsets[1] = v2i(-1, 0);
+				offsets[2] = v2i(1, 0);
+				offsets[3] = v2i(0, 1);
+				for offset: offsets {
+					if !move[offset_index] { continue; }
+					int first_move = 1;
+					s8[c_max_tiles][c_max_tiles] new_tiles;
+					memset(new_tiles, 0, c_max_tiles * c_max_tiles);
+					int[c_max_tiles][c_max_tiles] new_tiles_selected;
+					memset(new_tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+
 					for y: c_max_tiles {
-						if exit_loop { break; }
 						for x: c_max_tiles {
-							if tiles_selected[y][x] {
-								s_v2i index = v2i(x, y - 1);
-								if !is_valid_tile_index(index) { exit_loop = 1; break; }
+							if !editor.tiles_selected[y][x] {
+								new_tiles[y][x] = editor.tiles[y][x];
+							}
+						}
+					}
+
+					int hit_a_border = 0;
+					for y: c_max_tiles {
+						for x: c_max_tiles {
+							if !editor.tiles_selected[y][x] { continue; }
+							s_v2i index = v2i(x + offset.x, y + offset.y);
+							if !is_valid_tile_index(index) { hit_a_border = 1; }
+							if !hit_a_border {
 								if first_move {
 									first_move = 0;
 									editor_save_undo();
 								}
-								editor.tiles[index.y][index.x] = tiles[y][x];
-								editor.tiles[y][x] = 0;
-								editor.tiles_selected[index.y][index.x] = 1;
-								editor.tiles_selected[y][x] = 0;
+								new_tiles[index.y][index.x] = editor.tiles[y][x];
+								new_tiles_selected[index.y][index.x] = editor.tiles_selected[y][x];
+							}
+							else {
+								new_tiles[y][x] = editor.tiles[y][x];
+								new_tiles_selected[y][x] = editor.tiles_selected[y][x];
 							}
 						}
 					}
+					editor.tiles = new_tiles;
+					editor.tiles_selected = new_tiles_selected;
 				}
 			}
 			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		move tiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
