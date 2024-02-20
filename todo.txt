@@ -66,3 +66,4 @@ usage:
 
 
 we have a bug with nested includes?? the error message contains a variable name instead of a file
+	are we checking for null?

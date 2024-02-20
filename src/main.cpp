@@ -207,6 +207,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/import_shadow.tk", false},
 		{"tests/nested_for_loops.tk", false},
 		{"tests/nonsense.tk", false},
+		{"tests/const_without_value.tk", false},
 		{"tests/data_enum.tk", true},
 		{"tests/data_enum2.tk", true},
 		{"tests/data_enum3.tk", true},
