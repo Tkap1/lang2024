@@ -28,9 +28,6 @@ global constexpr s_op_table c_op_table[] = {
 	{e_type_f32, e_type_f32, e_type_f32},
 };
 
-
-
-
 typedef s_sarray<s_scope**, 64> t_scope_arr;
 typedef s_sarray<s_node*, 128> t_get_imports;
 typedef s_sarray<s_node*, 128> t_flat_struct_members;
@@ -67,3 +64,5 @@ func t_get_imports* get_imports(t_scope_arr* data, s_lin_arena* arena);
 func b8 can_thing_be_added_to_scope(s_token name, t_scope_arr* data, s_error_reporter* reporter, s_lin_arena* arena);
 func t_flat_struct_members get_flat_array_of_struct_members(s_node* nstruct);
 func void get_flat_array_of_struct_members_(s_node* nstruct, t_flat_struct_members* result);
+func s_node* get_data_enum_by_name(char* name, t_scope_arr* data);
+func void add_data_enum_to_scope(t_scope_arr* data, s_node* data_enum, s_lin_arena* arena);

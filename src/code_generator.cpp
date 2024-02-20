@@ -363,15 +363,40 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 				// builder->add("_");
 				// node_to_c_str(node->right, builder, context);
 			}
+			else if(node->var_type->type == e_node_data_enum) {
+				assert(node->right->type == e_node_identifier);
+				// @TODO(tkap, 17/02/2024): We want the enum member somewhere
+				builder->add("%i", node->right->temp_var_decl->enum_value);
+				// node_to_c_str(node->left, builder, context);
+				// builder->add("_");
+				// node_to_c_str(node->right, builder, context);
+			}
 			else {
-				node_to_c_str(node->left, builder, context);
-				if(node->left->temp_var_decl->pointer_level > 0) {
-					builder->add("->");
+				if(node->var_type->is_data_enum_struct_access) {
+					// @TODO(tkap, 20/02/2024): This kind of thing feels like it should happen in the type checking stage!
+					s_node* idk = get_data_enum_member(node->left);
+					assert(idk->type == e_node_data_enum_member);
+					b8 found = false;
+					for_node(member, idk->data_enum_member.members) {
+						// @TODO(tkap, 20/02/2024): sus?
+						if(member->token.equals(node->right->token)) {
+							node_to_c_str(member->left, builder, context);
+							found = true;
+							break;
+						}
+					}
+					assert(found);
 				}
 				else {
-					builder->add(".");
+					node_to_c_str(node->left, builder, context);
+					if(node->left->temp_var_decl->pointer_level > 0) {
+						builder->add("->");
+					}
+					else {
+						builder->add(".");
+					}
+					node_to_c_str(node->right, builder, context);
 				}
-				node_to_c_str(node->right, builder, context);
 			}
 		} break;
 
@@ -632,4 +657,13 @@ func char* get_name(s_node* node)
 		invalid_default_case;
 	}
 	return null;
+}
+
+func s_node* get_data_enum_member(s_node* node)
+{
+	assert(node->type == e_node_member_access);
+	assert(node->left->type == e_node_identifier);
+	assert(node->right->type == e_node_identifier);
+	return node->right->temp_var_decl;
+
 }

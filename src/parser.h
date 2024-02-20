@@ -117,6 +117,7 @@ struct s_scope
 	s_sarray<s_node*, 128> structs;
 	s_sarray<s_node*, 128> funcs;
 	s_sarray<s_node*, 128> enums;
+	s_sarray<s_node*, 128> data_enums;
 	s_sarray<s_node*, 128> types;
 	s_sarray<s_node*, 256> vars;
 	s_sarray<s_node*, 128> imports;
@@ -125,6 +126,8 @@ struct s_scope
 struct s_node
 {
 	b8 type_checked;
+	b8 is_data_enum_member;
+	b8 is_data_enum_struct_access;
 	e_node type;
 	int line;
 	s_token token;

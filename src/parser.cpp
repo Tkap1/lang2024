@@ -199,6 +199,7 @@ func s_parse_result parse_data_enum(s_tokenizer tokenizer, s_error_reporter* rep
 		while(true) {
 			if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
 			s_node member = zero;
+			member.type = e_node_data_enum_member;
 			member.token = token;
 			if(is_keyword(token)) {
 				reporter->fatal(tokenizer.file, tokenizer.line, "data_enum member name cannot be a reserved keyword");
@@ -214,7 +215,6 @@ func s_parse_result parse_data_enum(s_tokenizer tokenizer, s_error_reporter* rep
 			s_node** curr_field = &member.data_enum_member.members;
 			while(true) {
 				s_node field = zero;
-				field.type = e_node_data_enum_member;
 				if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) {
 					break;
 				}
@@ -340,6 +340,7 @@ func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* rep
 
 func s_parse_result parse_directive(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
 {
+	unreferenced(arena);
 	s_parse_result result = zero;
 	s_token token = zero;
 
@@ -965,7 +966,7 @@ func b8 is_keyword(s_token token)
 {
 	// @TODO(tkap, 10/02/2024):
 	constexpr char* c_keywords[] = {
-		"if", "struct", "for", "while", "enum", "else", "import", "operator",
+		"if", "struct", "for", "while", "enum", "else", "import", "operator", "data_enum",
 	};
 	for(int keyword_i = 0; keyword_i < array_count(c_keywords); keyword_i++) {
 		if(token.equals(c_keywords[keyword_i])) { return true; }

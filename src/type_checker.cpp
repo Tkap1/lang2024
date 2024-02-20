@@ -203,8 +203,25 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_data_enum: {
+
+			int member_index = 0;
+			s_node* last_member = null;
+			for_node(member, node->data_enum.members) {
+				member->enum_value = member_index;
+				member_index += 1;
+				last_member = member;
+			}
+			s_node count_member = zero;
+			count_member.enum_value = member_index;
+			count_member.token = {.type = e_token_identifier, .len = 5, .at = "count"};
+			last_member->next = alloc_node(count_member, arena);
+
+			if(!type_check_struct(node->data_enum.nstruct, reporter, data, arena, context)) {
+				return false;
+			}
+
 			node->type_checked = true;
-			add_struct_to_scope(data, node->data_enum.nstruct, arena);
+			add_data_enum_to_scope(data, node, arena);
 			return true;
 		} break;
 
@@ -582,6 +599,31 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 						}
 					}
 				}
+				else if(context.member_access->type == e_node_data_enum) {
+					s_node* data_enum = context.member_access;
+					if(data_enum->is_data_enum_member) {
+						for_node(member, data_enum->data_enum.nstruct->nstruct.members) {
+							if(member->var_decl.name.equals(node->token)) {
+								node->var_type = alloc_node(*member->var_type, arena);
+								node->var_type->is_data_enum_struct_access = true;
+								node->temp_var_decl = member;
+								success = true;
+								break;
+							}
+						}
+					}
+					else {
+						for_node(member, data_enum->data_enum.members) {
+							if(member->token.equals(node->token)) {
+								node->var_type = alloc_node(*data_enum, arena);
+								node->var_type->is_data_enum_member = true;
+								node->temp_var_decl = member;
+								success = true;
+								break;
+							}
+						}
+					}
+				}
 				invalid_else;
 			}
 			else {
@@ -619,6 +661,13 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 					s_node* nenum = get_enum_by_name(node->token.str(), data);
 					if(nenum) {
 						node->var_type = nenum;
+						success = true;
+						break;
+					}
+
+					s_node* data_enum = get_data_enum_by_name(node->token.str(), data);
+					if(data_enum) {
+						node->var_type = data_enum;
 						success = true;
 						break;
 					}
@@ -738,7 +787,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
-			if(!node->left->var_type || (node->left->var_type->type != e_node_struct) && node->left->var_type->type != e_node_enum) {
+			if(!node->left->var_type || (node->left->var_type->type != e_node_struct && node->left->var_type->type != e_node_enum && node->left->var_type->type != e_node_data_enum)) {
 				reporter->fatal(node->token.file, node->token.line, "todo bad member access");
 				return false;
 			}
@@ -1229,6 +1278,16 @@ func void add_enum_to_scope(t_scope_arr* data, s_node* nenum, s_lin_arena* arena
 	scope1->enums.add(nenum);
 }
 
+func void add_data_enum_to_scope(t_scope_arr* data, s_node* data_enum, s_lin_arena* arena)
+{
+	s_scope** scope2 = data->get(data->count - 1);
+	if(!*scope2) {
+		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
+	}
+	s_scope* scope1 = *scope2;
+	scope1->data_enums.add(data_enum);
+}
+
 func void add_func_to_scope(t_scope_arr* data, s_node* nfunc, s_lin_arena* arena)
 {
 	s_scope** scope2 = data->get(data->count - 1);
@@ -1355,6 +1414,23 @@ func s_node* get_enum_by_name(char* name, t_scope_arr* data)
 			s_scope* scope1 = *scope2;
 			foreach_val(nenum_i, nenum, scope1->enums) {
 				assert(nenum->type == e_node_enum);
+				if(nenum->token.equals(name)) {
+					return nenum;
+				}
+			}
+		}
+	}
+	return null;
+}
+
+func s_node* get_data_enum_by_name(char* name, t_scope_arr* data)
+{
+	for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
+		s_scope** scope2 = data->get(scope2_i);
+		if(*scope2) {
+			s_scope* scope1 = *scope2;
+			foreach_val(nenum_i, nenum, scope1->data_enums) {
+				assert(nenum->type == e_node_data_enum);
 				if(nenum->token.equals(name)) {
 					return nenum;
 				}
@@ -1588,6 +1664,10 @@ func b8 can_thing_be_added_to_scope(s_token name, t_scope_arr* data, s_error_rep
 	}
 	if(get_enum_by_name(name.str(), data)) {
 		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because an enum with that name already exists", name.str());
+		return false;
+	}
+	if(get_data_enum_by_name(name.str(), data)) {
+		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a data_enum with that name already exists", name.str());
 		return false;
 	}
 	if(get_type_by_name(name.str(), data)) {

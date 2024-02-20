@@ -1,5 +1,4 @@
 
-
 #include "raylib.tk"
 #include "data.tk"
 #include "constants.tk"
@@ -7,7 +6,6 @@
 
 func int main()
 {
-
 	game_state.curr = 1;
 	editor.state.curr = 1;
 	SetTraceLogLevel(LOG_WARNING);

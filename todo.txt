@@ -63,3 +63,6 @@ usage:
 	m000.path
 	e_map[e_map.m000].path
 	e_map[0].path
+
+
+we have a bug with nested includes?? the error message contains a variable name instead of a file

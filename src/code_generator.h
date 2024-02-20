@@ -19,3 +19,4 @@ func void generate_func_decl_arg(s_node* node, t_code_builder* builder, b8 is_ex
 func void generate_array_base_type(s_node* node, t_code_builder* builder);
 func void get_subscript_str(s_node* node, int level, t_code_builder* builder, s_code_gen_context context);
 func char* get_name(s_node* node);
+func s_node* get_data_enum_member(s_node* node);

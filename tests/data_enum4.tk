@@ -1,0 +1,18 @@
+
+
+
+data_enum e_foo
+{
+	struct s_foo
+	{
+		int value,
+	}
+	a {
+		value = 1,
+	}
+}
+
+func void f()
+{
+	int x = e_foo[e_foo.a].value;
+}
