@@ -593,6 +593,22 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 		goto success;
 	}
 
+	if(tokenizer.consume_token("import", reporter)) {
+
+		result.node.type = e_node_import;
+		s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
+		if(pr.success) {
+			result.node.left = alloc_node(pr.node, arena);
+			tokenizer = pr.tokenizer;
+		}
+
+		if(!tokenizer.consume_token(e_token_semicolon, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'");
+		}
+
+		goto success;
+	}
+
 	if(tokenizer.consume_token("return", reporter)) {
 
 		result.node.type = e_node_return;

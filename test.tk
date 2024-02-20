@@ -417,10 +417,10 @@ func int main()
 
 func void do_input()
 {
-
-	input.left_click_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-	input.left_click_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
-	input.left_click_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+	import input;
+	left_click_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+	left_click_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
+	left_click_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
 
 	// @Note(tkap, 18/02/2024): Game
 	if game_state.curr == 1 {
@@ -428,10 +428,10 @@ func void do_input()
 			set_next_state(&game_state, 2);
 		}
 
-		input.shoot = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-		input.move_left = IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A);
-		input.move_right = IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D);
-		input.jump = IsKeyPressed(KEY_SPACE);
+		shoot = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+		move_left = IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A);
+		move_right = IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D);
+		jump = IsKeyPressed(KEY_SPACE);
 	}
 
 	// @Note(tkap, 18/02/2024): Editor
@@ -440,21 +440,21 @@ func void do_input()
 			set_next_state(&game_state, 1);
 		}
 
-		input.move_tile_left = IsKeyPressed(KEY_LEFT);
-		input.move_tile_right = IsKeyPressed(KEY_RIGHT);
-		input.move_tile_up = IsKeyPressed(KEY_UP);
-		input.move_tile_down = IsKeyPressed(KEY_DOWN);
-		input.move_left = IsKeyDown(KEY_A);
-		input.move_right = IsKeyDown(KEY_D);
-		input.move_up = IsKeyDown(KEY_W);
-		input.move_down = IsKeyDown(KEY_S);
-		input.place_tile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-		input.one = IsKeyPressed(KEY_ONE);
-		input.cancel = IsKeyPressed(KEY_ESCAPE);
-		input.remove_tiles = IsKeyPressed(KEY_DELETE);
+		move_tile_left = IsKeyPressed(KEY_LEFT);
+		move_tile_right = IsKeyPressed(KEY_RIGHT);
+		move_tile_up = IsKeyPressed(KEY_UP);
+		move_tile_down = IsKeyPressed(KEY_DOWN);
+		move_left = IsKeyDown(KEY_A);
+		move_right = IsKeyDown(KEY_D);
+		move_up = IsKeyDown(KEY_W);
+		move_down = IsKeyDown(KEY_S);
+		place_tile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
+		one = IsKeyPressed(KEY_ONE);
+		cancel = IsKeyPressed(KEY_ESCAPE);
+		remove_tiles = IsKeyPressed(KEY_DELETE);
 
 		if IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_Z) {
-			input.undo = 1;
+			undo = 1;
 		}
 	}
 }
@@ -488,12 +488,13 @@ func void update()
 		if player.shoot_timer >= c_shoot_delay && input.shoot {
 			player.shoot_timer -= c_shoot_delay;
 			for c_max_projectiles {
-				if !projectiles.active[it] {
-					projectiles.active[it] = 1;
-					projectiles.pos[it] = player.pos;
-					projectiles.vel[it] = dir_from_to(projectiles.pos[it], world_mouse);
-					projectiles.vel[it].x *= 10;
-					projectiles.vel[it].y *= 10;
+				import projectiles;
+				if !active[it] {
+					active[it] = 1;
+					pos[it] = player.pos;
+					vel[it] = dir_from_to(pos[it], world_mouse);
+					vel[it].x *= 10;
+					vel[it].y *= 10;
 					break;
 				}
 			}
@@ -594,23 +595,23 @@ func void update()
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		for c_max_projectiles {
-			if !projectiles.active[it] { continue; }
-			projectiles.pos[it].x += projectiles.vel[it].x;
-			projectiles.pos[it].y += projectiles.vel[it].y;
+			import projectiles;
+			if !active[it] { continue; }
+			pos[it].x += vel[it].x;
+			pos[it].y += vel[it].y;
 
-			s_v2 pos = projectiles.pos[it];
-			s_v2i col = get_tile_collision(pos, projectile_size);
+			s_v2i col = get_tile_collision(pos[it], projectile_size);
 			if col.x == -1 { continue; }
-			projectiles.active[it] = 0;
-			float distance = v2_distance(pos, player.pos);
+			active[it] = 0;
+			float distance = v2_distance(pos[it], player.pos);
 			float strength = smoothstep(128, 32, distance) * 5;
-			s_v2 dir = dir_from_to(pos, player.pos);
+			s_v2 dir = dir_from_to(pos[it], player.pos);
 			s_v2 push = dir * strength;
 			player.vel.x += push.x;
 			player.vel.y += push.y;
 			s_animation anim;
 			anim.id = e_animation.explosion;
-			anim.pos = pos;
+			anim.pos = pos[it];
 			animations[animation_count] = anim;
 			animation_count += 1;
 		}
@@ -856,9 +857,9 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	for c_max_projectiles {
-		if !projectiles.active[it] { continue; }
-		s_v2 pos = to_screen(projectiles.pos[it]);
-		draw_texture(g_textures[e_texture.projectile], pos, projectile_size, WHITE, 1);
+		import projectiles;
+		if !active[it] { continue; }
+		draw_texture(g_textures[e_texture.projectile], to_screen(pos[it]), projectile_size, WHITE, 1);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

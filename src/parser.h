@@ -68,6 +68,7 @@ enum e_node
 	e_node_break,
 	e_node_enum,
 	e_node_dereference,
+	e_node_import,
 };
 
 enum e_context
@@ -115,6 +116,7 @@ struct s_scope
 	s_sarray<s_node*, 128> enums;
 	s_sarray<s_node*, 128> types;
 	s_sarray<s_node*, 256> vars;
+	s_sarray<s_node*, 128> imports;
 };
 
 struct s_node

@@ -34,3 +34,17 @@ func void on_failed_assert(char* condition, char* file, int line)
 	}
 	exit(1);
 }
+
+template <typename t, int n>
+struct s_sarray
+{
+	t elements[n];
+	int count = 0;
+
+	void add(t new_element);
+	t pop();
+	t& get(int index);
+	t& operator[](int index);
+	t& get_last();
+	void remove_and_shift(int index);
+};

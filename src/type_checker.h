@@ -32,6 +32,8 @@ global constexpr s_op_table c_op_table[] = {
 
 
 typedef s_sarray<s_scope**, 64> t_scope_arr;
+typedef s_sarray<s_node*, 128> t_get_imports;
+typedef s_sarray<s_node*, 128> t_flat_struct_members;
 
 func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena* arena);
 func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context);
@@ -43,7 +45,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context);
 func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data);
 func void add_type_to_scope(t_scope_arr* data, s_node* type, s_lin_arena* arena);
-func void add_var_to_scope(t_scope_arr* data, s_node* var, s_lin_arena* arena);
+func b8 add_var_to_scope(t_scope_arr* data, s_node* var, s_error_reporter* reporter, s_lin_arena* arena);
 func s_node* get_struct_by_name_except(char* name, s_node* exclude, t_scope_arr* data);
 func void add_struct_to_scope(t_scope_arr* data, s_node* nstruct, s_lin_arena* arena);
 func void add_func_to_scope(t_scope_arr* data, s_node* nfunc, s_lin_arena* arena);
@@ -60,3 +62,8 @@ func s_node* get_enum_by_name(char* name, t_scope_arr* data);
 func s_node* get_type_by_id(e_type id, t_scope_arr* data);
 func b8 is_same_type(s_node* a, s_node* b);
 func b8 type_check_arithmetic(s_node* node, s_error_reporter* reporter, t_scope_arr* data, s_lin_arena* arena, s_type_check_context context);
+func b8 add_import_to_scope(t_scope_arr* data, s_node* import, s_error_reporter* reporter, s_lin_arena* arena);
+func t_get_imports* get_imports(t_scope_arr* data, s_lin_arena* arena);
+func b8 can_thing_be_added_to_scope(s_token name, t_scope_arr* data, s_error_reporter* reporter, s_lin_arena* arena);
+func t_flat_struct_members get_flat_array_of_struct_members(s_node* nstruct);
+func void get_flat_array_of_struct_members_(s_node* nstruct, t_flat_struct_members* result);

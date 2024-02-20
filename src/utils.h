@@ -15,21 +15,6 @@
 #define invalid_default_case default: assert(!"Invalid default case");
 #define invalid_else else { assert(!"Invalid else"); }
 
-
-template <typename t, int n>
-struct s_sarray
-{
-	t elements[n];
-	int count = 0;
-
-	void add(t new_element);
-	t pop();
-	t& get(int index);
-	t& operator[](int index);
-	t& get_last();
-	void remove_and_shift(int index);
-};
-
 template <int n>
 struct s_str_builder
 {

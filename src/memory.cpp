@@ -27,3 +27,13 @@ u8* s_lin_arena::alloc_zero(int in_size)
 	memset(result, 0, in_size);
 	return result;
 }
+
+void s_lin_arena::push()
+{
+	push_arr.add(used);
+}
+
+void s_lin_arena::pop()
+{
+	used = push_arr.pop();
+}

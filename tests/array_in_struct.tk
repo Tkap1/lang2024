@@ -9,7 +9,7 @@ struct s_foo
 {
 	import s_bar bar,
 }
-func void foo()
+func void f()
 {
 	s_foo foo;
 	foo.arr[0];

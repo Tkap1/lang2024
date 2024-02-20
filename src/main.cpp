@@ -178,7 +178,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/no_forward_decl.tk", true},
 		{"tests/import.tk", true},
 		{"tests/import2.tk", true},
-		// // {"tests/import3.tk", false},
+		{"tests/import3.tk", false},
 		{"tests/import_nest.tk", true},
 		{"tests/array_in_struct.tk", true},
 		{"tests/import_nest.tk", true},
@@ -197,6 +197,8 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/dereference2.tk", true},
 		{"tests/dereference3.tk", true},
 		{"tests/import4.tk", true},
+		{"tests/import_struct_statement.tk", true},
+		{"tests/import_shadow.tk", false},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

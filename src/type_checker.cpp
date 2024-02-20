@@ -467,7 +467,9 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			// if(node->var_decl.type->ntype.is_const) {
 			// 	node->dont_generate = true;
 			// }
-			add_var_to_scope(data, node, arena);
+			if(!add_var_to_scope(data, node, reporter, arena)) {
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
@@ -488,6 +490,21 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 				node->var_type = node->nreturn.expression->var_type;
 			}
 			// @TODO(tkap, 12/02/2024): check that types are the same
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_import: {
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			if(node->left->var_type->type == e_node_struct) {
+				if(!add_import_to_scope(data, node->left, reporter, arena)) {
+					return false;
+				}
+			}
+			invalid_else;
+			node->dont_generate = true;
 			node->type_checked = true;
 			return true;
 		} break;
@@ -548,9 +565,6 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 							break;
 						}
 					}
-					// if(!success && node->token.equals("count")) {
-					// 	success = true;
-					// }
 				}
 				invalid_else;
 			}
@@ -591,6 +605,27 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 						node->var_type = nenum;
 						success = true;
 						break;
+					}
+
+					t_get_imports* imports = get_imports(data, arena);
+					for(int import_i = 0; import_i < imports->count; import_i++) {
+						s_node* import = imports->get(import_i);
+						if(import->var_type->type == e_node_struct) {
+							s_get_struct_member member = get_struct_member(node->token.str(), import->var_type, data);
+							if(!member.node) { continue; }
+							s_node temp = zero;
+							temp.type = e_node_member_access;
+							temp.next = node->next;
+							node->next = null;
+							temp.left = import;
+							temp.right = alloc_node(*node, arena);
+							*node = temp;
+							if(!type_check_expr(node, reporter, data, arena, context)) {
+								assert(false);
+							}
+							success = true;
+							break;
+						}
 					}
 				}
 			}
@@ -958,6 +993,15 @@ func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_report
 
 	if(member->type_checked) { return true; }
 
+	{
+		s_token token = member->var_decl.name;
+		s_get_struct_member possible_duplicate = get_struct_member(token.str(), nstruct, data);
+		if(possible_duplicate.node && possible_duplicate.node != member) {
+			reporter->fatal(token.file, token.line, "Duplicate struct member '%s'", token.str());
+			return false;
+		}
+	}
+
 	// @TODO(tkap, 10/02/2024): Handle a member of type current_struct*
 	if(!type_check_statement(member->var_decl.type, reporter, data, arena, context)) {
 		reporter->recoverable_error(member->var_decl.type->token.file, member->var_decl.type->token.line, "Struct member '%s' has unknown type '%s'", member->var_decl.name.str(), node_to_str(member->var_decl.type));
@@ -1111,14 +1155,42 @@ func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data)
 	return zero;
 }
 
-func void add_var_to_scope(t_scope_arr* data, s_node* var, s_lin_arena* arena)
+func b8 add_var_to_scope(t_scope_arr* data, s_node* var, s_error_reporter* reporter, s_lin_arena* arena)
 {
+	assert(var->type == e_node_var_decl);
+	s_token token = var->var_decl.name;
+	if(!can_thing_be_added_to_scope(token, data, reporter, arena)) {
+		return false;
+	}
 	s_scope** scope2 = data->get(data->count - 1);
 	if(!*scope2) {
 		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
 	}
 	s_scope* scope1 = *scope2;
 	scope1->vars.add(var);
+	return true;
+}
+
+func b8 add_import_to_scope(t_scope_arr* data, s_node* import, s_error_reporter* reporter, s_lin_arena* arena)
+{
+	// @Hack(tkap, 20/02/2024): Temporary
+	assert(import->type == e_node_identifier);
+	// @Hack(tkap, 20/02/2024): Also temporary
+	assert(import->var_type->type == e_node_struct);
+
+	t_flat_struct_members members = get_flat_array_of_struct_members(import->var_type);
+	foreach_val(member_i, member, members) {
+		if(!can_thing_be_added_to_scope(member->var_decl.name, data, reporter, arena)) {
+			return false;
+		}
+	}
+	s_scope** scope2 = data->get(data->count - 1);
+	if(!*scope2) {
+		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
+	}
+	s_scope* scope1 = *scope2;
+	scope1->imports.add(import);
+	return true;
 }
 
 func void add_struct_to_scope(t_scope_arr* data, s_node* nstruct, s_lin_arena* arena)
@@ -1227,6 +1299,21 @@ func s_node* get_var_by_name(char* name, t_scope_arr* data)
 	return null;
 }
 
+func t_get_imports* get_imports(t_scope_arr* data, s_lin_arena* arena)
+{
+	t_get_imports* result = (t_get_imports*)arena->alloc_zero(sizeof(t_get_imports));
+	for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
+		s_scope** scope2 = data->get(scope2_i);
+		if(*scope2) {
+			s_scope* scope1 = *scope2;
+			foreach_val(import_i, import, scope1->imports) {
+				result->add(import);
+			}
+		}
+	}
+	return result;
+}
+
 func s_node* get_func_by_name(char* name, t_scope_arr* data)
 {
 	for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
@@ -1304,6 +1391,7 @@ func s_get_struct_member get_struct_member(char* name, s_node* nstruct, t_scope_
 				temp.is_imported = true;
 				temp.import_source = member;
 				result = temp;
+				break;
 			}
 		}
 	}
@@ -1465,4 +1553,64 @@ func b8 type_check_arithmetic(s_node* node, s_error_reporter* reporter, t_scope_
 		}
 	}
 	return success;
+}
+
+// @TODO(tkap, 20/02/2024): Better errors. This assumes that we only call this from add_var_to_scope
+func b8 can_thing_be_added_to_scope(s_token name, t_scope_arr* data, s_error_reporter* reporter, s_lin_arena* arena)
+{
+	if(get_var_by_name(name.str(), data)) {
+		reporter->fatal(name.file, name.line, "Duplicate variable name '%s'", name.str());
+		return false;
+	}
+	if(get_struct_by_name_except(name.str(), null, data)) {
+		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a struct with that name already exists", name.str());
+		return false;
+	}
+	if(get_func_by_name(name.str(), data)) {
+		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a function with that name already exists", name.str());
+		return false;
+	}
+	if(get_enum_by_name(name.str(), data)) {
+		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because an enum with that name already exists", name.str());
+		return false;
+	}
+	if(get_type_by_name(name.str(), data)) {
+		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a type with that name already exists", name.str());
+		return false;
+	}
+	arena->push();
+	t_get_imports* imports = get_imports(data, arena);
+	for(int import_i = 0; import_i < imports->count; import_i++) {
+		s_node* import = imports->get(import_i);
+		if(import->var_type->type == e_node_struct) {
+			s_get_struct_member member = get_struct_member(name.str(), import->var_type, data);
+			if(member.node) {
+				reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a variable coming from an imported struct already has that name", name.str());
+				return false;
+			}
+		}
+	}
+	arena->pop();
+	return true;
+}
+
+func t_flat_struct_members get_flat_array_of_struct_members(s_node* nstruct)
+{
+	assert(nstruct->type == e_node_struct);
+	t_flat_struct_members result;
+	get_flat_array_of_struct_members_(nstruct, &result);
+	return result;
+}
+
+func void get_flat_array_of_struct_members_(s_node* nstruct, t_flat_struct_members* result)
+{
+	assert(nstruct->type == e_node_struct);
+	for_node(member, nstruct->nstruct.members) {
+		if(member->var_decl.is_import) {
+			get_flat_array_of_struct_members_(member->var_type, result);
+		}
+		else {
+			result->add(member);
+		}
+	}
 }

@@ -43,3 +43,5 @@ this shouldnt be allowed! editor.tiles is an s8!!
 int[c_max_tiles][c_max_tiles] tiles = editor.tiles;
 
 #include or equivalent
+
+to prevent shadowing, every time we call add_x_to_scope, check every single thing to see if there is something with that name already!
