@@ -202,6 +202,12 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			return true;
 		} break;
 
+		case e_node_data_enum: {
+			node->type_checked = true;
+			add_struct_to_scope(data, node->data_enum.nstruct, arena);
+			return true;
+		} break;
+
 		case e_node_func_decl: {
 			if(!type_check_func_decl(node, reporter, data, arena, context)) {
 				return false;

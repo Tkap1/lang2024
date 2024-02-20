@@ -18,62 +18,79 @@ func b8 generate_code(s_node* ast, s_lin_arena* arena)
 	builder->add_line("void* memcpy(void* restrict dest, const void* restrict src, size_t n);");
 	s_code_gen_context context = zero;
 	for_node(node, ast) {
-		switch(node->type) {
-			case e_node_func_decl: {
-				node_to_c_str(node->func_decl.return_type, builder, context);
-				builder->add(" %s(", node->func_decl.name.str());
-				if(node->func_decl.argument_count <= 0) {
-					builder->add("void");
-				}
-				else {
-					for_node(arg, node->func_decl.arguments) {
-						generate_func_decl_arg(arg, builder, node->func_decl.is_external);
-						// builder->add("%s", node_to_c_str(arg));
-						// builder->add("%s ", node_to_c_str(arg->var_decl.type));
-						// builder->add("%s", arg->var_decl.name.str());
-						if(arg->next) {
-							builder->add(", ");
-						}
-					}
-				}
-				if(node->func_decl.is_external) {
-					builder->add_line(");");
-				}
-				else {
-					builder->add_line(")");
-					generate_statement(node->func_decl.body, builder);
-				}
-			} break;
-
-			case e_node_struct: {
-				builder->add_line_tabs("typedef struct %s", node->token.str());
-				builder->push_scope();
-				for_node(member, node->nstruct.members) {
-					generate_struct_member(member, builder);
-				}
-				builder->pop_scope("%s", format_str(" %s;", node->token.str()));
-			} break;
-
-			case e_node_var_decl: {
-				generate_statement(node, builder);
-			} break;
-
-			case e_node_enum: {
-				builder->add_line("typedef enum %s", node->token.str());
-				builder->push_scope();
-				for_node(member, node->nenum.members) {
-					builder->add_line_tabs("%s_%s,", node->token.str(), member->token.str());
-				}
-				builder->pop_scope(" %s;", node->token.str());
-			} break;
-
-			invalid_default_case;
-		}
+		generate_node(node, builder, context);
 	}
 
 	write_file("output.c", builder->data, builder->len);
 
 	return true;
+}
+
+func void generate_node(s_node* node, t_code_builder* builder, s_code_gen_context context)
+{
+	if(node->dont_generate) { return; }
+
+	switch(node->type) {
+		case e_node_func_decl: {
+			node_to_c_str(node->func_decl.return_type, builder, context);
+			builder->add(" %s(", node->func_decl.name.str());
+			if(node->func_decl.argument_count <= 0) {
+				builder->add("void");
+			}
+			else {
+				for_node(arg, node->func_decl.arguments) {
+					generate_func_decl_arg(arg, builder, node->func_decl.is_external);
+					// builder->add("%s", node_to_c_str(arg));
+					// builder->add("%s ", node_to_c_str(arg->var_decl.type));
+					// builder->add("%s", arg->var_decl.name.str());
+					if(arg->next) {
+						builder->add(", ");
+					}
+				}
+			}
+			if(node->func_decl.is_external) {
+				builder->add_line(");");
+			}
+			else {
+				builder->add_line(")");
+				generate_statement(node->func_decl.body, builder);
+			}
+		} break;
+
+		case e_node_struct: {
+			builder->add_line_tabs("typedef struct %s", node->token.str());
+			builder->push_scope();
+			for_node(member, node->nstruct.members) {
+				generate_struct_member(member, builder);
+			}
+			builder->pop_scope("%s", format_str(" %s;", node->token.str()));
+		} break;
+
+		case e_node_var_decl: {
+			generate_statement(node, builder);
+		} break;
+
+		case e_node_enum: {
+			builder->add_line("typedef enum %s", node->token.str());
+			builder->push_scope();
+			for_node(member, node->nenum.members) {
+				builder->add_line_tabs("%s_%s,", node->token.str(), member->token.str());
+			}
+			builder->pop_scope(" %s;", node->token.str());
+		} break;
+
+		case e_node_data_enum: {
+			builder->add_line("typedef enum %s", node->token.str());
+			builder->push_scope();
+			for_node(member, node->data_enum.members) {
+				builder->add_line_tabs("%s_%s,", node->token.str(), member->token.str());
+			}
+			builder->pop_scope(" %s;", node->token.str());
+			generate_node(node->data_enum.nstruct, builder, context);
+		} break;
+
+		invalid_default_case;
+	}
 }
 
 func void generate_func_decl_arg(s_node* node, t_code_builder* builder, b8 is_external)
