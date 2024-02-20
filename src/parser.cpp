@@ -31,6 +31,18 @@ func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_aren
 			continue;
 		}
 
+		pr = parse_directive(tokenizer, reporter, arena);
+		if(pr.success) {
+			s_node* node = parse_step(pr.node.token.str(), reporter, arena, reporter->ignore_errors);
+			tokenizer = pr.tokenizer;
+			*current = node;
+			while(*current) {
+				s_node* temp = *current;
+				current = &temp->next;
+			}
+			continue;
+		}
+
 		pr = parse_external_func_decl(tokenizer, reporter, arena);
 		if(pr.success) {
 			tokenizer = pr.tokenizer;
@@ -211,6 +223,30 @@ func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* rep
 			result.node.func_decl.name = {.type = e_token_identifier, .len = (int)strlen(name), .at = name};
 		}
 
+		result.tokenizer = tokenizer;
+		result.success = true;
+	}
+
+	return result;
+}
+
+func s_parse_result parse_directive(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
+{
+	s_parse_result result = zero;
+	s_token token = zero;
+
+	breakable_block {
+		result.node.type = e_node_include;
+		if(!tokenizer.consume_token(e_token_pound, reporter)) { break; }
+		if(!tokenizer.consume_token("include", reporter)) {
+			reporter->fatal(token.file, token.line, "Expected 'include' after '#'");
+			return result;
+		}
+		if(!tokenizer.consume_token(e_token_string, &token, reporter)) {
+			reporter->fatal(token.file, token.line, "Expected string after '#include'");
+			return result;
+		}
+		result.node.token = token;
 		result.tokenizer = tokenizer;
 		result.success = true;
 	}

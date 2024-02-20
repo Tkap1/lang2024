@@ -1,0 +1,182 @@
+
+struct s_color
+{
+	u8 r,
+	u8 g,
+	u8 b,
+	u8 a,
+}
+struct s_texture
+{
+	u32 id,
+	int width,
+	int height,
+	int mipmaps,
+	int format,
+}
+
+const int LOG_WARNING = 4;
+const int FLAG_VSYNC_HINT = 64;
+const s_color BLACK = {0, 0, 0, 0};
+const s_color RED = {230, 41, 55, 255};
+const s_color GREEN = {0, 228, 48, 255};
+const s_color BLUE = {0, 121, 241, 255};
+const s_color WHITE = {255, 255, 255, 255};
+const s_color DARK = {50, 50, 50, 255};
+const int MOUSE_BUTTON_LEFT = 0;
+const int MOUSE_BUTTON_RIGHT = 1;
+
+const int KEY_NULL = 0;
+const int KEY_APOSTROPHE = 39;
+const int KEY_COMMA = 44;
+const int KEY_MINUS = 45;
+const int KEY_PERIOD = 46;
+const int KEY_SLASH = 47;
+const int KEY_ZERO = 48;
+const int KEY_ONE = 49;
+const int KEY_TWO = 50;
+const int KEY_THREE = 51;
+const int KEY_FOUR = 52;
+const int KEY_FIVE = 53;
+const int KEY_SIX = 54;
+const int KEY_SEVEN = 55;
+const int KEY_EIGHT = 56;
+const int KEY_NINE = 57;
+const int KEY_SEMICOLON = 59;
+const int KEY_EQUAL = 61;
+const int KEY_A = 65;
+const int KEY_B = 66;
+const int KEY_C = 67;
+const int KEY_D = 68;
+const int KEY_E = 69;
+const int KEY_F = 70;
+const int KEY_G = 71;
+const int KEY_H = 72;
+const int KEY_I = 73;
+const int KEY_J = 74;
+const int KEY_K = 75;
+const int KEY_L = 76;
+const int KEY_M = 77;
+const int KEY_N = 78;
+const int KEY_O = 79;
+const int KEY_P = 80;
+const int KEY_Q = 81;
+const int KEY_R = 82;
+const int KEY_S = 83;
+const int KEY_T = 84;
+const int KEY_U = 85;
+const int KEY_V = 86;
+const int KEY_W = 87;
+const int KEY_X = 88;
+const int KEY_Y = 89;
+const int KEY_Z = 90;
+const int KEY_LEFT_BRACKET = 91;
+const int KEY_BACKSLASH = 92;
+const int KEY_RIGHT_BRACKET = 93;
+const int KEY_GRAVE = 96;
+const int KEY_SPACE = 32;
+const int KEY_ESCAPE = 256;
+const int KEY_ENTER = 257;
+const int KEY_TAB = 258;
+const int KEY_BACKSPACE = 259;
+const int KEY_INSERT = 260;
+const int KEY_DELETE = 261;
+const int KEY_RIGHT = 262;
+const int KEY_LEFT = 263;
+const int KEY_DOWN = 264;
+const int KEY_UP = 265;
+const int KEY_PAGE_UP = 266;
+const int KEY_PAGE_DOWN = 267;
+const int KEY_HOME = 268;
+const int KEY_END = 269;
+const int KEY_CAPS_LOCK = 280;
+const int KEY_SCROLL_LOCK = 281;
+const int KEY_NUM_LOCK = 282;
+const int KEY_PRINT_SCREEN = 283;
+const int KEY_PAUSE = 284;
+const int KEY_F1 = 290;
+const int KEY_F2 = 291;
+const int KEY_F3 = 292;
+const int KEY_F4 = 293;
+const int KEY_F5 = 294;
+const int KEY_F6 = 295;
+const int KEY_F7 = 296;
+const int KEY_F8 = 297;
+const int KEY_F9 = 298;
+const int KEY_F10 = 299;
+const int KEY_F11 = 300;
+const int KEY_F12 = 301;
+const int KEY_LEFT_SHIFT = 340;
+const int KEY_LEFT_CONTROL = 341;
+const int KEY_LEFT_ALT = 342;
+const int KEY_LEFT_SUPER = 343;
+const int KEY_RIGHT_SHIFT = 344;
+const int KEY_RIGHT_CONTROL = 345;
+const int KEY_RIGHT_ALT = 346;
+const int KEY_RIGHT_SUPER = 347;
+const int KEY_KB_MENU = 348;
+const int KEY_KP_0 = 320;
+const int KEY_KP_1 = 321;
+const int KEY_KP_2 = 322;
+const int KEY_KP_3 = 323;
+const int KEY_KP_4 = 324;
+const int KEY_KP_5 = 325;
+const int KEY_KP_6 = 326;
+const int KEY_KP_7 = 327;
+const int KEY_KP_8 = 328;
+const int KEY_KP_9 = 329;
+const int KEY_KP_DECIMAL = 330;
+const int KEY_KP_DIVIDE = 331;
+const int KEY_KP_MULTIPLY = 332;
+const int KEY_KP_SUBTRACT = 333;
+const int KEY_KP_ADD = 334;
+const int KEY_KP_ENTER = 335;
+const int KEY_KP_EQUAL = 336;
+const int KEY_BACK = 4;
+const int KEY_MENU = 5;
+const int KEY_VOLUME_UP = 24;
+const int KEY_VOLUME_DOWN = 2;
+const int TEXTURE_FILTER_ANISOTROPIC_16X = 5;
+
+struct s_v2
+{
+	float x,
+	float y,
+}
+
+struct s_rect
+{
+	import s_v2 pos,
+	s_v2 size,
+}
+
+external_func void SetTraceLogLevel(s32);
+external_func void SetConfigFlags(u32);
+external_func void InitWindow(s32, s32, char*);
+external_func b32 WindowShouldClose();
+external_func void BeginDrawing();
+external_func void DrawRectangle(s32, s32, s32, s32, s_color);
+external_func void DrawFPS(s32, s32);
+external_func void EndDrawing();
+external_func void ClearBackground(s_color);
+external_func int rand();
+external_func s_v2 GetMousePosition();
+external_func b32 IsMouseButtonPressed(int);
+external_func b32 IsMouseButtonReleased(int);
+external_func b32 IsMouseButtonDown(int);
+external_func float floorf(float);
+external_func b32 IsKeyDown(int);
+external_func b32 IsKeyPressed(int);
+external_func s_texture LoadTexture(char*);
+external_func void SetTextureFilter(s_texture, int);
+external_func float sinf(float);
+external_func float sqrtf(float);
+external_func double GetTime();
+external_func float GetFrameTime();
+external_func int printf(char*);
+external_func void SetTargetFPS(int);
+external_func void DrawTexturePro(s_texture, s_rect, s_rect, s_v2, float, s_color);
+external_func void SetExitKey(int);
+external_func void DrawText(char*, int, int, int, s_color);
+external_func void DrawRectangleLines(int, int, int, int, s_color);
+external_func void* memset(void*, int, size_t);

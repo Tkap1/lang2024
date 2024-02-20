@@ -20,5 +20,8 @@ struct s_error_reporter
 	void recoverable_error(char* file, int line, char* str = null, ...);
 };
 
+struct s_node;
+
 func void run_tests(s_lin_arena* arena);
 func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_reporter* reporter);
+func s_node* parse_step(char* file_path, s_error_reporter* reporter, s_lin_arena* arena, b8 ignore_errors);

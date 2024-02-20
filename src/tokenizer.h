@@ -36,6 +36,7 @@ enum e_token
 	e_token_comparison,
 	e_token_not_equals,
 	e_token_address_of,
+	e_token_pound,
 	e_token_colon,
 };
 

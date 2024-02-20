@@ -42,6 +42,24 @@ we need a better system for types...
 this shouldnt be allowed! editor.tiles is an s8!!
 int[c_max_tiles][c_max_tiles] tiles = editor.tiles;
 
-#include or equivalent
-
 add a test that prevents us from doing: const int foo; (no value!!)
+
+
+we want something like this
+data_enum e_map
+{
+	struct s_map_data
+	{
+		char* path,
+	}
+	m000 {
+		.path = "maps/000.map",
+	}
+	m001 {
+		.path = "maps/001.map",
+	}
+}
+usage:
+	m000.path
+	e_map[e_map.m000].path
+	e_map[0].path

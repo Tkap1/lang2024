@@ -124,7 +124,7 @@ void s_error_reporter::recoverable_error(char* file, int line, char* str, ...)
 	}
 }
 
-func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_reporter* reporter)
+func s_node* parse_step(char* file_path, s_error_reporter* reporter, s_lin_arena* arena, b8 ignore_errors)
 {
 	reporter->ignore_errors = ignore_errors;
 	s_tokenizer tokenizer = zero;
@@ -137,6 +137,12 @@ func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_r
 	tokenizer.file = file_path;
 
 	s_node* ast = parse(tokenizer, reporter, arena);
+	return ast;
+}
+
+func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_reporter* reporter)
+{
+	s_node* ast = parse_step(file_path, reporter, arena, ignore_errors);
 	if(!ast) {
 		if(!ignore_errors) {
 			printf("An empty program is not valid!\n");

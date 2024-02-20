@@ -257,6 +257,13 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 		at += 1;
 	}
 
+	else if(*at == '#') {
+		token.type = e_token_pound;
+		token.at = at;
+		token.len = 1;
+		at += 1;
+	}
+
 	else if(*at == '+') {
 		token.type = e_token_plus;
 		token.at = at;

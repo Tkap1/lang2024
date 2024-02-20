@@ -69,6 +69,7 @@ enum e_node
 	e_node_enum,
 	e_node_dereference,
 	e_node_import,
+	e_node_include,
 };
 
 enum e_context
@@ -272,3 +273,4 @@ func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* repo
 func s_node statement_str_to_node(char* str, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_enum(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_operator(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
+func s_parse_result parse_directive(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
