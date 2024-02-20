@@ -200,6 +200,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/import_struct_statement.tk", true},
 		{"tests/import_shadow.tk", false},
 		{"tests/nested_for_loops.tk", false},
+		{"tests/nonsense.tk", false},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

@@ -1,0 +1,9 @@
+
+
+int foo = 1;
+func void f()
+{
+	for foo {
+		bar;
+	}
+}

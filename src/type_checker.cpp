@@ -349,126 +349,70 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			assert(node->nfor.expr->var_type);
 			assert(node->nfor.body);
 
-			if(node->nfor.expr->var_type->type == e_node_array) {
-				if(node->nfor.iterator_name.len <= 0) {
-					node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 8, .at = "it_index"};
-					node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
+			if(!node->nfor.generated_iterators) {
+				node->nfor.generated_iterators = true;
+				if(node->nfor.expr->var_type->type == e_node_array) {
+					if(node->nfor.iterator_name.len <= 0) {
+						node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 8, .at = "it_index"};
+						node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
+					}
+					else {
+						char* str = alloc_str(arena, "%s_index", node->nfor.iterator_name.str());
+						node->nfor.iterator_index_name = {.type = e_token_identifier, .len = (int)strlen(str), .at = str};
+					}
+					s_node iterator_index = statement_str_to_node(format_str("int %s;", node->nfor.iterator_index_name.str()), reporter, arena);
+					iterator_index.dont_generate = true;
+					iterator_index.var_decl.name.file = node->nfor.expr->token.file;
+					iterator_index.var_decl.name.line = node->nfor.expr->token.line;
+					iterator_index.token.file = node->nfor.expr->token.file;
+					iterator_index.token.line = node->nfor.expr->token.line;
+					node->nfor.upper_bound = node->nfor.expr->var_type->array.size_expr;
+
+					s_node iterator = zero;
+					s_node value = zero;
+					s_node subscript_expr = zero;
+					subscript_expr.type = e_node_identifier;
+					subscript_expr.token = node->nfor.iterator_index_name;
+					value.type = e_node_subscript;
+					value.left = node->nfor.expr;
+					value.right = alloc_node(subscript_expr, arena);
+					iterator.type = e_node_var_decl;
+					// @TODO(tkap, 20/02/2024): This only works for 1d arrays!
+					iterator.var_decl.type = node->nfor.expr->var_type->left->var_type;
+					iterator.var_decl.name = node->nfor.iterator_name;
+					iterator.var_decl.value = alloc_node(value, arena);
+					iterator.var_decl.name.file = node->nfor.expr->token.file;
+					iterator.var_decl.name.line = node->nfor.expr->token.line;
+					iterator.token.file = node->nfor.expr->token.file;
+					iterator.token.line = node->nfor.expr->token.line;
+					node->nfor.upper_bound = node->nfor.expr->var_type->array.size_expr;
+
+					s_node* temp_statement = node->nfor.body->compound.statements;
+					iterator.next = temp_statement;
+					iterator_index.next = alloc_node(iterator, arena);
+					node->nfor.body->compound.statements = alloc_node(iterator_index, arena);
 				}
 				else {
-					char* str = alloc_str(arena, "%s_index", node->nfor.iterator_name.str());
-					node->nfor.iterator_index_name = {.type = e_token_identifier, .len = (int)strlen(str), .at = str};
+					if(node->nfor.iterator_name.len <= 0) {
+						node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 2, .at = "it"};
+						node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
+					}
+					else {
+						node->nfor.iterator_index_name = node->nfor.iterator_name;
+					}
+					s_node iterator_index = statement_str_to_node(format_str("int %s;", node->nfor.iterator_index_name.str()), reporter, arena);
+					iterator_index.dont_generate = true;
+					s_node* temp_statement = node->nfor.body->compound.statements;
+					iterator_index.next = temp_statement;
+					iterator_index.var_decl.name.file = node->nfor.expr->token.file;
+					iterator_index.var_decl.name.line = node->nfor.expr->token.line;
+					iterator_index.token.file = node->nfor.expr->token.file;
+					iterator_index.token.line = node->nfor.expr->token.line;
+					node->nfor.body->compound.statements = alloc_node(iterator_index, arena);
+					node->nfor.upper_bound = node->nfor.expr;
 				}
-				s_node iterator_index = statement_str_to_node(format_str("int %s;", node->nfor.iterator_index_name.str()), reporter, arena);
-				iterator_index.dont_generate = true;
-				iterator_index.var_decl.name.file = node->nfor.expr->token.file;
-				iterator_index.var_decl.name.line = node->nfor.expr->token.line;
-				iterator_index.token.file = node->nfor.expr->token.file;
-				iterator_index.token.line = node->nfor.expr->token.line;
-				node->nfor.upper_bound = node->nfor.expr->var_type->array.size_expr;
-
-				s_node iterator = zero;
-				s_node value = zero;
-				s_node subscript_expr = zero;
-				subscript_expr.type = e_node_identifier;
-				subscript_expr.token = node->nfor.iterator_index_name;
-				value.type = e_node_subscript;
-				value.left = node->nfor.expr;
-				value.right = alloc_node(subscript_expr, arena);
-				iterator.type = e_node_var_decl;
-				// @TODO(tkap, 20/02/2024): This only works for 1d arrays!
-				iterator.var_decl.type = node->nfor.expr->var_type->left->var_type;
-				iterator.var_decl.name = node->nfor.iterator_name;
-				iterator.var_decl.value = alloc_node(value, arena);
-				iterator.var_decl.name.file = node->nfor.expr->token.file;
-				iterator.var_decl.name.line = node->nfor.expr->token.line;
-				iterator.token.file = node->nfor.expr->token.file;
-				iterator.token.line = node->nfor.expr->token.line;
-				node->nfor.upper_bound = node->nfor.expr->var_type->array.size_expr;
-
-				s_node* temp_statement = node->nfor.body->compound.statements;
-				iterator.next = temp_statement;
-				iterator_index.next = alloc_node(iterator, arena);
-				node->nfor.body->compound.statements = alloc_node(iterator_index, arena);
-			}
-			else {
-				if(node->nfor.iterator_name.len <= 0) {
-					node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 2, .at = "it"};
-					node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
-				}
-				else {
-					node->nfor.iterator_index_name = node->nfor.iterator_name;
-				}
-				s_node iterator_index = statement_str_to_node(format_str("int %s;", node->nfor.iterator_index_name.str()), reporter, arena);
-				iterator_index.dont_generate = true;
-				s_node* temp_statement = node->nfor.body->compound.statements;
-				iterator_index.next = temp_statement;
-				iterator_index.var_decl.name.file = node->nfor.expr->token.file;
-				iterator_index.var_decl.name.line = node->nfor.expr->token.line;
-				iterator_index.token.file = node->nfor.expr->token.file;
-				iterator_index.token.line = node->nfor.expr->token.line;
-				node->nfor.body->compound.statements = alloc_node(iterator_index, arena);
-				node->nfor.upper_bound = node->nfor.expr;
 			}
 
-
-			#if 0
-
-			s_node* iter_type;
-			s_node temp = zero;
-			if(node->nfor.expr->var_type->type == e_node_array) {
-				if(node->nfor.iterator_name.len <= 0) {
-					node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 8, .at = "it_index"};
-					node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
-				}
-				else {
-					char* str = alloc_str(arena, "%s_index", node->nfor.iterator_name.str());
-					node->nfor.iterator_index_name = {.type = e_token_identifier, .len = (int)strlen(str), .at = str};
-				}
-
-				s_node* it_index = alloc_node(statement_str_to_node(format_str("int %s = 0;", node->nfor.iterator_index_name.str()), reporter, arena), arena);
-				it_index->dont_generate = true;
-				// @TODO(tkap, 13/02/2024): Should this be ->var_type?
-				iter_type = node->nfor.expr->var_type->left;
-				temp.type = e_node_var_decl;
-				temp.var_decl.type = iter_type;
-				temp.var_decl.value = alloc_node(statement_str_to_node(alloc_str(arena, "%s[%s];", node->nfor.expr->token.str(), node->nfor.iterator_index_name.str()), reporter, arena), arena);
-				temp.var_decl.name = node->nfor.iterator_name;
-				s_node* old = node->nfor.body->compound.statements;
-				node->nfor.body->compound.statements = it_index;
-				it_index->next = alloc_node(temp, arena);
-				it_index->next->next = old;
-				node->nfor.upper_bound = node->nfor.expr->var_type->array.size_expr;
-			}
-			else {
-				if(node->nfor.iterator_name.len <= 0) {
-					node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 2, .at = "it"};
-					node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
-				}
-				else {
-					node->nfor.iterator_index_name = node->nfor.iterator_name;
-				}
-
-				iter_type = node->nfor.expr->var_type;
-				temp.type = e_node_var_decl;
-				temp.dont_generate = true;
-				temp.var_decl.type = iter_type;
-				temp.var_decl.value = alloc_node(statement_str_to_node("0;", reporter, arena), arena);
-				temp.var_decl.name = node->nfor.iterator_name;
-				s_node* temp2 = alloc_node(temp, arena);
-				s_node* old = node->nfor.body->compound.statements;
-				node->nfor.body->compound.statements = temp2;
-				temp2->next = old;
-				node->nfor.upper_bound = node->nfor.expr;
-			}
-			assert(iter_type);
-			// assert(iter_type->type == e_node_type);
-
-			// @TODO(tkap, 12/02/2024): This is fucked. we are going to add the "it" variable to the scope the for loop is in, rather than inside the for loop
-			// @TODO(tkap, 12/02/2024): We are going to add this multiple times!!!
-			// b8 success = type_check_statement(&temp, reporter, data, arena);
-			// assert(success);
-			// add_var_to_scope(data, alloc_node(temp, arena), arena);
-			#endif
 			if(!type_check_statement(node->nfor.body, reporter, data, arena, context)) {
 				return false;
 			}

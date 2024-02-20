@@ -223,6 +223,7 @@ struct s_node
 
 		struct
 		{
+			b8 generated_iterators;
 			s_token iterator_index_name;
 			s_token iterator_name;
 			s_node* expr;
