@@ -70,6 +70,8 @@ enum e_node
 	e_node_dereference,
 	e_node_import,
 	e_node_include,
+	e_node_data_enum,
+	e_node_data_enum_member,
 };
 
 enum e_context
@@ -242,6 +244,19 @@ struct s_node
 			int member_count;
 			s_node* members;
 		} nenum;
+
+		struct
+		{
+			s_node* nstruct;
+			int member_count;
+			s_node* members;
+		} data_enum;
+
+		struct
+		{
+			int member_count;
+			s_node* members;
+		} data_enum_member;
 	};
 };
 
@@ -274,3 +289,4 @@ func s_node statement_str_to_node(char* str, s_error_reporter* reporter, s_lin_a
 func s_parse_result parse_enum(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_operator(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_directive(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
+func s_parse_result parse_data_enum(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);

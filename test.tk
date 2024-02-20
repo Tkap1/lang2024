@@ -2,7 +2,7 @@
 
 #include "raylib.tk"
 #include "data.tk"
-#include "config.tk"
+#include "constants.tk"
 #include "globals.tk"
 
 func int main()

@@ -122,3 +122,17 @@ struct s_animation_data
 	int frame_count,
 	int[32] frames,
 }
+
+data_enum e_map
+{
+	struct s_map_data
+	{
+		char* path,
+	}
+	m000 {
+		path = "foo",
+	}
+	m001 {
+		path = "bar",
+	}
+}

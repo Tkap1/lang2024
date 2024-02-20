@@ -24,6 +24,13 @@ func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_aren
 			continue;
 		}
 
+		pr = parse_data_enum(tokenizer, reporter, arena);
+		if(pr.success) {
+			tokenizer = pr.tokenizer;
+			current = advance_node(current, pr.node, arena);
+			continue;
+		}
+
 		pr = parse_func_decl(tokenizer, reporter, arena);
 		if(pr.success) {
 			tokenizer = pr.tokenizer;
@@ -144,6 +151,107 @@ func s_parse_result parse_enum(s_tokenizer tokenizer, s_error_reporter* reporter
 		}
 		if(result.node.nenum.member_count <= 0) {
 			reporter->fatal(tokenizer.file, tokenizer.line, "Enums must have at least 1 member");
+		}
+
+		if(!tokenizer.consume_token(e_token_close_brace, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected '}' after 'enum'"); }
+
+		result.tokenizer = tokenizer;
+		result.success = true;
+	}
+
+	return result;
+}
+
+func s_parse_result parse_data_enum(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
+{
+	s_parse_result result = zero;
+	s_token token = zero;
+
+	breakable_block {
+		if(!tokenizer.consume_token("data_enum", reporter)) { break; }
+		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "data_enum missing name");
+			return result;
+		}
+		if(is_keyword(token)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "data_enum name cannot be a reserved keyword");
+			return result;
+		}
+		if(!tokenizer.consume_token(e_token_open_brace, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected '{' after 'data_enum'");
+			return result;
+		}
+
+		result.node.token = token;
+		result.node.type = e_node_data_enum;
+
+		s_parse_result pr = parse_struct(tokenizer, reporter, arena);
+		if(!pr.success) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected a struct inside data_enum");
+			return result;
+		}
+		tokenizer = pr.tokenizer;
+		result.node.data_enum.nstruct = alloc_node(pr.node, arena);
+
+		s_node** curr_member = &result.node.data_enum.members;
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		members start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		while(true) {
+			if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { break; }
+			s_node member = zero;
+			member.token = token;
+			if(is_keyword(token)) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "data_enum member name cannot be a reserved keyword");
+				return result;
+			}
+
+			if(!tokenizer.consume_token(e_token_open_brace, reporter)) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "Expected '{'");
+				return result;
+			}
+
+			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		fields start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+			s_node** curr_field = &member.data_enum_member.members;
+			while(true) {
+				s_node field = zero;
+				field.type = e_node_data_enum_member;
+				if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) {
+					break;
+				}
+				field.token = token;
+				if(!tokenizer.consume_token(e_token_assign, reporter)) {
+					reporter->fatal(tokenizer.file, tokenizer.line, "Expected '='");
+					return result;
+				}
+				pr = parse_expression(tokenizer, reporter, 0, arena);
+				if(!pr.success) {
+					reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression");
+					return result;
+				}
+				tokenizer = pr.tokenizer;
+				field.left = alloc_node(pr.node, arena);
+				member.data_enum_member.member_count += 1;
+				curr_field = advance_node(curr_field, field, arena);
+				if(!tokenizer.consume_token(e_token_comma, &token, reporter)) { break; }
+			}
+			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		fields end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+			if(member.data_enum_member.member_count <= 0) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "data_enum member must have at least 1 field");
+			}
+
+			if(!tokenizer.consume_token(e_token_close_brace, reporter)) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "Expected '}'");
+				return result;
+			}
+
+			curr_member = advance_node(curr_member, member, arena);
+			result.node.data_enum.member_count += 1;
+		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		members end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+		if(result.node.data_enum.member_count <= 0) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "data_enums must have at least 1 member");
 		}
 
 		if(!tokenizer.consume_token(e_token_close_brace, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected '}' after 'enum'"); }
