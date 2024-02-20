@@ -1,0 +1,124 @@
+
+
+
+struct s_v2i
+{
+	int x,
+	int y,
+}
+
+enum e_editor_state
+{
+	invalid,
+	select,
+	paint,
+}
+
+struct s_player
+{
+	import s_v2 pos,
+	s_v2 vel,
+	int shoot_timer,
+}
+
+struct s_input_data
+{
+	int shoot,
+	int move_left,
+	int move_right,
+	int move_up,
+	int move_down,
+	int move_tile_left,
+	int move_tile_right,
+	int move_tile_up,
+	int move_tile_down,
+	int jump,
+	int place_tile,
+	int one,
+	int cancel,
+	int left_click_down,
+	int left_click_pressed,
+	int left_click_released,
+	int remove_tiles,
+	int undo,
+}
+
+struct s_projectiles
+{
+	b8[c_max_projectiles] active,
+	s_v2[c_max_projectiles] pos,
+	s_v2[c_max_projectiles] vel,
+}
+
+struct s_camera
+{
+	s_v2 pos,
+	s_v2 offset,
+}
+
+enum e_animation
+{
+	explosion,
+}
+
+enum e_texture
+{
+	player_face,
+	player_body,
+	player_hand,
+	tile,
+	explosion1,
+	explosion2,
+	explosion3,
+	explosion4,
+	explosion5,
+	explosion6,
+	explosion7,
+	explosion8,
+	explosion9,
+	explosion10,
+	explosion11,
+	explosion12,
+	projectile,
+}
+
+struct s_state
+{
+	int curr,
+	int next,
+}
+
+// @Note(tkap, 15/02/2024): For things that get undone/redone by undo system
+struct s_editor_data
+{
+	s8[c_max_tiles][c_max_tiles] tiles,
+	int[c_max_tiles][c_max_tiles] tiles_selected,
+}
+
+struct s_editor
+{
+	import s_editor_data data,
+	int painting,
+	int undo_count,
+	int undo_index,
+	s_editor_data[c_editor_max_undo] undo_stack,
+	s_v2 selection_start,
+	int selecting,
+	s_state state,
+	int curr_tile,
+}
+
+struct s_animation
+{
+	s_v2 pos,
+	int id,
+	float time,
+	int curr_frame,
+}
+
+struct s_animation_data
+{
+	float delay,
+	int frame_count,
+	int[32] frames,
+}
