@@ -68,7 +68,7 @@ struct s_spikes
 {
 	b8[c_max_spikes] active,
 	int[c_max_spikes] rotation,
-	s_v2[c_max_spikes] pos,
+	s_v2i[c_max_spikes] pos,
 }
 
 struct s_camera

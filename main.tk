@@ -390,9 +390,10 @@ func void render(s_map* map)
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		spikes render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	for c_max_spikes {
-		import game.spikes;
+		import map.spikes;
 		if !active[it] { continue; }
-		draw_texture(g_textures[e_texture.projectile], to_screen(pos[it]), spike_size, RED, 0);
+		s_v2 draw_pos = to_screen(tile_index_to_pos(pos[it]));
+		draw_texture(g_textures[e_texture.projectile], draw_pos, spike_size, RED, 0);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		spikes render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -889,11 +890,23 @@ func void update_editor()
 		if input.place_tile {
 			s_v2i index = pos_to_tile_index(world_mouse);
 			if is_valid_tile_index(index) {
-				if map.tiles[index.y][index.x] != 1 && !painting {
-					painting = 1;
-					editor_save_undo();
+				if curr_tile == 1 {
+					if map.tiles[index.y][index.x] != 1 && !painting {
+						painting = 1;
+						editor_save_undo();
+					}
+					map.tiles[index.y][index.x] = 1;
 				}
-				map.tiles[index.y][index.x] = 1;
+				if curr_tile == 2 {
+					int spike = get_spike_at_index(index, &map);
+					if spike < 0 {
+						if !painting {
+							painting = 1;
+							editor_save_undo();
+						}
+						spike = add_spike(index, &map);
+					}
+				}
 			}
 		}
 	}
@@ -952,4 +965,36 @@ func void update_editor()
 func b32 pressed_or_repeat(int key)
 {
 	return IsKeyPressed(key) || IsKeyPressedRepeat(key);
+}
+
+func int get_spike_at_index(s_v2i index, s_map* map)
+{
+	import map.spikes;
+	for c_max_spikes {
+		if !active[it] { continue; }
+		if v2i_equals(pos[it], index) { return it; }
+	}
+	return -1;
+}
+
+func b32 v2i_equals(s_v2i a, s_v2i b)
+{
+	return a.x == b.x && a.y == b.y;
+}
+
+func int add_spike(s_v2i in_pos, s_map* map)
+{
+	import map.spikes;
+	for c_max_spikes {
+		if active[it] { continue; }
+		active[it] = 1;
+		pos[it] = in_pos;
+		return it;
+	}
+	return -1;
+}
+
+func s_v2 tile_index_to_pos(s_v2i index)
+{
+	return v2(index.x * tile_size.x, index.y * tile_size.y);
 }
