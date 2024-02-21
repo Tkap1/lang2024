@@ -5,7 +5,7 @@ struct s_foo
 	int member,
 }
 
-const s_foo c_foo;
+const s_foo c_foo = 10;
 
 func int main()
 {

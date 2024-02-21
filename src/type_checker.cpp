@@ -484,6 +484,10 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			if(!type_check_node(node->var_decl.type, reporter, data, arena, context)) {
 				return false;
 			}
+			if(node->var_decl.is_const && !node->var_decl.value) {
+				reporter->fatal(node->token.file, node->token.line, "Constant variable declaration must have a value");
+				return false;
+			}
 			node->var_type = node->var_decl.type->var_type;
 			if(node->var_decl.value) {
 				if(!type_check_expr(node->var_decl.value, reporter, data, arena, context)) {
@@ -834,13 +838,13 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				return false;
 			}
 			node->temp_var_decl = node->left->temp_var_decl;
-			// @TODO(tkap, 14/02/2024): Not sure about this
 			if(node->left->var_type->type == e_node_data_enum) {
 				node->var_type = alloc_node(*node->left->var_type->data_enum.nstruct, arena);
 				node->array_capacity = 1;
 				node->var_type->is_data_enum_struct_access = true;
 			}
 			else {
+				// @TODO(tkap, 14/02/2024): Not sure about this
 				node->var_type = node->left->var_type->left->var_type;
 				s_node* temp_array = node->temp_var_decl;
 				for(int i = 0; i < context.subscript_level; i++) {
