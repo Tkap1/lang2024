@@ -1080,7 +1080,8 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			}
 			s_node* nstruct = get_struct_by_name_except(node->token.str(arena), null, data);
 			if(nstruct) {
-				node->var_type = nstruct;
+				node->var_type = alloc_node(*nstruct, arena);
+				node->var_type->pointer_level = node->pointer_level;
 				node->type_checked = true;
 				return true;
 			}

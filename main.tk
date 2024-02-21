@@ -52,6 +52,10 @@ func int main()
 	projectile_size = v2(16, 16);
 	spike_size = tile_size;
 
+	camera.zoom = 1;
+	camera.offset.x = ww / 2 - player_size.x / 2;
+	camera.offset.y = wh / 2 - player_size.y / 2;
+
 	game.player.pos = v2(32, 32);
 
 	int bottom_tile = wh / tile_size.x;
@@ -85,6 +89,8 @@ func void do_input()
 	left_click_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 	left_click_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
 	confirm = IsKeyPressed(KEY_ENTER);
+
+	wheel = GetMouseWheelMove();
 
 	// @Note(tkap, 18/02/2024): Game
 	if game_state.curr == e_state.game {
@@ -139,7 +145,15 @@ func void do_input()
 func void update()
 {
 	mouse = GetMousePosition();
-	world_mouse = to_world(mouse);
+	world_mouse = to_world(mouse, camera);
+
+	if input.wheel < 0 {
+		camera.zoom = max(0.1, camera.zoom * 0.9);
+	}
+	if input.wheel > 0 {
+		camera.zoom = min(5, camera.zoom * 1.1);
+	}
+	input.wheel = 0;
 
 	if game.player.shoot_timer < c_shoot_delay {
 		game.player.shoot_timer += 1;
@@ -217,7 +231,7 @@ func void update()
 					if index.y < 0 || index.y >= c_max_tiles { continue; }
 
 					s8 tile = g_map.tiles[index.y][index.x];
-					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
+					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.y);
 					if tile > 0 {
 						if rect_collides_rect(get_topleft(game.player.pos, player_size), player_size, tile_pos, tile_size) {
 							if game.player.vel.x > 0 {
@@ -250,7 +264,7 @@ func void update()
 					if index.y < 0 || index.y >= c_max_tiles { continue; }
 
 					s8 tile = g_map.tiles[index.y][index.x];
-					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
+					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.y);
 					if tile > 0 {
 						if rect_collides_rect(get_topleft(game.player.pos, player_size), player_size, tile_pos, tile_size) {
 							if game.player.vel.y > 0 {
@@ -298,9 +312,6 @@ func void update()
 		}
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
-		camera.offset.x = ww / 2 - player_size.x / 2;
-		camera.offset.y = wh / 2 - player_size.y / 2;
 		camera.pos.x = game.player.x;
 		camera.pos.y = game.player.y;
 
@@ -321,33 +332,40 @@ func void render(s_map* map)
 	float time = GetTime();
 
 	mouse = GetMousePosition();
-	world_mouse = to_world(mouse);
+	world_mouse = to_world(mouse, camera);
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		render tiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	{
-		int right = (ww + camera.pos.x) / tile_size.x + 1;
-		int down = (wh + camera.pos.y) / tile_size.y + 1;
-		for y: down {
-			if y >= c_max_tiles { continue; }
-			for x: right {
-				if x >= c_max_tiles { continue; }
-				s8 tile = map.tiles[y][x];
-				s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
+		s_rect bounds = get_camera_bounds(camera);
+		int left = bounds.x / tile_size.x - 1;
+		int right = bounds.size.x / tile_size.x + 1;
+		int top = bounds.y / tile_size.y - 1;
+		int bottom = bounds.size.y / tile_size.y + 1;
+		for y: (bottom - top) {
+			int yy = top + y;
+			if yy < 0 { continue; }
+			if yy >= c_max_tiles { continue; }
+			for x: (right - left) {
+				int xx = left + x;
+				if xx < 0 { continue; }
+				if xx >= c_max_tiles { continue; }
+				s8 tile = map.tiles[yy][xx];
+				s_v2 tile_pos = v2(xx * tile_size.x, yy * tile_size.y);
 				s_color color = DARK;
 				if tile == 0 {
-					if x % 2 == 0 {
+					if xx % 2 == 0 {
 						color = {100, 25, 25, 255};
 					}
 				}
 				if tile == 1 {
 					color = WHITE;
 				}
-				draw_texture(g_textures[e_texture.tile], to_screen(tile_pos), tile_size, color, 0);
-				if tile > 0 && game_state.curr == e_state.editor && editor.tiles_selected[y][x] {
+				draw_texture(g_textures[e_texture.tile], tile_pos, tile_size, color, 0, &camera);
+				if tile > 0 && game_state.curr == e_state.editor && editor.tiles_selected[yy][xx] {
 					float size = sin2(time * 10) * tile_size.x;
 					s_color temp_color = GREEN;
 					temp_color.a = 150;
-					draw_texture(g_textures[e_texture.tile], to_screen(get_center(tile_pos, tile_size)), v2(size, size), temp_color, 1);
+					draw_texture(g_textures[e_texture.tile], get_center(tile_pos, tile_size), v2(size, size), temp_color, 1, &camera);
 				}
 			}
 		}
@@ -357,25 +375,25 @@ func void render(s_map* map)
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		player render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	{
 		import game.player;
-		draw_texture(g_textures[e_texture.player_body], to_screen(pos), player_size, WHITE, 1);
+		draw_texture(g_textures[e_texture.player_body], pos, player_size, WHITE, 1, &camera);
 
 		{
 			s_v2 face_pos = pos;
-			draw_texture_scaled(g_textures[e_texture.player_face], to_screen(face_pos), 0.5, WHITE, 1);
+			draw_texture_scaled(g_textures[e_texture.player_face], face_pos, 0.5, WHITE, 1, &camera);
 		}
 
 		{
 			s_v2 hand_pos = pos;
 			hand_pos.x -= player_size.x * 0.9;
 			hand_pos.y += sinf(time * 6) * 5;
-			draw_texture_scaled(g_textures[e_texture.player_hand], to_screen(hand_pos), 0.5, WHITE, 1);
+			draw_texture_scaled(g_textures[e_texture.player_hand], hand_pos, 0.5, WHITE, 1, &camera);
 		}
 
 		{
 			s_v2 hand_pos = pos;
 			hand_pos.x += player_size.x * 0.9;
 			hand_pos.y += sinf(time * 6) * 5;
-			draw_texture_scaled(g_textures[e_texture.player_hand], to_screen(hand_pos), 0.5, WHITE, 1);
+			draw_texture_scaled(g_textures[e_texture.player_hand], hand_pos, 0.5, WHITE, 1, &camera);
 		}
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		player render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -384,7 +402,7 @@ func void render(s_map* map)
 	for c_max_projectiles {
 		import game.projectiles;
 		if !active[it] { continue; }
-		draw_texture(g_textures[e_texture.projectile], to_screen(pos[it]), projectile_size, WHITE, 1);
+		draw_texture(g_textures[e_texture.projectile], pos[it], projectile_size, WHITE, 1, &camera);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -392,15 +410,15 @@ func void render(s_map* map)
 	for c_max_spikes {
 		import map.spikes;
 		if !active[it] { continue; }
-		s_v2 draw_pos = to_screen(tile_index_to_pos(pos[it]));
-		draw_texture(g_textures[e_texture.projectile], draw_pos, spike_size, RED, 0);
+		s_v2 draw_pos = tile_index_to_pos(pos[it]);
+		draw_texture(g_textures[e_texture.projectile], draw_pos, spike_size, RED, 0, &camera);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		spikes render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	for animation_count {
 		s_animation* anim = &animations[it];
 		s_animation_data data = g_animations[anim.id];
-		draw_texture(g_textures[data.frames[anim.curr_frame]], to_screen(anim.pos), player_size * 2, WHITE, 1);
+		draw_texture(g_textures[data.frames[anim.curr_frame]], anim.pos, player_size * 2, WHITE, 1, &camera);
 		anim.time += delta;
 		if anim.time > data.delay {
 			anim.time -= data.delay;
@@ -420,7 +438,8 @@ func void render(s_map* map)
 
 			if editor.selecting {
 				s_rect rect = get_editor_selection_rectangle();
-				rect.pos = to_screen(rect.pos);
+				rect.pos = to_screen(rect.pos, camera);
+				rect.size *= camera.zoom;
 				DrawRectangleLines(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, WHITE);
 			}
 		}
@@ -466,7 +485,7 @@ func s_v2i get_tile_collision(s_v2 pos, s_v2 size)
 			if index.y < 0 || index.y >= c_max_tiles { continue; }
 
 			s8 tile = g_map.tiles[index.y][index.x];
-			s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
+			s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.y);
 			if tile > 0 {
 				if rect_collides_rect(pos, size, tile_pos, tile_size) {
 					return index;
@@ -507,23 +526,30 @@ func float max(float a, float b)
 	return a;
 }
 
-func s_v2 to_screen(s_v2 v)
+func s_v2 to_screen(s_v2 v, s_camera cam)
 {
 	s_v2 result = v;
-	result.x -= camera.pos.x;
-	result.y -= camera.pos.y;
-	result.x += camera.offset.x;
-	result.y += camera.offset.y;
+	result -= cam.pos;
+	result *= cam.zoom;
+	result += cam.offset;
 	return result;
 }
 
-func s_v2 to_world(s_v2 v)
+func s_v2 to_world(s_v2 v, s_camera cam)
 {
 	s_v2 result = v;
-	result.x -= camera.offset.x;
-	result.y -= camera.offset.y;
-	result.x += camera.pos.x;
-	result.y += camera.pos.y;
+	result -= cam.offset;
+	result /= cam.zoom;
+	result += cam.pos;
+	return result;
+}
+
+func s_rect get_camera_bounds(s_camera cam)
+{
+	import cam;
+	s_rect result;
+	result.pos = to_world(v2(0, 0), cam);
+	result.size = to_world(v2(ww, wh), cam);
 	return result;
 }
 
@@ -592,8 +618,12 @@ func s_texture load_texture(char* path)
 	return texture;
 }
 
-func void draw_texture(s_texture texture, s_v2 pos, s_v2 size, s_color color, int centered)
+func void draw_texture(s_texture texture, s_v2 pos, s_v2 size, s_color color, int centered, s_camera* cam)
 {
+	if cam {
+		pos = to_screen(pos, *cam);
+		size *= cam.zoom;
+	}
 	s_rect dst;
 	dst.pos = pos;
 	dst.size = size;
@@ -608,8 +638,12 @@ func void draw_texture(s_texture texture, s_v2 pos, s_v2 size, s_color color, in
 	DrawTexturePro(texture, src, dst, origin, 0, color);
 }
 
-func void draw_texture_scaled(s_texture texture, s_v2 pos, float scale, s_color color, int centered)
+func void draw_texture_scaled(s_texture texture, s_v2 pos, float scale, s_color color, int centered, s_camera* cam)
 {
+	if cam {
+		pos = to_screen(pos, *cam);
+		scale *= cam.zoom;
+	}
 	s_rect src;
 	src.size.x = texture.width;
 	src.size.y = texture.height;
@@ -639,10 +673,24 @@ func s_v2 operator*(s_v2 a, float b)
 	return a;
 }
 
+func s_v2 operator/(s_v2 a, float b)
+{
+	a.x /= b;
+	a.y /= b;
+	return a;
+}
+
 func s_v2 operator+(s_v2 a, s_v2 b)
 {
 	a.x += b.x;
 	a.y += b.y;
+	return a;
+}
+
+func s_v2 operator-(s_v2 a, s_v2 b)
+{
+	a.x -= b.x;
+	a.y -= b.y;
 	return a;
 }
 
@@ -740,8 +788,6 @@ func void update_editor()
 		set_next_state(&state, e_editor_state.load);
 	}
 
-	camera.offset.x = ww / 2 - player_size.x / 2;
-	camera.offset.y = wh / 2 - player_size.y / 2;
 	s_v2 dir;
 	if input.move_left {
 		dir.x -= 1;

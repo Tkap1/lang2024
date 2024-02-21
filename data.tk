@@ -55,6 +55,7 @@ struct s_input_data
 	int load_map,
 	int confirm,
 	int delete_char,
+	float wheel,
 }
 
 struct s_projectiles
@@ -73,6 +74,7 @@ struct s_spikes
 
 struct s_camera
 {
+	float zoom,
 	s_v2 pos,
 	s_v2 offset,
 }

@@ -183,3 +183,4 @@ external_func void* memset(void*, int, size_t);
 external_func int GetCharPressed();
 external_func int GetKeyPressed();
 external_func b32 IsKeyPressedRepeat(int);
+external_func float GetMouseWheelMove();
