@@ -5,6 +5,7 @@ struct s_code_gen_context
 {
 	b8 is_func_arg;
 	b8 prefix_struct_literal;
+	b8 is_data_enum_struct_access;
 };
 
 global constexpr int c_builder_size = 10 * c_mb;

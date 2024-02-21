@@ -1,5 +1,4 @@
 
-
 data_enum e_foo
 {
 	struct s_foo

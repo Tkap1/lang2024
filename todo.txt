@@ -42,9 +42,6 @@ we need a better system for types...
 this shouldnt be allowed! editor.tiles is an s8!!
 int[c_max_tiles][c_max_tiles] tiles = editor.tiles;
 
-add a test that prevents us from doing: const int foo; (no value!!)
-
-
 we want something like this
 data_enum e_map
 {
@@ -67,3 +64,5 @@ usage:
 
 we have a bug with nested includes?? the error message contains a variable name instead of a file
 	are we checking for null?
+
+we need to generate the data enum table thing, because we could have e_foo[some_variable_not_known_at_compile_time]

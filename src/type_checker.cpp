@@ -833,15 +833,21 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_expr(node->right, reporter, data, arena, temp)) {
 				return false;
 			}
-			// @TODO(tkap, 17/02/2024): Should be temp_var_decl
 			node->temp_var_decl = node->left->temp_var_decl;
 			// @TODO(tkap, 14/02/2024): Not sure about this
-			node->var_type = node->left->var_type->left->var_type;
-			s_node* temp_array = node->temp_var_decl;
-			for(int i = 0; i < context.subscript_level; i++) {
-				temp_array = temp_array->left;
+			if(node->left->var_type->type == e_node_data_enum) {
+				node->var_type = alloc_node(*node->left->var_type->data_enum.nstruct, arena);
+				node->array_capacity = 1;
+				node->var_type->is_data_enum_struct_access = true;
 			}
-			node->array_capacity = temp_array->array.size_expr->integer.value;
+			else {
+				node->var_type = node->left->var_type->left->var_type;
+				s_node* temp_array = node->temp_var_decl;
+				for(int i = 0; i < context.subscript_level; i++) {
+					temp_array = temp_array->left;
+				}
+				node->array_capacity = temp_array->array.size_expr->integer.value;
+			}
 			// @TODO(tkap, 12/02/2024): check that left is array
 			node->type_checked = true;
 			return true;

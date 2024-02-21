@@ -87,6 +87,25 @@ func void generate_node(s_node* node, t_code_builder* builder, s_code_gen_contex
 			}
 			builder->pop_scope(" %s;", node->token.str());
 			generate_node(node->data_enum.nstruct, builder, context);
+
+			builder->add_line("static const %s %s_data[] = {", node->data_enum.nstruct->token.str(), node->token.str());
+			builder->scope += 1;
+			for_node(member, node->data_enum.members) {
+				b8 is_count_member = member->next == null;
+				if(is_count_member) { continue; }
+				builder->add_tabs("{");
+				for_node(field, member->data_enum_member.members) {
+					builder->add(".%s = ", field->token.str());
+					node_to_c_str(field->left, builder, context);
+					if(field->next) {
+						builder->add(", ");
+					}
+				}
+				builder->add_line("},");
+			}
+			builder->add_line("};");
+			builder->scope -= 1;
+
 		} break;
 
 		invalid_default_case;
@@ -291,6 +310,7 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 	if(node->dont_generate) { return; }
 
 	switch(node->type) {
+
 		case e_node_type: {
 			builder->add("%s", node->token.str());
 			for(int i = 0; i < node->pointer_level; i++) {
@@ -308,6 +328,9 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 
 		case e_node_identifier: {
 			builder->add("%s", node->token.str());
+			if(context.is_data_enum_struct_access) {
+				builder->add("_data");
+			}
 		} break;
 
 		// @TODO(tkap, 17/02/2024): I dont get this
@@ -359,37 +382,37 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 				assert(node->right->type == e_node_identifier);
 				// @TODO(tkap, 17/02/2024): We want the enum member somewhere
 				builder->add("%i", node->right->temp_var_decl->enum_value);
-				// node_to_c_str(node->left, builder, context);
-				// builder->add("_");
-				// node_to_c_str(node->right, builder, context);
 			}
 			else if(node->var_type->type == e_node_data_enum) {
 				assert(node->right->type == e_node_identifier);
 				// @TODO(tkap, 17/02/2024): We want the enum member somewhere
 				builder->add("%i", node->right->temp_var_decl->enum_value);
-				// node_to_c_str(node->left, builder, context);
-				// builder->add("_");
-				// node_to_c_str(node->right, builder, context);
 			}
 			else {
 				if(node->var_type->is_data_enum_struct_access) {
+					// @TODO(tkap, 21/02/2024): sus?
+					builder->add(
+						"%s_data[%s_%s].%s", node->left->var_type->token.str(), node->left->var_type->token.str(),
+						node->left->right->token.str(), node->right->token.str()
+					);
+
 					// @TODO(tkap, 20/02/2024): This kind of thing feels like it should happen in the type checking stage!
-					s_node* idk = get_data_enum_member(node->left);
-					assert(idk->type == e_node_data_enum_member);
-					b8 found = false;
-					for_node(member, idk->data_enum_member.members) {
-						// @TODO(tkap, 20/02/2024): sus?
-						if(member->token.equals(node->right->token)) {
-							node_to_c_str(member->left, builder, context);
-							found = true;
-							break;
-						}
-					}
-					assert(found);
+					// s_node* idk = get_data_enum_member(node->left);
+					// assert(idk->type == e_node_data_enum_member);
+					// b8 found = false;
+					// for_node(member, idk->data_enum_member.members) {
+					// 	// @TODO(tkap, 20/02/2024): sus?
+					// 	if(member->token.equals(node->right->token)) {
+					// 		node_to_c_str(member->left, builder, context);
+					// 		found = true;
+					// 		break;
+					// 	}
+					// }
+					// assert(found);
 				}
 				else {
 					node_to_c_str(node->left, builder, context);
-					if(node->left->temp_var_decl->pointer_level > 0) {
+					if(node->left->temp_var_decl && node->left->temp_var_decl->pointer_level > 0) {
 						builder->add("->");
 					}
 					else {
@@ -548,7 +571,9 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 
 		case e_node_subscript: {
 			builder->add("(*(");
-			get_subscript_str(node, 0, builder, context);
+			s_code_gen_context temp = context;
+			temp.is_data_enum_struct_access = node->var_type->is_data_enum_struct_access;
+			get_subscript_str(node, 0, builder, temp);
 			builder->add("))");
 		} break;
 
