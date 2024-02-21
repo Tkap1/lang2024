@@ -1259,8 +1259,6 @@ func b8 add_var_to_scope(t_scope_arr* data, s_node* var, s_error_reporter* repor
 
 func b8 add_import_to_scope(t_scope_arr* data, s_node* import, s_error_reporter* reporter, s_lin_arena* arena)
 {
-	// @Hack(tkap, 20/02/2024): Temporary
-	assert(import->type == e_node_identifier);
 	// @Hack(tkap, 20/02/2024): Also temporary
 	assert(import->var_type->type == e_node_struct);
 

@@ -76,3 +76,5 @@ while without an expression is broken, it thinks the {} is a struct literal
 bringing a variable into scope with import that collides with a function name does not give an error!
 
 we want to allow: import game.projectiles;
+
+importing a value instead of a struct fails an assert, we want an error!
