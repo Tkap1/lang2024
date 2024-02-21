@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-	char* file_name = "test.tk";
+	char* file_name = "main.tk";
 	s_error_reporter reporter = zero;
 	if(compile(file_name, &arena, false, &reporter)) {
 		printf("Success!\n");

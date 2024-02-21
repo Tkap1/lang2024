@@ -12,11 +12,21 @@ enum e_editor_state
 	invalid,
 	select,
 	paint,
+	save,
+	load,
+}
+
+enum e_state
+{
+	invalid,
+	game,
+	editor,
 }
 
 struct s_player
 {
 	import s_v2 pos,
+	int on_ground,
 	s_v2 vel,
 	int shoot_timer,
 }
@@ -41,6 +51,10 @@ struct s_input_data
 	int left_click_released,
 	int remove_tiles,
 	int undo,
+	int save_map,
+	int load_map,
+	int confirm,
+	int delete_char,
 }
 
 struct s_projectiles
@@ -50,10 +64,23 @@ struct s_projectiles
 	s_v2[c_max_projectiles] vel,
 }
 
+struct s_spikes
+{
+	b8[c_max_spikes] active,
+	int[c_max_spikes] rotation,
+	s_v2[c_max_spikes] pos,
+}
+
 struct s_camera
 {
 	s_v2 pos,
 	s_v2 offset,
+}
+
+struct s_game
+{
+	s_spikes spikes,
+	s_projectiles projectiles,
 }
 
 enum e_animation
@@ -91,7 +118,7 @@ struct s_state
 // @Note(tkap, 15/02/2024): For things that get undone/redone by undo system
 struct s_editor_data
 {
-	s8[c_max_tiles][c_max_tiles] tiles,
+	s_map map,
 	int[c_max_tiles][c_max_tiles] tiles_selected,
 }
 
@@ -106,6 +133,8 @@ struct s_editor
 	int selecting,
 	s_state state,
 	int curr_tile,
+	int save_load_cursor,
+	char[128] save_load_input,
 }
 
 struct s_animation
@@ -123,6 +152,11 @@ struct s_animation_data
 	int[32] frames,
 }
 
+struct s_map
+{
+	s8[c_max_tiles][c_max_tiles] tiles,
+}
+
 data_enum e_map
 {
 	struct s_map_data
@@ -130,9 +164,27 @@ data_enum e_map
 		char* path,
 	}
 	m000 {
-		path = "foo",
+		path = "maps/000.map",
 	}
 	m001 {
-		path = "bar",
+		path = "maps/001.map",
 	}
 }
+
+struct FILE_
+{
+	int* foo,
+}
+
+
+const int SEEK_SET = 0;
+const int SEEK_CUR = 1;
+const int SEEK_END = 2;
+
+external_func FILE_* fopen(char*, char*);
+external_func int fclose(FILE_*);
+external_func u64 fread(void*, u64, u64, FILE_*);
+external_func u64 fwrite(void*, u64, u64, FILE_*);
+external_func s32 ftell(FILE_*);
+external_func int fseek(FILE_*, s32, s32);
+

@@ -2,7 +2,7 @@
 
 s_texture[e_texture.count] g_textures;
 s_animation_data[e_animation.count] g_animations;
-s8[c_max_tiles][c_max_tiles] g_tiles;
+s_map g_map;
 s_camera camera;
 float delta;
 float update_timer;
@@ -10,6 +10,7 @@ s_v2 tile_size;
 s_v2 player_size;
 s_player player;
 s_projectiles projectiles;
+s_game game;
 s_v2 projectile_size;
 s_v2 mouse;
 s_v2 world_mouse;

@@ -66,3 +66,13 @@ we have a bug with nested includes?? the error message contains a variable name 
 	are we checking for null?
 
 we need to generate the data enum table thing, because we could have e_foo[some_variable_not_known_at_compile_time]
+
+if we have a bad type in an external function, we dont get an error in the declaration, but we do get an error when we try to call, it doesnt exist
+
+we need a sizeof immediately
+
+while without an expression is broken, it thinks the {} is a struct literal
+
+bringing a variable into scope with import that collides with a function name does not give an error!
+
+we want to allow: import game.projectiles;

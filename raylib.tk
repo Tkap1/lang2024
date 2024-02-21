@@ -180,3 +180,6 @@ external_func void SetExitKey(int);
 external_func void DrawText(char*, int, int, int, s_color);
 external_func void DrawRectangleLines(int, int, int, int, s_color);
 external_func void* memset(void*, int, size_t);
+external_func int GetCharPressed();
+external_func int GetKeyPressed();
+external_func b32 IsKeyPressedRepeat(int);

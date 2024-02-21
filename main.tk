@@ -55,9 +55,8 @@ func int main()
 
 	int bottom_tile = wh / tile_size.x;
 	for x: c_max_tiles {
-		g_tiles[bottom_tile][x] = 1;
+		g_map.tiles[bottom_tile][x] = 1;
 	}
-
 
 	while !WindowShouldClose() {
 		delta = GetFrameTime();
@@ -68,23 +67,27 @@ func int main()
 			update_timer -= c_update_delay;
 			update();
 		}
-		s8[c_max_tiles][c_max_tiles]* tiles = &g_tiles;
-		if(game_state.curr == 2) {
-			tiles = &editor.tiles;
+		s_map* map =  &g_map;
+		if(game_state.curr == e_state.editor) {
+			map = &editor.map;
 		}
-		render(tiles);
+		render(map);
 	}
 }
 
 func void do_input()
 {
 	import input;
+
+
+	int is_ctrl_down = IsKeyDown(KEY_LEFT_CONTROL);
 	left_click_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
 	left_click_pressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
 	left_click_released = IsMouseButtonReleased(MOUSE_BUTTON_LEFT);
+	confirm = IsKeyPressed(KEY_ENTER);
 
 	// @Note(tkap, 18/02/2024): Game
-	if game_state.curr == 1 {
+	if game_state.curr == e_state.game {
 		if IsKeyPressed(KEY_F1) {
 			set_next_state(&game_state, 2);
 		}
@@ -96,27 +99,36 @@ func void do_input()
 	}
 
 	// @Note(tkap, 18/02/2024): Editor
-	if game_state.curr == 2 {
+	if game_state.curr == e_state.editor {
 		if IsKeyPressed(KEY_F1) {
 			set_next_state(&game_state, 1);
 		}
+		int can_move = editor.state.curr != e_editor_state.save && editor.state.curr != e_editor_state.load && !is_ctrl_down;
 
 		move_tile_left = IsKeyPressed(KEY_LEFT);
 		move_tile_right = IsKeyPressed(KEY_RIGHT);
 		move_tile_up = IsKeyPressed(KEY_UP);
 		move_tile_down = IsKeyPressed(KEY_DOWN);
-		move_left = IsKeyDown(KEY_A);
-		move_right = IsKeyDown(KEY_D);
-		move_up = IsKeyDown(KEY_W);
-		move_down = IsKeyDown(KEY_S);
+		move_left = IsKeyDown(KEY_A) && can_move;
+		move_right = IsKeyDown(KEY_D) && can_move;
+		move_up = IsKeyDown(KEY_W) && can_move;
+		move_down = IsKeyDown(KEY_S) && can_move;
 		place_tile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
 		one = IsKeyPressed(KEY_ONE);
 		cancel = IsKeyPressed(KEY_ESCAPE);
 		remove_tiles = IsKeyPressed(KEY_DELETE);
+		delete_char = IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE);
 
-		if IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_Z) {
+		if is_ctrl_down && IsKeyPressed(KEY_Z) {
 			undo = 1;
 		}
+		if is_ctrl_down && IsKeyPressed(KEY_S) {
+			save_map = 1;
+		}
+		if is_ctrl_down && IsKeyPressed(KEY_L) {
+			load_map = 1;
+		}
+
 	}
 }
 
@@ -132,18 +144,18 @@ func void update()
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		change state start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	if game_state.next != 0 {
 		game_state.curr = game_state.next;
-		if game_state.next == 1 {
-			g_tiles = editor.tiles;
+		if game_state.next == e_state.game {
+			g_map = editor.map;
 		}
-		if game_state.next == 2 {
-			editor.tiles = g_tiles;
+		if game_state.next == e_state.editor {
+			editor.map = g_map;
 		}
 		game_state.next = 0;
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		change state end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		gameplay start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	if game_state.curr == 1 {
+	if game_state.curr == e_state.game {
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		create projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		if player.shoot_timer >= c_shoot_delay && input.shoot {
@@ -154,8 +166,8 @@ func void update()
 					active[it] = 1;
 					pos[it] = player.pos;
 					vel[it] = dir_from_to(pos[it], world_mouse);
-					vel[it].x *= 10;
-					vel[it].y *= 10;
+					vel[it].x *= c_projectile_speed;
+					vel[it].y *= c_projectile_speed;
 					break;
 				}
 			}
@@ -170,6 +182,9 @@ func void update()
 			if input.move_right {
 				dir.x += 1;
 			}
+			if !player.on_ground {
+				dir.x *= 0.1;
+			}
 			if dir.x > 0 && player.vel.x < c_max_walk_vel {
 				player.vel.x = min(c_max_walk_vel, player.vel.x + dir.x);
 			}
@@ -178,10 +193,9 @@ func void update()
 			}
 		}
 
-		player.vel.y += 0.09;
+		player.vel.y += c_gravity;
 
-		if input.jump {
-			input.jump = 0;
+		if player.on_ground && consume_input(&input.jump) {
 			player.vel.y = -3;
 		}
 
@@ -198,7 +212,7 @@ func void update()
 					if index.x < 0 || index.x >= c_max_tiles { continue; }
 					if index.y < 0 || index.y >= c_max_tiles { continue; }
 
-					s8 tile = g_tiles[index.y][index.x];
+					s8 tile = g_map.tiles[index.y][index.x];
 					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 					if tile > 0 {
 						if rect_collides_rect(get_topleft(player.pos, player_size), player_size, tile_pos, tile_size) {
@@ -208,6 +222,7 @@ func void update()
 							else {
 								player.x = tile_pos.x + tile_size.x + player_size.x / 2;
 							}
+							player.vel.x = 0;
 						}
 					}
 				}
@@ -230,7 +245,7 @@ func void update()
 					if index.x < 0 || index.x >= c_max_tiles { continue; }
 					if index.y < 0 || index.y >= c_max_tiles { continue; }
 
-					s8 tile = g_tiles[index.y][index.x];
+					s8 tile = g_map.tiles[index.y][index.x];
 					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 					if tile > 0 {
 						if rect_collides_rect(get_topleft(player.pos, player_size), player_size, tile_pos, tile_size) {
@@ -249,9 +264,10 @@ func void update()
 		}
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		y collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-		if is_grounded {
+		if player.on_ground {
 			player.vel.x *= 0.8;
 		}
+		player.on_ground = is_grounded;
 
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -287,8 +303,16 @@ func void update()
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		gameplay end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	if game_state.curr == 2 {
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		update editor start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	if game_state.curr == e_state.editor {
+
+		if consume_input(&input.save_map) {
+			set_next_state(&editor.state, e_editor_state.save);
+		}
+
+		if consume_input(&input.load_map) {
+			set_next_state(&editor.state, e_editor_state.load);
+		}
 
 		camera.offset.x = ww / 2 - player_size.x / 2;
 		camera.offset.y = wh / 2 - player_size.y / 2;
@@ -310,6 +334,14 @@ func void update()
 			editor.state.curr = editor.state.next;
 			if editor.state.next == e_editor_state.paint {
 				memset(editor.tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+			}
+			if editor.state.next == e_editor_state.save {
+				editor.save_load_cursor = 0;
+				editor.save_load_input[0] = 0;
+			}
+			if editor.state.next == e_editor_state.load {
+				editor.save_load_cursor = 0;
+				editor.save_load_input[0] = 0;
 			}
 			editor.state.next = 0;
 		}
@@ -333,7 +365,7 @@ func void update()
 				s_rect rect = get_editor_selection_rectangle();
 				for y: c_max_tiles {
 					for x: c_max_tiles {
-						if editor.tiles[y][x] <= 0 { continue; }
+						if editor.map.tiles[y][x] <= 0 { continue; }
 						s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.y);
 						if rect_collides_rect(rect.pos, rect.size, tile_pos, tile_size) {
 							editor.tiles_selected[y][x] = 1;
@@ -365,7 +397,7 @@ func void update()
 					for y: c_max_tiles {
 						for x: c_max_tiles {
 							if !editor.tiles_selected[y][x] {
-								new_tiles[y][x] = editor.tiles[y][x];
+								new_tiles[y][x] = editor.map.tiles[y][x];
 							}
 						}
 					}
@@ -381,16 +413,16 @@ func void update()
 									first_move = 0;
 									editor_save_undo();
 								}
-								new_tiles[index.y][index.x] = editor.tiles[y][x];
+								new_tiles[index.y][index.x] = editor.map.tiles[y][x];
 								new_tiles_selected[index.y][index.x] = editor.tiles_selected[y][x];
 							}
 							else {
-								new_tiles[y][x] = editor.tiles[y][x];
+								new_tiles[y][x] = editor.map.tiles[y][x];
 								new_tiles_selected[y][x] = editor.tiles_selected[y][x];
 							}
 						}
 					}
-					editor.tiles = new_tiles;
+					editor.map.tiles = new_tiles;
 					editor.tiles_selected = new_tiles_selected;
 				}
 			}
@@ -405,7 +437,7 @@ func void update()
 								editor_save_undo();
 								deleted_something = 1;
 							}
-							editor.tiles[y][x] = 0;
+							editor.map.tiles[y][x] = 0;
 							editor.tiles_selected[y][x] = 0;
 						}
 					}
@@ -426,20 +458,72 @@ func void update()
 			if input.place_tile {
 				s_v2i index = pos_to_tile_index(world_mouse);
 				if is_valid_tile_index(index) {
-					if editor.tiles[index.y][index.x] != 1 && !editor.painting {
+					if editor.map.tiles[index.y][index.x] != 1 && !editor.painting {
 						editor.painting = 1;
 						editor_save_undo();
 					}
-					editor.tiles[index.y][index.x] = 1;
+					editor.map.tiles[index.y][index.x] = 1;
 				}
 			}
 		}
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor save update start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		if editor.state.curr == e_editor_state.save {
+			import editor;
+			if consume_input(&input.cancel) {
+				set_next_state(&state, e_editor_state.select);
+			}
+			while 1 {
+				int c = GetCharPressed();
+				if !c { break; }
+				save_load_input[save_load_cursor] = c;
+				save_load_input[save_load_cursor + 1] = 0;
+				save_load_cursor += 1;
+			}
+			if consume_input(&input.delete_char) {
+				if save_load_cursor > 0 {
+					save_load_cursor -= 1;
+					save_load_input[save_load_cursor] = 0;
+				}
+			}
+			if save_load_input[0] && consume_input(&input.confirm) {
+				do_save_map(save_load_input, &map);
+				set_next_state(&state, e_editor_state.select);
+			}
+		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor save update end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor load update start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		if editor.state.curr == e_editor_state.load {
+			import editor;
+			if consume_input(&input.cancel) {
+				set_next_state(&state, e_editor_state.select);
+			}
+			while 1 {
+				int c = GetCharPressed();
+				if !c { break; }
+				save_load_input[save_load_cursor] = c;
+				save_load_input[save_load_cursor + 1] = 0;
+				save_load_cursor += 1;
+			}
+			if consume_input(&input.delete_char) {
+				if save_load_cursor > 0 {
+					save_load_cursor -= 1;
+					save_load_input[save_load_cursor] = 0;
+				}
+			}
+			if save_load_input[0] && consume_input(&input.confirm) {
+				map = do_load_map(save_load_input);
+				set_next_state(&state, e_editor_state.select);
+			}
+		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor load update end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	}
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		update editor end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 }
 
-func void render(s8[c_max_tiles][c_max_tiles]* tiles)
+func void render(s_map* map)
 {
 	BeginDrawing();
 	ClearBackground(BLACK);
@@ -456,7 +540,7 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 			if y >= c_max_tiles { continue; }
 			for x: right {
 				if x >= c_max_tiles { continue; }
-				s8 tile = tiles[y][x];
+				s8 tile = map.tiles[y][x];
 				s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.x);
 				s_color color = DARK;
 				if tile == 0 {
@@ -468,7 +552,7 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 					color = WHITE;
 				}
 				draw_texture(g_textures[e_texture.tile], to_screen(tile_pos), tile_size, color, 0);
-				if tile > 0 && game_state.curr == 2 && editor.tiles_selected[y][x] {
+				if tile > 0 && game_state.curr == e_state.editor && editor.tiles_selected[y][x] {
 					float size = sin2(time * 10) * tile_size.x;
 					s_color temp_color = GREEN;
 					temp_color.a = 150;
@@ -493,7 +577,6 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 			}
 		}
 	}
-
 
 	draw_texture(g_textures[e_texture.player_body], to_screen(player.pos), player_size, WHITE, 1);
 
@@ -524,8 +607,8 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	if game_state.curr == 2 {
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		render editor start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	if game_state.curr == e_state.editor {
 		if editor.state.curr == e_editor_state.select {
 			draw_text("select", v2(400, 100));
 
@@ -539,8 +622,26 @@ func void render(s8[c_max_tiles][c_max_tiles]* tiles)
 		if editor.state.curr == e_editor_state.paint {
 			draw_text("paint", v2(400, 100));
 		}
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor save render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		if editor.state.curr == e_editor_state.save {
+			draw_text("save", v2(400, 100));
+			if(editor.save_load_input[0]) {
+				draw_text(editor.save_load_input, v2(400, 500));
+			}
+		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor save render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor load render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		if editor.state.curr == e_editor_state.load {
+			draw_text("load", v2(400, 100));
+			if(editor.save_load_input[0]) {
+				draw_text(editor.save_load_input, v2(400, 500));
+			}
+		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor load render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 	}
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		render editor end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	DrawFPS(16, 16);
 
@@ -558,7 +659,7 @@ func s_v2i get_tile_collision(s_v2 pos, s_v2 size)
 			if index.x < 0 || index.x >= c_max_tiles { continue; }
 			if index.y < 0 || index.y >= c_max_tiles { continue; }
 
-			s8 tile = g_tiles[index.y][index.x];
+			s8 tile = g_map.tiles[index.y][index.x];
 			s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 			if tile > 0 {
 				if rect_collides_rect(pos, size, tile_pos, tile_size) {
@@ -795,4 +896,23 @@ func void editor_undo()
 	}
 	editor.data = editor.undo_stack[editor.undo_index];
 	editor.undo_count -= 1;
+}
+
+func void do_save_map(char* name, s_map* map)
+{
+	FILE_* file = fopen(name, "wb");
+	fwrite(map, 1, c_max_tiles * c_max_tiles, file);
+	fclose(file);
+}
+
+func s_map do_load_map(char* name)
+{
+	FILE_* file = fopen(name, "rb");
+	fseek(file, 0, SEEK_END);
+	int size = ftell(file);
+	fseek(file, 0, SEEK_SET);
+	s_map map;
+	fread(&map, 1, c_max_tiles * c_max_tiles, file);
+	fclose(file);
+	return map;
 }

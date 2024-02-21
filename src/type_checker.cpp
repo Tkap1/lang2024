@@ -54,6 +54,17 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 	{
 		s_node node = zero;
 		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 3, .at = "u64"};
+		node.basic_type.is_unsigned = true;
+		node.basic_type.name = "u64";
+		node.basic_type.id = e_type_u64;
+		node.size_in_bytes = 8;
+		add_type_to_scope(data, alloc_node(node, arena), arena);
+	}
+
+	{
+		s_node node = zero;
+		node.type = e_node_type;
 		node.token = {.type = e_token_identifier, .len = 3, .at = "b32"};
 		node.basic_type.name = "b32";
 		node.basic_type.id = e_type_b32;
