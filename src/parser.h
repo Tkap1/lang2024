@@ -151,6 +151,7 @@ struct s_node
 	{
 		struct
 		{
+			b8 is_packed;
 			int member_count;
 			s_node* members;
 		} nstruct;
@@ -292,5 +293,6 @@ func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* repo
 func s_node statement_str_to_node(char* str, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_enum(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_operator(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
-func s_parse_result parse_directive(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
+func s_parse_result parse_include(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_data_enum(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
+func s_parse_result parse_pack(s_tokenizer tokenizer, s_error_reporter* reporter);

@@ -2,7 +2,7 @@
 
 const int c_max_projectiles = 128;
 const int c_max_spikes = 128;
-const int c_max_tiles = 64;
+const int c_max_tiles = 128;
 const int c_editor_max_undo = 16;
 const int c_updates_per_second = 240;
 const float c_update_delay = 1.0 / c_updates_per_second;
@@ -12,3 +12,5 @@ const int c_shoot_delay = 80;
 const float c_projectile_speed = 5;
 const float c_max_walk_vel = 1;
 const float c_gravity = 0.07;
+const int c_map_version = 1;
+const float cam_speed = 3;

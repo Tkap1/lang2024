@@ -221,6 +221,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/sizeof5.tk", true},
 		{"tests/sizeof6.tk", true},
 		{"tests/sizeof7.tk", true},
+		{"tests/operator_overload4.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

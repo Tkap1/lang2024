@@ -38,7 +38,7 @@ func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_aren
 			continue;
 		}
 
-		pr = parse_directive(tokenizer, reporter, arena);
+		pr = parse_include(tokenizer, reporter, arena);
 		if(pr.success) {
 			tokenizer = pr.tokenizer;
 			s_node* node = parse_step(pr.node.token.str(arena), reporter, arena, reporter->ignore_errors);
@@ -85,11 +85,18 @@ func s_parse_result parse_struct(s_tokenizer tokenizer, s_error_reporter* report
 	s_token token = zero;
 
 	breakable_block {
+		s_parse_result pr = parse_pack(tokenizer, reporter);
+		b8 is_packed = false;
+		if(pr.success) {
+			tokenizer = pr.tokenizer;
+			is_packed = true;
+		}
 		if(!tokenizer.consume_token("struct", reporter)) { break; }
 		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line); }
 		if(is_keyword(token)) { reporter->fatal(token.file, token.line, "Struct name cannot be a reserved keyword"); }
 		result.node.token = token;
 		result.node.type = e_node_struct;
+		result.node.nstruct.is_packed = is_packed;
 		if(!tokenizer.consume_token(e_token_open_brace, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line); }
 
 		s_node** curr_struct_member = &result.node.nstruct.members;
@@ -98,7 +105,7 @@ func s_parse_result parse_struct(s_tokenizer tokenizer, s_error_reporter* report
 			if(tokenizer.consume_token("import", reporter)) {
 				member.var_decl.is_import = true;
 			}
-			s_parse_result pr = parse_type(tokenizer, reporter, arena);
+			pr = parse_type(tokenizer, reporter, arena);
 			if(!pr.success) { break; }
 			tokenizer = pr.tokenizer;
 			if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) {
@@ -339,7 +346,7 @@ func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* rep
 	return result;
 }
 
-func s_parse_result parse_directive(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
+func s_parse_result parse_include(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
 {
 	unreferenced(arena);
 	s_parse_result result = zero;
@@ -348,15 +355,25 @@ func s_parse_result parse_directive(s_tokenizer tokenizer, s_error_reporter* rep
 	breakable_block {
 		result.node.type = e_node_include;
 		if(!tokenizer.consume_token(e_token_pound, reporter)) { break; }
-		if(!tokenizer.consume_token("include", reporter)) {
-			reporter->fatal(token.file, token.line, "Expected 'include' after '#'");
-			return result;
-		}
+		if(!tokenizer.consume_token("include", reporter)) { break; }
 		if(!tokenizer.consume_token(e_token_string, &token, reporter)) {
 			reporter->fatal(token.file, token.line, "Expected string after '#include'");
 			return result;
 		}
 		result.node.token = token;
+		result.tokenizer = tokenizer;
+		result.success = true;
+	}
+
+	return result;
+}
+
+func s_parse_result parse_pack(s_tokenizer tokenizer, s_error_reporter* reporter)
+{
+	s_parse_result result = zero;
+	breakable_block {
+		if(!tokenizer.consume_token(e_token_pound, reporter)) { break; }
+		if(!tokenizer.consume_token("pack", reporter)) { break; }
 		result.tokenizer = tokenizer;
 		result.success = true;
 	}

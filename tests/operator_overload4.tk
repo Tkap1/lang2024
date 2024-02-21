@@ -1,0 +1,28 @@
+
+
+struct s_v2
+{
+	float x,
+	float y,
+}
+
+func s_v2 operator+(s_v2 a, s_v2 b)
+{
+	a.x += b.x;
+	a.y += b.y;
+	return a;
+}
+
+func s_v2 operator*(s_v2 a, float b)
+{
+	a.x *= b;
+	a.y *= b;
+	return a;
+}
+
+func void f()
+{
+	s_v2 a;
+	s_v2 b;
+	a + b * 1.0;
+}

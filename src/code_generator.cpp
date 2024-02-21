@@ -58,12 +58,19 @@ func void generate_node(s_node* node, t_code_builder* builder, s_code_gen_contex
 		} break;
 
 		case e_node_struct: {
+			b8 is_packed = node->nstruct.is_packed;
+			if(is_packed) {
+				builder->add_line_tabs("#pragma pack(push, 1)");
+			}
 			builder->add_line_tabs("typedef struct %s", node->token.str(arena));
 			builder->push_scope();
 			for_node(member, node->nstruct.members) {
 				generate_struct_member(member, builder, arena);
 			}
 			builder->pop_scope("%s", alloc_str(arena, " %s;", node->token.str(arena)));
+			if(is_packed) {
+				builder->add_line_tabs("#pragma pack(pop)");
+			}
 		} break;
 
 		case e_node_var_decl: {
@@ -309,6 +316,8 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 {
 	if(node->dont_generate) { return; }
 
+	char* arithmetic_symbol = null;
+
 	switch(node->type) {
 
 		case e_node_type: {
@@ -443,30 +452,6 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 			builder->add(")");
 		} break;
 
-		case e_node_add: {
-			builder->add("(");
-			node_to_c_str(node->left, builder, context, arena);
-			builder->add(" + ");
-			node_to_c_str(node->right, builder, context, arena);
-			builder->add(")");
-		} break;
-
-		case e_node_divide: {
-			builder->add("(");
-			node_to_c_str(node->left, builder, context, arena);
-			builder->add(" / ");
-			node_to_c_str(node->right, builder, context, arena);
-			builder->add(")");
-		} break;
-
-		case e_node_subtract: {
-			builder->add("(");
-			node_to_c_str(node->left, builder, context, arena);
-			builder->add(" - ");
-			node_to_c_str(node->right, builder, context, arena);
-			builder->add(")");
-		} break;
-
 		case e_node_logic_or: {
 			builder->add("(");
 			node_to_c_str(node->left, builder, context, arena);
@@ -499,7 +484,20 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 			builder->add(")");
 		} break;
 
-		case e_node_multiply: {
+		case e_node_add:
+			arithmetic_symbol = "+";
+			goto arithmethic;
+		case e_node_subtract:
+			arithmetic_symbol = "-";
+			goto arithmethic;
+		case e_node_multiply:
+			arithmetic_symbol = "*";
+			goto arithmethic;
+		case e_node_divide:
+			arithmetic_symbol = "/";
+			goto arithmethic;
+		{
+			arithmethic:
 			s_node* nfunc = node->operator_overload_func;
 			if(nfunc) {
 				builder->add("%s(", nfunc->func_decl.name.str(arena));
@@ -511,7 +509,7 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 			else {
 				builder->add("(");
 				node_to_c_str(node->left, builder, context, arena);
-				builder->add(" * ");
+				builder->add(" %s ", arithmetic_symbol);
 				node_to_c_str(node->right, builder, context, arena);
 				builder->add(")");
 			}

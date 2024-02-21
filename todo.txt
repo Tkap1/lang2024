@@ -80,3 +80,5 @@ we want to allow: import game.projectiles;
 importing a value instead of a struct fails an assert, we want an error!
 
 do we want to handle alignment bullshit with sizeof?
+
+having a return something inside a function that returns void says that the function doesnt' exist

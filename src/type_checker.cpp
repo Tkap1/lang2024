@@ -1669,8 +1669,7 @@ func b8 type_check_arithmetic(s_node* node, s_error_reporter* reporter, t_scope_
 					// @TODO(tkap, 18/02/2024): We actually want something like can_type_be_converted_to_whatever()
 					if(second_arg->var_type->type == e_node_type) {
 						if(is_same_type(first_arg->var_type, node->left->var_type) && is_compatible_type(second_arg->var_type, node->right->var_type, second_arg->var_type->basic_type.id)) {
-							// @TODO(tkap, 18/02/2024): Or do we want return_type->var_type?
-							node->var_type = nfunc->func_decl.return_type;
+							node->var_type = nfunc->func_decl.return_type->var_type;
 							node->operator_overload_func = nfunc;
 							success = true;
 							break;

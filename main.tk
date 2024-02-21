@@ -105,10 +105,10 @@ func void do_input()
 		}
 		int can_move = editor.state.curr != e_editor_state.save && editor.state.curr != e_editor_state.load && !is_ctrl_down;
 
-		move_tile_left = IsKeyPressed(KEY_LEFT);
-		move_tile_right = IsKeyPressed(KEY_RIGHT);
-		move_tile_up = IsKeyPressed(KEY_UP);
-		move_tile_down = IsKeyPressed(KEY_DOWN);
+		move_tile_left = pressed_or_repeat(KEY_LEFT);
+		move_tile_right = pressed_or_repeat(KEY_RIGHT);
+		move_tile_up = pressed_or_repeat(KEY_UP);
+		move_tile_down = pressed_or_repeat(KEY_DOWN);
 		move_left = IsKeyDown(KEY_A) && can_move;
 		move_right = IsKeyDown(KEY_D) && can_move;
 		move_up = IsKeyDown(KEY_W) && can_move;
@@ -121,7 +121,7 @@ func void do_input()
 
 		cancel = IsKeyPressed(KEY_ESCAPE);
 		remove_tiles = IsKeyPressed(KEY_DELETE);
-		delete_char = IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE);
+		delete_char = pressed_or_repeat(KEY_BACKSPACE);
 
 		if is_ctrl_down && IsKeyPressed(KEY_Z) {
 			undo = 1;
@@ -323,6 +323,7 @@ func void render(s_map* map)
 	mouse = GetMousePosition();
 	world_mouse = to_world(mouse);
 
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		render tiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	{
 		int right = (ww + camera.pos.x) / tile_size.x + 1;
 		int down = (wh + camera.pos.y) / tile_size.y + 1;
@@ -351,6 +352,7 @@ func void render(s_map* map)
 			}
 		}
 	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		render tiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		player render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	{
@@ -389,6 +391,7 @@ func void render(s_map* map)
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		spikes render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	for c_max_spikes {
 		import game.spikes;
+		if !active[it] { continue; }
 		draw_texture(g_textures[e_texture.projectile], to_screen(pos[it]), spike_size, RED, 0);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		spikes render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -635,6 +638,13 @@ func s_v2 operator*(s_v2 a, float b)
 	return a;
 }
 
+func s_v2 operator+(s_v2 a, s_v2 b)
+{
+	a.x += b.x;
+	a.y += b.y;
+	return a;
+}
+
 func void set_next_state(s_state* state, int next)
 {
 	state.next = next;
@@ -703,20 +713,19 @@ func void editor_undo()
 func void do_save_map(char* name, s_map* map)
 {
 	FILE_* file = fopen(name, "wb");
-	fwrite(map, 1, c_max_tiles * c_max_tiles, file);
+	int version = c_map_version;
+	fwrite(&version, 1, sizeof(int), file);
+	fwrite(map, 1, sizeof(s_map), file);
 	fclose(file);
 }
 
-func s_map do_load_map(char* name)
+func void do_load_map(char* name, s_map* out_map)
 {
 	FILE_* file = fopen(name, "rb");
-	fseek(file, 0, SEEK_END);
-	ftell(file);
-	fseek(file, 0, SEEK_SET);
-	s_map map;
-	fread(&map, 1, c_max_tiles * c_max_tiles, file);
+	int version;
+	fread(&version, 1, sizeof(int), file);
+	fread(out_map, 1, sizeof(s_map), file);
 	fclose(file);
-	return map;
 }
 
 func void update_editor()
@@ -732,24 +741,25 @@ func void update_editor()
 
 	camera.offset.x = ww / 2 - player_size.x / 2;
 	camera.offset.y = wh / 2 - player_size.y / 2;
-	const float cam_speed = 3;
+	s_v2 dir;
 	if input.move_left {
-		camera.pos.x -= cam_speed;
+		dir.x -= 1;
 	}
 	if input.move_right {
-		camera.pos.x += cam_speed;
+		dir.x += 1;
 	}
 	if input.move_up {
-		camera.pos.y -= cam_speed;
+		dir.y -= 1;
 	}
 	if input.move_down {
-		camera.pos.y += cam_speed;
+		dir.y += 1;
 	}
+	camera.pos += v2_normalized(dir) * cam_speed;
 
 	if state.next > 0 {
 		state.curr = state.next;
 		if state.next == e_editor_state.paint {
-			memset(tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+			memset(tiles_selected, 0, sizeof(tiles_selected));
 		}
 		if state.next == e_editor_state.save {
 			save_load_cursor = 0;
@@ -782,7 +792,7 @@ func void update_editor()
 
 		if selecting && consume_input(&input.left_click_released) {
 			selecting = 0;
-			memset(tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+			memset(tiles_selected, 0, sizeof(tiles_selected));
 			s_rect rect = get_editor_selection_rectangle();
 			for y: c_max_tiles {
 				for x: c_max_tiles {
@@ -811,9 +821,9 @@ func void update_editor()
 				if !move[offset_index] { continue; }
 				int first_move = 1;
 				s8[c_max_tiles][c_max_tiles] new_tiles;
-				memset(new_tiles, 0, c_max_tiles * c_max_tiles);
+				memset(new_tiles, 0, sizeof(new_tiles));
 				int[c_max_tiles][c_max_tiles] new_tiles_selected;
-				memset(new_tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+				memset(new_tiles_selected, 0, sizeof(new_tiles_selected));
 
 				for y: c_max_tiles {
 					for x: c_max_tiles {
@@ -863,7 +873,7 @@ func void update_editor()
 					}
 				}
 			}
-			memset(tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+			memset(tiles_selected, 0, sizeof(tiles_selected));
 		}
 	}
 
@@ -932,9 +942,14 @@ func void update_editor()
 			}
 		}
 		if save_load_input[0] && consume_input(&input.confirm) {
-			map = do_load_map(save_load_input);
+			do_load_map(save_load_input, &map);
 			set_next_state(&state, e_editor_state.select);
 		}
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor load update end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+}
+
+func b32 pressed_or_repeat(int key)
+{
+	return IsKeyPressed(key) || IsKeyPressedRepeat(key);
 }

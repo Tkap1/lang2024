@@ -153,23 +153,17 @@ struct s_animation_data
 	int[32] frames,
 }
 
+enum e_tile
+{
+	invalid,
+	basic,
+}
+
+#pack
 struct s_map
 {
 	s8[c_max_tiles][c_max_tiles] tiles,
-}
-
-data_enum e_map
-{
-	struct s_map_data
-	{
-		char* path,
-	}
-	m000 {
-		path = "maps/000.map",
-	}
-	m001 {
-		path = "maps/001.map",
-	}
+	s_spikes spikes,
 }
 
 struct FILE_
