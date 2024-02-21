@@ -1,0 +1,13 @@
+
+struct s_foo
+{
+	int x,
+	int y,
+	int z,
+}
+
+func void f()
+{
+	s_foo y;
+	int x = sizeof(y);
+}

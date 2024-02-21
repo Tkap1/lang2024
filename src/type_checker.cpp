@@ -133,6 +133,19 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		add_type_to_scope(data, alloc_node(node, arena), arena);
 	}
 
+
+	{
+		s_node node = zero;
+		node.func_decl.is_external = true;
+		node.func_decl.argument_count = 1;
+		node.type = e_node_func_decl;
+		node.func_decl.name = {.type = e_token_identifier, .len = 6, .at = "sizeof"};
+		node.func_decl.return_type = get_type_by_id(e_type_u64, data);
+		b8 result = type_check_func_decl(&node, reporter, data, arena, zero);
+		assert(result);
+		add_func_to_scope(data, alloc_node(node, arena), arena);
+	}
+
 	while(true) {
 		reporter->error_level = e_error_level_none;
 		b8 successfully_typechecked_something = false;
@@ -643,6 +656,23 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			}
 			else {
 				breakable_block {
+
+					if(context.inside_sizeof) {
+						s_node* type = get_type_by_name(node->token.str(arena), data);
+						if(type) {
+							node->var_type = type;
+							success = true;
+							break;
+						}
+
+						s_node* nstruct = get_struct_by_name_except(node->token.str(arena), null, data);
+						if(nstruct) {
+							node->var_type = type;
+							success = true;
+							break;
+						}
+					}
+
 					s_node* var = get_var_by_name(node->token.str(arena), data);
 					if(var) {
 						assert(var->var_type);
@@ -826,8 +856,12 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
+			s_type_check_context temp = context;
+			if(node->left->type == e_node_identifier && node->left->token.equals("sizeof")) {
+				temp.inside_sizeof = true;
+			}
 			for_node(arg, node->func_call.arguments) {
-				if(!type_check_expr(arg, reporter, data, arena, context)) {
+				if(!type_check_expr(arg, reporter, data, arena, temp)) {
 					return false;
 				}
 			}
@@ -855,13 +889,20 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				node->var_type->is_data_enum_struct_access = true;
 			}
 			else {
-				// @TODO(tkap, 14/02/2024): Not sure about this
-				node->var_type = node->left->var_type->left->var_type;
-				s_node* temp_array = node->temp_var_decl;
-				for(int i = 0; i < context.subscript_level; i++) {
-					temp_array = temp_array->left;
+				if(context.inside_sizeof) {
+					node->var_type = node->left->var_type;
+					node->array_capacity = 1;
+					node->inside_sizeof = true;
 				}
-				node->array_capacity = temp_array->array.size_expr->integer.value;
+				else {
+					// @TODO(tkap, 14/02/2024): Not sure about this
+					node->var_type = node->left->var_type->left->var_type;
+					s_node* temp_array = node->temp_var_decl;
+					for(int i = 0; i < context.subscript_level; i++) {
+						temp_array = temp_array->left;
+					}
+					node->array_capacity = temp_array->array.size_expr->integer.value;
+				}
 			}
 			// @TODO(tkap, 12/02/2024): check that left is array
 			node->type_checked = true;

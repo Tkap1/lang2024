@@ -138,6 +138,7 @@ struct s_node
 	int enum_value;
 	s_node* temp_var_decl;
 	s_node* operator_overload_func;
+	b8 inside_sizeof;
 
 	// @TODO(tkap, 10/02/2024): probably dont want this
 	s_node* left;

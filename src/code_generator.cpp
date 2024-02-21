@@ -570,11 +570,19 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 		} break;
 
 		case e_node_subscript: {
-			builder->add("(*(");
-			s_code_gen_context temp = context;
-			temp.is_data_enum_struct_access = node->var_type->is_data_enum_struct_access;
-			get_subscript_str(node, 0, builder, temp, arena);
-			builder->add("))");
+			if(node->inside_sizeof) {
+				node_to_c_str(node->left, builder, context, arena);
+				builder->add("[");
+				node_to_c_str(node->right, builder, context, arena);
+				builder->add("]");
+			}
+			else {
+				builder->add("(*(");
+				s_code_gen_context temp = context;
+				temp.is_data_enum_struct_access = node->var_type->is_data_enum_struct_access;
+				get_subscript_str(node, 0, builder, temp, arena);
+				builder->add("))");
+			}
 		} break;
 
 		invalid_default_case;

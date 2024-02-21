@@ -1,0 +1,7 @@
+
+
+func void f()
+{
+	int y;
+	int x = sizeof(y);
+}

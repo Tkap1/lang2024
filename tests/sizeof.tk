@@ -1,0 +1,6 @@
+
+
+func void f()
+{
+	int x = sizeof(1);
+}

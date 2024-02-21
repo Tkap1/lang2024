@@ -214,6 +214,13 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/data_enum4.tk", true},
 		{"tests/import5.tk", true},
 		{"tests/import6.tk", true},
+		{"tests/sizeof.tk", true},
+		{"tests/sizeof2.tk", true},
+		{"tests/sizeof3.tk", true},
+		{"tests/sizeof4.tk", true},
+		{"tests/sizeof5.tk", true},
+		{"tests/sizeof6.tk", true},
+		{"tests/sizeof7.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
