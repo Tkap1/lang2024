@@ -76,28 +76,16 @@ t& s_sarray<t, n>::get(int index)
 	return elements[index];
 }
 
-printf_warnings(1, 2)
-func char* format_str(char* str, ...)
-{
-	static int index = 0;
-	static char buffers[c_static_buffers][c_static_buffer_len];
-	char* buffer = buffers[index];
-	index = (index + 1) % c_static_buffers;
-	va_list args;
-	va_start(args, str);
-	vsnprintf(buffer, c_static_buffer_len, str, args);
-	va_end(args);
-	return buffer;
-}
-
 printf_warnings(2, 3)
 func char* alloc_str(s_lin_arena* arena, char* str, ...)
 {
-	char* buffer = (char*)arena->alloc_zero(1024);
+	char* buffer = (char*)arena->alloc(1024);
 	va_list args;
 	va_start(args, str);
-	vsnprintf(buffer, 1024, str, args);
+	int written = vsnprintf(buffer, 1024, str, args);
 	va_end(args);
+	assert(written >= 0);
+	arena->used -= 1024 - (written + 1);
 	return buffer;
 }
 

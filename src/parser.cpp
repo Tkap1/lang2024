@@ -41,7 +41,7 @@ func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_aren
 		pr = parse_directive(tokenizer, reporter, arena);
 		if(pr.success) {
 			tokenizer = pr.tokenizer;
-			s_node* node = parse_step(pr.node.token.str(), reporter, arena, reporter->ignore_errors);
+			s_node* node = parse_step(pr.node.token.str(arena), reporter, arena, reporter->ignore_errors);
 			if(!node) { continue; }
 			*current = node;
 			while(*current) {
@@ -116,7 +116,7 @@ func s_parse_result parse_struct(s_tokenizer tokenizer, s_error_reporter* report
 		}
 
 		if(!tokenizer.consume_token(e_token_close_brace, reporter)) {
-			reporter->fatal(tokenizer.file, result.node.token.line, "Struct '%s' missing closing brace", result.node.token.str());
+			reporter->fatal(tokenizer.file, result.node.token.line, "Struct '%s' missing closing brace", result.node.token.str(arena));
 		}
 
 		result.tokenizer = tokenizer;
@@ -538,13 +538,13 @@ func s_parse_result parse_sub_expression(s_tokenizer tokenizer, s_error_reporter
 	if(tokenizer.consume_token(e_token_integer, &token, reporter)) {
 		result.node.type = e_node_integer;
 		result.node.token = token;
-		result.node.integer.value = atoi(token.str());
+		result.node.integer.value = atoi(token.str(arena));
 		goto success;
 	}
 	if(tokenizer.consume_token(e_token_float, &token, reporter)) {
 		result.node.type = e_node_float;
 		result.node.token = token;
-		result.node.nfloat.value = (float)atof(token.str());
+		result.node.nfloat.value = (float)atof(token.str(arena));
 		goto success;
 	}
 	if(tokenizer.consume_token(e_token_identifier, &token, reporter)) {
@@ -975,25 +975,25 @@ func b8 is_keyword(s_token token)
 	return false;
 }
 
-func void print_expression(s_node* node)
+func void print_expression(s_node* node, s_lin_arena* arena)
 {
 	switch(node->type) {
 		case e_node_add: {
 			printf("(");
-			print_expression(node->left);
+			print_expression(node->left, arena);
 			printf("+");
-			print_expression(node->right);
+			print_expression(node->right, arena);
 			printf(")");
 		} break;
 		case e_node_multiply: {
 			printf("(");
-			print_expression(node->left);
+			print_expression(node->left, arena);
 			printf("*");
-			print_expression(node->right);
+			print_expression(node->right, arena);
 			printf(")");
 		} break;
 		case e_node_integer: {
-			printf("%s", node->token.str());
+			printf("%s", node->token.str(arena));
 		} break;
 
 		invalid_default_case;

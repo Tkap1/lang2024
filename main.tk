@@ -352,22 +352,6 @@ func void render(s_map* map)
 		}
 	}
 
-	for animation_count {
-		s_animation* anim = &animations[it];
-		s_animation_data data = g_animations[anim.id];
-		draw_texture(g_textures[data.frames[anim.curr_frame]], to_screen(anim.pos), player_size * 2, WHITE, 1);
-		anim.time += delta;
-		if anim.time > data.delay {
-			anim.time -= data.delay;
-			anim.curr_frame = (anim.curr_frame + 1) % data.frame_count;
-			if anim.curr_frame == 0 {
-				animation_count -= 1;
-				animations[it] = animations[animation_count];
-				continue;
-			}
-		}
-	}
-
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		player render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	{
 		import game.player;
@@ -408,6 +392,22 @@ func void render(s_map* map)
 		draw_texture(g_textures[e_texture.projectile], to_screen(pos[it]), spike_size, RED, 0);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		spikes render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	for animation_count {
+		s_animation* anim = &animations[it];
+		s_animation_data data = g_animations[anim.id];
+		draw_texture(g_textures[data.frames[anim.curr_frame]], to_screen(anim.pos), player_size * 2, WHITE, 1);
+		anim.time += delta;
+		if anim.time > data.delay {
+			anim.time -= data.delay;
+			anim.curr_frame = (anim.curr_frame + 1) % data.frame_count;
+			if anim.curr_frame == 0 {
+				animation_count -= 1;
+				animations[it] = animations[animation_count];
+				continue;
+			}
+		}
+	}
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		render editor start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	if game_state.curr == e_state.editor {
@@ -890,7 +890,6 @@ func void update_editor()
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor save update start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	if state.curr == e_editor_state.save {
-		import editor;
 		if consume_input(&input.cancel) {
 			set_next_state(&state, e_editor_state.select);
 		}
@@ -916,7 +915,6 @@ func void update_editor()
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor load update start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	if state.curr == e_editor_state.load {
-		import editor;
 		if consume_input(&input.cancel) {
 			set_next_state(&state, e_editor_state.select);
 		}

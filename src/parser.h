@@ -283,7 +283,7 @@ func b8 is_keyword(s_token token);
 func s_parse_result parse_type(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_array(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* reporter, int in_operator_level, s_lin_arena* arena);
-func void print_expression(s_node* node);
+func void print_expression(s_node* node, s_lin_arena* arena);
 func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_external_func_decl(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);

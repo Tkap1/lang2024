@@ -50,7 +50,7 @@ struct s_token
 
 	b8 equals(char* str);
 	b8 equals(s_token token);
-	char* str();
+	char* str(s_lin_arena* arena);
 };
 
 struct s_tokenizer
@@ -69,4 +69,4 @@ struct s_tokenizer
 	b8 eat_comment();
 };
 
-func char* token_to_str(s_token token);
+func char* token_to_str(s_token token, s_lin_arena* arena);

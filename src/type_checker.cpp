@@ -164,9 +164,9 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 	s_scope* scope = *data->get(0);
 	foreach_val(node_i, node, scope->structs) {
 
-		s_node* dupe = get_struct_by_name_except(node->token.str(), node, data);
+		s_node* dupe = get_struct_by_name_except(node->token.str(arena), node, data);
 		if(dupe) {
-			reporter->fatal(dupe->token.file, dupe->token.line, "Duplicate struct name '%s'", dupe->token.str());
+			reporter->fatal(dupe->token.file, dupe->token.line, "Duplicate struct name '%s'", dupe->token.str(arena));
 			return null;
 		}
 
@@ -175,7 +175,7 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 			for_node(other_member, node->nstruct.members) {
 				if(member == other_member) { continue; }
 				if(member->var_decl.name.equals(other_member->var_decl.name)) {
-					reporter->fatal(other_member->var_decl.name.file, other_member->var_decl.name.line, "Duplicate struct member name '%s' on struct '%s'", member->var_decl.name.str(), node->token.str());
+					reporter->fatal(other_member->var_decl.name.file, other_member->var_decl.name.line, "Duplicate struct member name '%s' on struct '%s'", member->var_decl.name.str(arena), node->token.str(arena));
 					return null;
 				}
 			}
@@ -282,7 +282,7 @@ func b8 type_check_struct(s_node* node, s_error_reporter* reporter, t_scope_arr*
 	}
 	node->type_checked = result;
 	if(result) {
-		// printf("Added struct '%s'\n", node->token.str());
+		// printf("Added struct '%s'\n", node->token.str(arena));
 		add_struct_to_scope(data, node, arena);
 	}
 	return result;
@@ -303,7 +303,7 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 	data->add(&node->func_decl.scope);
 
 	if(!type_check_expr(node->func_decl.return_type, reporter, data, arena, context)) {
-		reporter->recoverable_error(node->func_decl.name.file, node->func_decl.name.line, "Function '%s' has unknown return type '%s'", node->func_decl.name.str(), node_to_str(node->func_decl.return_type));
+		reporter->recoverable_error(node->func_decl.name.file, node->func_decl.name.line, "Function '%s' has unknown return type '%s'", node->func_decl.name.str(arena), node_to_str(node->func_decl.return_type, arena));
 		data->pop();
 		s_scope* scope = *data->get(scope_index);
 		scope->funcs.remove_and_shift(func_index);
@@ -321,7 +321,7 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 				data->pop();
 				s_scope* scope = *data->get(scope_index);
 				scope->funcs.remove_and_shift(func_index);
-				reporter->recoverable_error(arg->var_decl.name.file, arg->var_decl.name.line, "Function argument '%s' has unknown type '%s'", arg->var_decl.name.str(), node_to_str(arg->var_decl.type));
+				reporter->recoverable_error(arg->var_decl.name.file, arg->var_decl.name.line, "Function argument '%s' has unknown type '%s'", arg->var_decl.name.str(arena), node_to_str(arg->var_decl.type, arena));
 				return false;
 			}
 		}
@@ -341,7 +341,7 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 
 	data->pop();
 
-	// printf("Added function '%s'\n", node->func_decl.name.str());
+	// printf("Added function '%s'\n", node->func_decl.name.str(arena));
 	return true;
 }
 
@@ -391,10 +391,10 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 						node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
 					}
 					else {
-						char* str = alloc_str(arena, "%s_index", node->nfor.iterator_name.str());
+						char* str = alloc_str(arena, "%s_index", node->nfor.iterator_name.str(arena));
 						node->nfor.iterator_index_name = {.type = e_token_identifier, .len = (int)strlen(str), .at = str};
 					}
-					s_node iterator_index = statement_str_to_node(format_str("int %s;", node->nfor.iterator_index_name.str()), reporter, arena);
+					s_node iterator_index = statement_str_to_node(alloc_str(arena, "int %s;", node->nfor.iterator_index_name.str(arena)), reporter, arena);
 					iterator_index.dont_generate = true;
 					iterator_index.var_decl.name.file = node->nfor.expr->token.file;
 					iterator_index.var_decl.name.line = node->nfor.expr->token.line;
@@ -434,7 +434,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 					else {
 						node->nfor.iterator_index_name = node->nfor.iterator_name;
 					}
-					s_node iterator_index = statement_str_to_node(format_str("int %s;", node->nfor.iterator_index_name.str()), reporter, arena);
+					s_node iterator_index = statement_str_to_node(alloc_str(arena, "int %s;", node->nfor.iterator_index_name.str(arena)), reporter, arena);
 					iterator_index.dont_generate = true;
 					s_node* temp_statement = node->nfor.body->compound.statements;
 					iterator_index.next = temp_statement;
@@ -597,7 +597,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			b8 success = false;
 			if(context.member_access) {
 				if(context.member_access->type == e_node_struct) {
-					s_get_struct_member member = get_struct_member(node->token.str(), context.member_access, data);
+					s_get_struct_member member = get_struct_member(node->token.str(arena), context.member_access, data);
 					if(member.node) {
 						node->var_type = member.node->var_type;
 						success = true;
@@ -643,7 +643,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			}
 			else {
 				breakable_block {
-					s_node* var = get_var_by_name(node->token.str(), data);
+					s_node* var = get_var_by_name(node->token.str(arena), data);
 					if(var) {
 						assert(var->var_type);
 						node->temp_var_decl = var->var_decl.type;
@@ -651,7 +651,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 						success = true;
 
 						if(var->var_type->type == e_node_type && var->var_decl.is_const) {
-							s_maybe<s_node> c = get_compile_time_value(var->var_decl.value, data);
+							s_maybe<s_node> c = get_compile_time_value(var->var_decl.value, data, arena);
 							assert(c.valid);
 							node->type = c.value.type;
 							if(c.value.type == e_node_integer) {
@@ -665,7 +665,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 						break;
 					}
-					s_node* nfunc = get_func_by_name(node->token.str(), data);
+					s_node* nfunc = get_func_by_name(node->token.str(arena), data);
 					if(nfunc) {
 						assert(nfunc->var_type);
 						node->var_type = nfunc->var_type;
@@ -673,14 +673,14 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 						break;
 					}
 
-					s_node* nenum = get_enum_by_name(node->token.str(), data);
+					s_node* nenum = get_enum_by_name(node->token.str(arena), data);
 					if(nenum) {
 						node->var_type = nenum;
 						success = true;
 						break;
 					}
 
-					s_node* data_enum = get_data_enum_by_name(node->token.str(), data);
+					s_node* data_enum = get_data_enum_by_name(node->token.str(arena), data);
 					if(data_enum) {
 						node->var_type = data_enum;
 						success = true;
@@ -691,7 +691,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 					for(int import_i = 0; import_i < imports->count; import_i++) {
 						s_node* import = imports->get(import_i);
 						if(import->var_type->type == e_node_struct) {
-							s_get_struct_member member = get_struct_member(node->token.str(), import->var_type, data);
+							s_get_struct_member member = get_struct_member(node->token.str(arena), import->var_type, data);
 							if(!member.node) { continue; }
 							s_node temp = zero;
 							temp.type = e_node_member_access;
@@ -714,7 +714,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				return true;
 			}
 			else {
-				reporter->recoverable_error(node->token.file, node->token.line, "Identifier '%s' not found", node->token.str());
+				reporter->recoverable_error(node->token.file, node->token.line, "Identifier '%s' not found", node->token.str(arena));
 				return false;
 			}
 		} break;
@@ -1010,7 +1010,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_expr(node->array.size_expr, reporter, data, arena, context)) {
 				return false;
 			}
-			s_maybe<s_node> c = get_compile_time_value(node->array.size_expr, data);
+			s_maybe<s_node> c = get_compile_time_value(node->array.size_expr, data, arena);
 			if(!c.valid) {
 				reporter->fatal(node->array.size_expr->token.file, node->array.size_expr->token.line, "Array size is not constant");
 				return false;
@@ -1029,7 +1029,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_type: {
 			// @TODO(tkap, 11/02/2024):
-			s_node* type = get_type_by_name(node->token.str(), data);
+			s_node* type = get_type_by_name(node->token.str(arena), data);
 			if(type) {
 				// @TODO(tkap, 18/02/2024): Questionable.
 				node->var_type = alloc_node(*type, arena);
@@ -1037,13 +1037,13 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				node->type_checked = true;
 				return true;
 			}
-			s_node* nstruct = get_struct_by_name_except(node->token.str(), null, data);
+			s_node* nstruct = get_struct_by_name_except(node->token.str(arena), null, data);
 			if(nstruct) {
 				node->var_type = nstruct;
 				node->type_checked = true;
 				return true;
 			}
-			reporter->recoverable_error(node->token.file, node->token.line, "Unkown type '%s'", node->token.str());
+			reporter->recoverable_error(node->token.file, node->token.line, "Unkown type '%s'", node->token.str(arena));
 			return false;
 		} break;
 
@@ -1081,16 +1081,16 @@ func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_report
 
 	{
 		s_token token = member->var_decl.name;
-		s_get_struct_member possible_duplicate = get_struct_member(token.str(), nstruct, data);
+		s_get_struct_member possible_duplicate = get_struct_member(token.str(arena), nstruct, data);
 		if(possible_duplicate.node && possible_duplicate.node != member) {
-			reporter->fatal(token.file, token.line, "Duplicate struct member '%s'", token.str());
+			reporter->fatal(token.file, token.line, "Duplicate struct member '%s'", token.str(arena));
 			return false;
 		}
 	}
 
 	// @TODO(tkap, 10/02/2024): Handle a member of type current_struct*
 	if(!type_check_statement(member->var_decl.type, reporter, data, arena, context)) {
-		reporter->recoverable_error(member->var_decl.type->token.file, member->var_decl.type->token.line, "Struct member '%s' has unknown type '%s'", member->var_decl.name.str(), node_to_str(member->var_decl.type));
+		reporter->recoverable_error(member->var_decl.type->token.file, member->var_decl.type->token.line, "Struct member '%s' has unknown type '%s'", member->var_decl.name.str(arena), node_to_str(member->var_decl.type, arena));
 		return false;
 	}
 	member->var_type = member->var_decl.type->var_type;
@@ -1100,16 +1100,16 @@ func b8 type_check_struct_member(s_node* nstruct, s_node* member, s_error_report
 	return true;
 }
 
-func char* node_to_str(s_node* node)
+func char* node_to_str(s_node* node, s_lin_arena* arena)
 {
 	switch(node->type) {
 		case e_node_type: {
-			return node->token.str();
+			return node->token.str(arena);
 		} break;
 
 		case e_node_array: {
-			char* str = node_to_str(node->left);
-			return format_str("%s[]", str);
+			char* str = node_to_str(node->left, arena);
+			return alloc_str(arena, "%s[]", str);
 		} break;
 
 		invalid_default_case;
@@ -1117,7 +1117,7 @@ func char* node_to_str(s_node* node)
 	return null;
 }
 
-func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data)
+func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data, s_lin_arena* arena)
 {
 	switch(node->type) {
 
@@ -1129,18 +1129,18 @@ func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data)
 		} break;
 
 		case e_node_identifier: {
-			s_node* var = get_var_by_name(node->token.str(), data);
+			s_node* var = get_var_by_name(node->token.str(arena), data);
 			if(var) {
 				if(!is_const(var->var_decl.type, data)) { return zero; }
-				return get_compile_time_value(var->var_decl.value, data);
+				return get_compile_time_value(var->var_decl.value, data, arena);
 			}
 			assert(false);
 		} break;
 
 		case e_node_add: {
-			s_maybe<s_node> left = get_compile_time_value(node->left, data);
+			s_maybe<s_node> left = get_compile_time_value(node->left, data, arena);
 			if(!left.valid) { return zero; }
-			s_maybe<s_node> right = get_compile_time_value(node->right, data);
+			s_maybe<s_node> right = get_compile_time_value(node->right, data, arena);
 			if(!right.valid) { return zero; }
 
 			f64 left_val;
@@ -1167,9 +1167,9 @@ func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data)
 		} break;
 
 		case e_node_multiply: {
-			s_maybe<s_node> left = get_compile_time_value(node->left, data);
+			s_maybe<s_node> left = get_compile_time_value(node->left, data, arena);
 			if(!left.valid) { return zero; }
-			s_maybe<s_node> right = get_compile_time_value(node->right, data);
+			s_maybe<s_node> right = get_compile_time_value(node->right, data, arena);
 			if(!right.valid) { return zero; }
 			f64 left_val;
 			if(left.value.type == e_node_float) { left_val = left.value.nfloat.value; }
@@ -1194,9 +1194,9 @@ func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data)
 		} break;
 
 		case e_node_divide: {
-			s_maybe<s_node> left = get_compile_time_value(node->left, data);
+			s_maybe<s_node> left = get_compile_time_value(node->left, data, arena);
 			if(!left.valid) { return zero; }
-			s_maybe<s_node> right = get_compile_time_value(node->right, data);
+			s_maybe<s_node> right = get_compile_time_value(node->right, data, arena);
 			if(!right.valid) { return zero; }
 			f64 left_val;
 			if(left.value.type == e_node_float) { left_val = left.value.nfloat.value; }
@@ -1520,7 +1520,7 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 	// if(node->left->type == e_node_member_access) {
 	// 	maybe_fix_member_access(node->left, node->left->left->var_type, data, arena);
 	// }
-	s_get_struct_member member = get_struct_member(node->right->token.str(), nstruct, data);
+	s_get_struct_member member = get_struct_member(node->right->token.str(arena), nstruct, data);
 	assert(member.node);
 	if(member.is_imported) {
 		s_node new_right = zero;
@@ -1544,18 +1544,18 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 }
 
 
-func int get_size_in_bytes(s_node* node, t_scope_arr* data)
+func int get_size_in_bytes(s_node* node, t_scope_arr* data, s_lin_arena* arena)
 {
 	assert(node->type_checked);
 	int result = 0;
 	switch(node->type) {
 		case e_node_array: {
 			assert(node->array.size_expr->type == e_node_integer);
-			result = get_size_in_bytes(node->left, data) * node->array.size_expr->integer.value;
+			result = get_size_in_bytes(node->left, data, arena) * node->array.size_expr->integer.value;
 		} break;
 
 		case e_node_type: {
-			s_node* type = get_type_by_name(node->token.str(), data);
+			s_node* type = get_type_by_name(node->token.str(arena), data);
 			assert(type);
 			return type->var_type->size_in_bytes;
 		} break;
@@ -1669,28 +1669,28 @@ func b8 type_check_arithmetic(s_node* node, s_error_reporter* reporter, t_scope_
 // @TODO(tkap, 20/02/2024): Better errors. This assumes that we only call this from add_var_to_scope
 func b8 can_thing_be_added_to_scope(s_token name, t_scope_arr* data, s_error_reporter* reporter, s_lin_arena* arena)
 {
-	if(get_var_by_name(name.str(), data)) {
-		reporter->fatal(name.file, name.line, "Duplicate variable name '%s'", name.str());
+	if(get_var_by_name(name.str(arena), data)) {
+		reporter->fatal(name.file, name.line, "Duplicate variable name '%s'", name.str(arena));
 		return false;
 	}
-	if(get_struct_by_name_except(name.str(), null, data)) {
-		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a struct with that name already exists", name.str());
+	if(get_struct_by_name_except(name.str(arena), null, data)) {
+		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a struct with that name already exists", name.str(arena));
 		return false;
 	}
-	if(get_func_by_name(name.str(), data)) {
-		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a function with that name already exists", name.str());
+	if(get_func_by_name(name.str(arena), data)) {
+		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a function with that name already exists", name.str(arena));
 		return false;
 	}
-	if(get_enum_by_name(name.str(), data)) {
-		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because an enum with that name already exists", name.str());
+	if(get_enum_by_name(name.str(arena), data)) {
+		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because an enum with that name already exists", name.str(arena));
 		return false;
 	}
-	if(get_data_enum_by_name(name.str(), data)) {
-		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a data_enum with that name already exists", name.str());
+	if(get_data_enum_by_name(name.str(arena), data)) {
+		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a data_enum with that name already exists", name.str(arena));
 		return false;
 	}
-	if(get_type_by_name(name.str(), data)) {
-		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a type with that name already exists", name.str());
+	if(get_type_by_name(name.str(arena), data)) {
+		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a type with that name already exists", name.str(arena));
 		return false;
 	}
 	arena->push();
@@ -1698,9 +1698,9 @@ func b8 can_thing_be_added_to_scope(s_token name, t_scope_arr* data, s_error_rep
 	for(int import_i = 0; import_i < imports->count; import_i++) {
 		s_node* import = imports->get(import_i);
 		if(import->var_type->type == e_node_struct) {
-			s_get_struct_member member = get_struct_member(name.str(), import->var_type, data);
+			s_get_struct_member member = get_struct_member(name.str(arena), import->var_type, data);
 			if(member.node) {
-				reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a variable coming from an imported struct already has that name", name.str());
+				reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a variable coming from an imported struct already has that name", name.str(arena));
 				return false;
 			}
 		}

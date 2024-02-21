@@ -425,7 +425,9 @@ b8 s_tokenizer::consume_token(e_token type, s_token* out_token, s_error_reporter
 
 b8 s_token::equals(char* in_str)
 {
-	return strcmp(str(), in_str) == 0;
+	int str_len = (int)strlen(in_str);
+	if(len != str_len) { return false; }
+	return strncmp(at, in_str, len) == 0;
 }
 
 b8 s_token::equals(s_token token)
@@ -435,21 +437,19 @@ b8 s_token::equals(s_token token)
 	return strncmp(at, token.at, len) == 0;
 }
 
-char* s_token::str()
+char* s_token::str(s_lin_arena* arena)
 {
 	assert(type > e_token_invalid);
-	return token_to_str(*this);
+	return token_to_str(*this, arena);
 }
 
-func char* token_to_str(s_token token)
+func char* token_to_str(s_token token, s_lin_arena* arena)
 {
 	assert(token.type > e_token_invalid);
 	if(token.type == e_token_eof) { return "EOF"; }
-
-	static int index = 0;
-	static char buffers[c_static_buffers][128];
-	char* buffer = buffers[index];
-	index = (index + 1) % c_static_buffers;
-	sprintf(buffer, "%.*s", ft(token));
+	char* buffer = (char*)arena->alloc(1024);
+	int written = sprintf(buffer, "%.*s", ft(token));
+	assert(written >= 0);
+	arena->used -= 1024 - (written + 1);
 	return buffer;
 }
