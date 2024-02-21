@@ -50,8 +50,9 @@ func int main()
 	tile_size = v2(g_textures[e_texture.tile].width * 0.25, g_textures[e_texture.tile].height * 0.25);
 	player_size = v2(g_textures[e_texture.player_body].width * 0.4, g_textures[e_texture.player_body].height * 0.4);
 	projectile_size = v2(16, 16);
+	spike_size = tile_size;
 
-	player.pos = v2(32, 32);
+	game.player.pos = v2(32, 32);
 
 	int bottom_tile = wh / tile_size.x;
 	for x: c_max_tiles {
@@ -78,7 +79,6 @@ func int main()
 func void do_input()
 {
 	import input;
-
 
 	int is_ctrl_down = IsKeyDown(KEY_LEFT_CONTROL);
 	left_click_down = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
@@ -114,7 +114,11 @@ func void do_input()
 		move_up = IsKeyDown(KEY_W) && can_move;
 		move_down = IsKeyDown(KEY_S) && can_move;
 		place_tile = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
-		one = IsKeyPressed(KEY_ONE);
+
+		for 10 {
+			numbers[it] = IsKeyPressed(KEY_ZERO + it);
+		}
+
 		cancel = IsKeyPressed(KEY_ESCAPE);
 		remove_tiles = IsKeyPressed(KEY_DELETE);
 		delete_char = IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE);
@@ -137,8 +141,8 @@ func void update()
 	mouse = GetMousePosition();
 	world_mouse = to_world(mouse);
 
-	if player.shoot_timer < c_shoot_delay {
-		player.shoot_timer += 1;
+	if game.player.shoot_timer < c_shoot_delay {
+		game.player.shoot_timer += 1;
 	}
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		change state start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -158,13 +162,13 @@ func void update()
 	if game_state.curr == e_state.game {
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		create projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		if player.shoot_timer >= c_shoot_delay && input.shoot {
-			player.shoot_timer -= c_shoot_delay;
+		if game.player.shoot_timer >= c_shoot_delay && input.shoot {
+			game.player.shoot_timer -= c_shoot_delay;
 			for c_max_projectiles {
-				import projectiles;
+				import game.projectiles;
 				if !active[it] {
 					active[it] = 1;
-					pos[it] = player.pos;
+					pos[it] = game.player.pos;
 					vel[it] = dir_from_to(pos[it], world_mouse);
 					vel[it].x *= c_projectile_speed;
 					vel[it].y *= c_projectile_speed;
@@ -182,28 +186,28 @@ func void update()
 			if input.move_right {
 				dir.x += 1;
 			}
-			if !player.on_ground {
+			if !game.player.on_ground {
 				dir.x *= 0.1;
 			}
-			if dir.x > 0 && player.vel.x < c_max_walk_vel {
-				player.vel.x = min(c_max_walk_vel, player.vel.x + dir.x);
+			if dir.x > 0 && game.player.vel.x < c_max_walk_vel {
+				game.player.vel.x = min(c_max_walk_vel, game.player.vel.x + dir.x);
 			}
-			if dir.x < 0 && player.vel.x > -c_max_walk_vel {
-				player.vel.x = max(-c_max_walk_vel, player.vel.x + dir.x);
+			if dir.x < 0 && game.player.vel.x > -c_max_walk_vel {
+				game.player.vel.x = max(-c_max_walk_vel, game.player.vel.x + dir.x);
 			}
 		}
 
-		player.vel.y += c_gravity;
+		game.player.vel.y += c_gravity;
 
-		if player.on_ground && consume_input(&input.jump) {
-			player.vel.y = -3;
+		if game.player.on_ground && consume_input(&input.jump) {
+			game.player.vel.y = -3;
 		}
 
-		player.x += player.vel.x;
+		game.player.x += game.player.vel.x;
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		{
-			s_v2i player_index = v2i(floorf(player.x / tile_size.x), floorf(player.y / tile_size.y));
+			s_v2i player_index = v2i(floorf(game.player.x / tile_size.x), floorf(game.player.y / tile_size.y));
 			for y: 7 {
 				int yy = -3 + y;
 				for x: 7 {
@@ -215,14 +219,14 @@ func void update()
 					s8 tile = g_map.tiles[index.y][index.x];
 					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 					if tile > 0 {
-						if rect_collides_rect(get_topleft(player.pos, player_size), player_size, tile_pos, tile_size) {
-							if player.vel.x > 0 {
-								player.x = tile_pos.x - player_size.x / 2;
+						if rect_collides_rect(get_topleft(game.player.pos, player_size), player_size, tile_pos, tile_size) {
+							if game.player.vel.x > 0 {
+								game.player.x = tile_pos.x - player_size.x / 2;
 							}
 							else {
-								player.x = tile_pos.x + tile_size.x + player_size.x / 2;
+								game.player.x = tile_pos.x + tile_size.x + player_size.x / 2;
 							}
-							player.vel.x = 0;
+							game.player.vel.x = 0;
 						}
 					}
 				}
@@ -230,13 +234,13 @@ func void update()
 		}
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		x collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-		player.y += player.vel.y;
+		game.player.y += game.player.vel.y;
 
 		int is_grounded = 0;
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		{
-			s_v2i player_index = v2i(floorf(player.x / tile_size.x), floorf(player.y / tile_size.y));
+			s_v2i player_index = v2i(floorf(game.player.x / tile_size.x), floorf(game.player.y / tile_size.y));
 			for y: 7 {
 				int yy = -3 + y;
 				for x: 7 {
@@ -248,15 +252,15 @@ func void update()
 					s8 tile = g_map.tiles[index.y][index.x];
 					s_v2 tile_pos = v2(index.x * tile_size.x, index.y * tile_size.x);
 					if tile > 0 {
-						if rect_collides_rect(get_topleft(player.pos, player_size), player_size, tile_pos, tile_size) {
-							if player.vel.y > 0 {
-								player.y = tile_pos.y - player_size.y / 2;
+						if rect_collides_rect(get_topleft(game.player.pos, player_size), player_size, tile_pos, tile_size) {
+							if game.player.vel.y > 0 {
+								game.player.y = tile_pos.y - player_size.y / 2;
 								is_grounded = 1;
 							}
 							else {
-								player.y = tile_pos.y + tile_size.y + player_size.y / 2;
+								game.player.y = tile_pos.y + tile_size.y + player_size.y / 2;
 							}
-							player.vel.y = 0;
+							game.player.vel.y = 0;
 						}
 					}
 				}
@@ -264,15 +268,15 @@ func void update()
 		}
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		y collision end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-		if player.on_ground {
-			player.vel.x *= 0.8;
+		if game.player.on_ground {
+			game.player.vel.x *= 0.8;
 		}
-		player.on_ground = is_grounded;
-
+		game.player.on_ground = is_grounded;
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		for c_max_projectiles {
-			import projectiles;
+			import game.projectiles;
+
 			if !active[it] { continue; }
 			pos[it].x += vel[it].x;
 			pos[it].y += vel[it].y;
@@ -280,12 +284,12 @@ func void update()
 			s_v2i col = get_tile_collision(pos[it], projectile_size);
 			if col.x == -1 { continue; }
 			active[it] = 0;
-			float distance = v2_distance(pos[it], player.pos);
+			float distance = v2_distance(pos[it], game.player.pos);
 			float strength = smoothstep(128, 32, distance) * 5;
-			s_v2 dir = dir_from_to(pos[it], player.pos);
+			s_v2 dir = dir_from_to(pos[it], game.player.pos);
 			s_v2 push = dir * strength;
-			player.vel.x += push.x;
-			player.vel.y += push.y;
+			game.player.vel.x += push.x;
+			game.player.vel.y += push.y;
 			s_animation anim;
 			anim.id = e_animation.explosion;
 			anim.pos = pos[it];
@@ -297,229 +301,15 @@ func void update()
 
 		camera.offset.x = ww / 2 - player_size.x / 2;
 		camera.offset.y = wh / 2 - player_size.y / 2;
-		camera.pos.x = player.x;
-		camera.pos.y = player.y;
+		camera.pos.x = game.player.x;
+		camera.pos.y = game.player.y;
 
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		gameplay end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		update editor start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	if game_state.curr == e_state.editor {
-
-		if consume_input(&input.save_map) {
-			set_next_state(&editor.state, e_editor_state.save);
-		}
-
-		if consume_input(&input.load_map) {
-			set_next_state(&editor.state, e_editor_state.load);
-		}
-
-		camera.offset.x = ww / 2 - player_size.x / 2;
-		camera.offset.y = wh / 2 - player_size.y / 2;
-		const float cam_speed = 3;
-		if input.move_left {
-			camera.pos.x -= cam_speed;
-		}
-		if input.move_right {
-			camera.pos.x += cam_speed;
-		}
-		if input.move_up {
-			camera.pos.y -= cam_speed;
-		}
-		if input.move_down {
-			camera.pos.y += cam_speed;
-		}
-
-		if editor.state.next > 0 {
-			editor.state.curr = editor.state.next;
-			if editor.state.next == e_editor_state.paint {
-				memset(editor.tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
-			}
-			if editor.state.next == e_editor_state.save {
-				editor.save_load_cursor = 0;
-				editor.save_load_input[0] = 0;
-			}
-			if editor.state.next == e_editor_state.load {
-				editor.save_load_cursor = 0;
-				editor.save_load_input[0] = 0;
-			}
-			editor.state.next = 0;
-		}
-
-		if consume_input(&input.undo) {
-			editor_undo();
-		}
-
-		if editor.state.curr == e_editor_state.select {
-			if consume_input(&input.one) {
-				set_next_state(&editor.state, 2);
-			}
-			if consume_input(&input.left_click_pressed) {
-				editor.selecting = 1;
-				editor.selection_start = world_mouse;
-			}
-
-			if editor.selecting && consume_input(&input.left_click_released) {
-				editor.selecting = 0;
-				memset(editor.tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
-				s_rect rect = get_editor_selection_rectangle();
-				for y: c_max_tiles {
-					for x: c_max_tiles {
-						if editor.map.tiles[y][x] <= 0 { continue; }
-						s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.y);
-						if rect_collides_rect(rect.pos, rect.size, tile_pos, tile_size) {
-							editor.tiles_selected[y][x] = 1;
-						}
-					}
-				}
-			}
-
-			// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		move tiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-			{
-				int[4] move;
-				s_v2i[4] offsets;
-				move[0] = consume_input(&input.move_tile_up);
-				move[1] = consume_input(&input.move_tile_left);
-				move[2] = consume_input(&input.move_tile_right);
-				move[3] = consume_input(&input.move_tile_down);
-				offsets[0] = v2i(0, -1);
-				offsets[1] = v2i(-1, 0);
-				offsets[2] = v2i(1, 0);
-				offsets[3] = v2i(0, 1);
-				for offset: offsets {
-					if !move[offset_index] { continue; }
-					int first_move = 1;
-					s8[c_max_tiles][c_max_tiles] new_tiles;
-					memset(new_tiles, 0, c_max_tiles * c_max_tiles);
-					int[c_max_tiles][c_max_tiles] new_tiles_selected;
-					memset(new_tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
-
-					for y: c_max_tiles {
-						for x: c_max_tiles {
-							if !editor.tiles_selected[y][x] {
-								new_tiles[y][x] = editor.map.tiles[y][x];
-							}
-						}
-					}
-
-					int hit_a_border = 0;
-					for y: c_max_tiles {
-						for x: c_max_tiles {
-							if !editor.tiles_selected[y][x] { continue; }
-							s_v2i index = v2i(x + offset.x, y + offset.y);
-							if !is_valid_tile_index(index) { hit_a_border = 1; }
-							if !hit_a_border {
-								if first_move {
-									first_move = 0;
-									editor_save_undo();
-								}
-								new_tiles[index.y][index.x] = editor.map.tiles[y][x];
-								new_tiles_selected[index.y][index.x] = editor.tiles_selected[y][x];
-							}
-							else {
-								new_tiles[y][x] = editor.map.tiles[y][x];
-								new_tiles_selected[y][x] = editor.tiles_selected[y][x];
-							}
-						}
-					}
-					editor.map.tiles = new_tiles;
-					editor.tiles_selected = new_tiles_selected;
-				}
-			}
-			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		move tiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-			if consume_input(&input.remove_tiles) {
-				int deleted_something = 0;
-				for y: c_max_tiles {
-					for x: c_max_tiles {
-						if editor.tiles_selected[y][x] {
-							if !deleted_something {
-								editor_save_undo();
-								deleted_something = 1;
-							}
-							editor.map.tiles[y][x] = 0;
-							editor.tiles_selected[y][x] = 0;
-						}
-					}
-				}
-				memset(editor.tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
-			}
-		}
-
-		if editor.state.curr == e_editor_state.paint {
-			if consume_input(&input.cancel) {
-				set_next_state(&editor.state, 1);
-			}
-
-			if editor.painting && consume_input(&input.left_click_released) {
-				editor.painting = 0;
-			}
-
-			if input.place_tile {
-				s_v2i index = pos_to_tile_index(world_mouse);
-				if is_valid_tile_index(index) {
-					if editor.map.tiles[index.y][index.x] != 1 && !editor.painting {
-						editor.painting = 1;
-						editor_save_undo();
-					}
-					editor.map.tiles[index.y][index.x] = 1;
-				}
-			}
-		}
-
-		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor save update start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		if editor.state.curr == e_editor_state.save {
-			import editor;
-			if consume_input(&input.cancel) {
-				set_next_state(&state, e_editor_state.select);
-			}
-			while 1 {
-				int c = GetCharPressed();
-				if !c { break; }
-				save_load_input[save_load_cursor] = c;
-				save_load_input[save_load_cursor + 1] = 0;
-				save_load_cursor += 1;
-			}
-			if consume_input(&input.delete_char) {
-				if save_load_cursor > 0 {
-					save_load_cursor -= 1;
-					save_load_input[save_load_cursor] = 0;
-				}
-			}
-			if save_load_input[0] && consume_input(&input.confirm) {
-				do_save_map(save_load_input, &map);
-				set_next_state(&state, e_editor_state.select);
-			}
-		}
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor save update end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor load update start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		if editor.state.curr == e_editor_state.load {
-			import editor;
-			if consume_input(&input.cancel) {
-				set_next_state(&state, e_editor_state.select);
-			}
-			while 1 {
-				int c = GetCharPressed();
-				if !c { break; }
-				save_load_input[save_load_cursor] = c;
-				save_load_input[save_load_cursor + 1] = 0;
-				save_load_cursor += 1;
-			}
-			if consume_input(&input.delete_char) {
-				if save_load_cursor > 0 {
-					save_load_cursor -= 1;
-					save_load_input[save_load_cursor] = 0;
-				}
-			}
-			if save_load_input[0] && consume_input(&input.confirm) {
-				map = do_load_map(save_load_input);
-				set_next_state(&state, e_editor_state.select);
-			}
-		}
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor load update end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		update_editor();
 	}
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		update editor end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 }
 
@@ -578,34 +368,46 @@ func void render(s_map* map)
 		}
 	}
 
-	draw_texture(g_textures[e_texture.player_body], to_screen(player.pos), player_size, WHITE, 1);
-
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		player render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	{
-		s_v2 face_pos = player.pos;
-		draw_texture_scaled(g_textures[e_texture.player_face], to_screen(face_pos), 0.5, WHITE, 1);
-	}
+		import game.player;
+		draw_texture(g_textures[e_texture.player_body], to_screen(pos), player_size, WHITE, 1);
 
-	{
-		s_v2 hand_pos = player.pos;
-		hand_pos.x -= player_size.x * 0.9;
-		hand_pos.y += sinf(time * 6) * 5;
-		draw_texture_scaled(g_textures[e_texture.player_hand], to_screen(hand_pos), 0.5, WHITE, 1);
-	}
+		{
+			s_v2 face_pos = pos;
+			draw_texture_scaled(g_textures[e_texture.player_face], to_screen(face_pos), 0.5, WHITE, 1);
+		}
 
-	{
-		s_v2 hand_pos = player.pos;
-		hand_pos.x += player_size.x * 0.9;
-		hand_pos.y += sinf(time * 6) * 5;
-		draw_texture_scaled(g_textures[e_texture.player_hand], to_screen(hand_pos), 0.5, WHITE, 1);
+		{
+			s_v2 hand_pos = pos;
+			hand_pos.x -= player_size.x * 0.9;
+			hand_pos.y += sinf(time * 6) * 5;
+			draw_texture_scaled(g_textures[e_texture.player_hand], to_screen(hand_pos), 0.5, WHITE, 1);
+		}
+
+		{
+			s_v2 hand_pos = pos;
+			hand_pos.x += player_size.x * 0.9;
+			hand_pos.y += sinf(time * 6) * 5;
+			draw_texture_scaled(g_textures[e_texture.player_hand], to_screen(hand_pos), 0.5, WHITE, 1);
+		}
 	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		player render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		projectiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	for c_max_projectiles {
-		import projectiles;
+		import game.projectiles;
 		if !active[it] { continue; }
 		draw_texture(g_textures[e_texture.projectile], to_screen(pos[it]), projectile_size, WHITE, 1);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		spikes render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	for c_max_spikes {
+		import game.spikes;
+		draw_texture(g_textures[e_texture.projectile], to_screen(pos[it]), spike_size, RED, 0);
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		spikes render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		render editor start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	if game_state.curr == e_state.editor {
@@ -909,10 +711,232 @@ func s_map do_load_map(char* name)
 {
 	FILE_* file = fopen(name, "rb");
 	fseek(file, 0, SEEK_END);
-	int size = ftell(file);
+	ftell(file);
 	fseek(file, 0, SEEK_SET);
 	s_map map;
 	fread(&map, 1, c_max_tiles * c_max_tiles, file);
 	fclose(file);
 	return map;
+}
+
+func void update_editor()
+{
+	import editor;
+	if consume_input(&input.save_map) {
+		set_next_state(&state, e_editor_state.save);
+	}
+
+	if consume_input(&input.load_map) {
+		set_next_state(&state, e_editor_state.load);
+	}
+
+	camera.offset.x = ww / 2 - player_size.x / 2;
+	camera.offset.y = wh / 2 - player_size.y / 2;
+	const float cam_speed = 3;
+	if input.move_left {
+		camera.pos.x -= cam_speed;
+	}
+	if input.move_right {
+		camera.pos.x += cam_speed;
+	}
+	if input.move_up {
+		camera.pos.y -= cam_speed;
+	}
+	if input.move_down {
+		camera.pos.y += cam_speed;
+	}
+
+	if state.next > 0 {
+		state.curr = state.next;
+		if state.next == e_editor_state.paint {
+			memset(tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+		}
+		if state.next == e_editor_state.save {
+			save_load_cursor = 0;
+			save_load_input[0] = 0;
+		}
+		if state.next == e_editor_state.load {
+			save_load_cursor = 0;
+			save_load_input[0] = 0;
+		}
+		state.next = 0;
+	}
+
+	if consume_input(&input.undo) {
+		editor_undo();
+	}
+
+	if state.curr == e_editor_state.select {
+		if consume_input(&input.numbers[1]) {
+			curr_tile = 1;
+			set_next_state(&state, 2);
+		}
+		if consume_input(&input.numbers[2]) {
+			curr_tile = 2;
+			set_next_state(&state, 2);
+		}
+		if consume_input(&input.left_click_pressed) {
+			selecting = 1;
+			selection_start = world_mouse;
+		}
+
+		if selecting && consume_input(&input.left_click_released) {
+			selecting = 0;
+			memset(tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+			s_rect rect = get_editor_selection_rectangle();
+			for y: c_max_tiles {
+				for x: c_max_tiles {
+					if map.tiles[y][x] <= 0 { continue; }
+					s_v2 tile_pos = v2(x * tile_size.x, y * tile_size.y);
+					if rect_collides_rect(rect.pos, rect.size, tile_pos, tile_size) {
+						tiles_selected[y][x] = 1;
+					}
+				}
+			}
+		}
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		move tiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		{
+			int[4] move;
+			s_v2i[4] offsets;
+			move[0] = consume_input(&input.move_tile_up);
+			move[1] = consume_input(&input.move_tile_left);
+			move[2] = consume_input(&input.move_tile_right);
+			move[3] = consume_input(&input.move_tile_down);
+			offsets[0] = v2i(0, -1);
+			offsets[1] = v2i(-1, 0);
+			offsets[2] = v2i(1, 0);
+			offsets[3] = v2i(0, 1);
+			for offset: offsets {
+				if !move[offset_index] { continue; }
+				int first_move = 1;
+				s8[c_max_tiles][c_max_tiles] new_tiles;
+				memset(new_tiles, 0, c_max_tiles * c_max_tiles);
+				int[c_max_tiles][c_max_tiles] new_tiles_selected;
+				memset(new_tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+
+				for y: c_max_tiles {
+					for x: c_max_tiles {
+						if !tiles_selected[y][x] {
+							new_tiles[y][x] = map.tiles[y][x];
+						}
+					}
+				}
+
+				int hit_a_border = 0;
+				for y: c_max_tiles {
+					for x: c_max_tiles {
+						if !tiles_selected[y][x] { continue; }
+						s_v2i index = v2i(x + offset.x, y + offset.y);
+						if !is_valid_tile_index(index) { hit_a_border = 1; }
+						if !hit_a_border {
+							if first_move {
+								first_move = 0;
+								editor_save_undo();
+							}
+							new_tiles[index.y][index.x] = map.tiles[y][x];
+							new_tiles_selected[index.y][index.x] = tiles_selected[y][x];
+						}
+						else {
+							new_tiles[y][x] = map.tiles[y][x];
+							new_tiles_selected[y][x] = tiles_selected[y][x];
+						}
+					}
+				}
+				map.tiles = new_tiles;
+				tiles_selected = new_tiles_selected;
+			}
+		}
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		move tiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+		if consume_input(&input.remove_tiles) {
+			int deleted_something = 0;
+			for y: c_max_tiles {
+				for x: c_max_tiles {
+					if tiles_selected[y][x] {
+						if !deleted_something {
+							editor_save_undo();
+							deleted_something = 1;
+						}
+						map.tiles[y][x] = 0;
+						tiles_selected[y][x] = 0;
+					}
+				}
+			}
+			memset(tiles_selected, 0, c_max_tiles * c_max_tiles * 4);
+		}
+	}
+
+	if state.curr == e_editor_state.paint {
+		if consume_input(&input.cancel) {
+			set_next_state(&state, 1);
+		}
+
+		if painting && consume_input(&input.left_click_released) {
+			painting = 0;
+		}
+
+		if input.place_tile {
+			s_v2i index = pos_to_tile_index(world_mouse);
+			if is_valid_tile_index(index) {
+				if map.tiles[index.y][index.x] != 1 && !painting {
+					painting = 1;
+					editor_save_undo();
+				}
+				map.tiles[index.y][index.x] = 1;
+			}
+		}
+	}
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor save update start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	if state.curr == e_editor_state.save {
+		import editor;
+		if consume_input(&input.cancel) {
+			set_next_state(&state, e_editor_state.select);
+		}
+		while 1 {
+			int c = GetCharPressed();
+			if !c { break; }
+			save_load_input[save_load_cursor] = c;
+			save_load_input[save_load_cursor + 1] = 0;
+			save_load_cursor += 1;
+		}
+		if consume_input(&input.delete_char) {
+			if save_load_cursor > 0 {
+				save_load_cursor -= 1;
+				save_load_input[save_load_cursor] = 0;
+			}
+		}
+		if save_load_input[0] && consume_input(&input.confirm) {
+			do_save_map(save_load_input, &map);
+			set_next_state(&state, e_editor_state.select);
+		}
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor save update end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor load update start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	if state.curr == e_editor_state.load {
+		import editor;
+		if consume_input(&input.cancel) {
+			set_next_state(&state, e_editor_state.select);
+		}
+		while 1 {
+			int c = GetCharPressed();
+			if !c { break; }
+			save_load_input[save_load_cursor] = c;
+			save_load_input[save_load_cursor + 1] = 0;
+			save_load_cursor += 1;
+		}
+		if consume_input(&input.delete_char) {
+			if save_load_cursor > 0 {
+				save_load_cursor -= 1;
+				save_load_input[save_load_cursor] = 0;
+			}
+		}
+		if save_load_input[0] && consume_input(&input.confirm) {
+			map = do_load_map(save_load_input);
+			set_next_state(&state, e_editor_state.select);
+		}
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor load update end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 }

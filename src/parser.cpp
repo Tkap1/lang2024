@@ -40,8 +40,9 @@ func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_aren
 
 		pr = parse_directive(tokenizer, reporter, arena);
 		if(pr.success) {
-			s_node* node = parse_step(pr.node.token.str(), reporter, arena, reporter->ignore_errors);
 			tokenizer = pr.tokenizer;
+			s_node* node = parse_step(pr.node.token.str(), reporter, arena, reporter->ignore_errors);
+			if(!node) { continue; }
 			*current = node;
 			while(*current) {
 				s_node* temp = *current;

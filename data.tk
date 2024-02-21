@@ -44,7 +44,7 @@ struct s_input_data
 	int move_tile_down,
 	int jump,
 	int place_tile,
-	int one,
+	int[10] numbers,
 	int cancel,
 	int left_click_down,
 	int left_click_pressed,
@@ -79,6 +79,7 @@ struct s_camera
 
 struct s_game
 {
+	s_player player,
 	s_spikes spikes,
 	s_projectiles projectiles,
 }
