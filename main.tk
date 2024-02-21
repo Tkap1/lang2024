@@ -777,6 +777,7 @@ func void update_editor()
 		editor_undo();
 	}
 
+
 	if state.curr == e_editor_state.select {
 		if consume_input(&input.numbers[1]) {
 			curr_tile = 1;
@@ -881,6 +882,15 @@ func void update_editor()
 	if state.curr == e_editor_state.paint {
 		if consume_input(&input.cancel) {
 			set_next_state(&state, 1);
+		}
+
+		if consume_input(&input.numbers[1]) {
+			curr_tile = 1;
+			set_next_state(&state, 2);
+		}
+		if consume_input(&input.numbers[2]) {
+			curr_tile = 2;
+			set_next_state(&state, 2);
 		}
 
 		if painting && consume_input(&input.left_click_released) {
