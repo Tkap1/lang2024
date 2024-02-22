@@ -40,6 +40,7 @@ func int main()
 	g_textures[e_texture.explosion11] = load_texture("assets/explosion-d11.png");
 	g_textures[e_texture.explosion12] = load_texture("assets/explosion-d12.png");
 	g_textures[e_texture.projectile] = load_texture("assets/blue_body_circle.png");
+	g_textures[e_texture.spike] = load_texture("assets/spike.png");
 
 	g_animations[e_animation.explosion].delay = 0.025;
 	g_animations[e_animation.explosion].frame_count = 12;
@@ -105,8 +106,6 @@ func void do_input()
 	speed_up = pressed_or_repeat(KEY_KP_ADD);
 	speed_down = pressed_or_repeat(KEY_KP_SUBTRACT);
 
-	reset = IsKeyPressed(KEY_R);
-
 	wheel = GetMouseWheelMove();
 
 	// @Note(tkap, 18/02/2024): Game
@@ -115,6 +114,7 @@ func void do_input()
 			set_next_state(&game_state, 2);
 		}
 
+		reset = IsKeyPressed(KEY_R);
 		shoot = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
 		move_left = IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A);
 		move_right = IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D);
@@ -155,6 +155,8 @@ func void do_input()
 		if is_ctrl_down && IsKeyPressed(KEY_L) {
 			load_map = 1;
 		}
+
+		rotate = pressed_or_repeat(KEY_R);
 
 	}
 
@@ -216,7 +218,7 @@ func void update()
 			if col.x == -1 { continue; }
 			active[it] = 0;
 			float distance = v2_distance(pos[it], game.player.pos);
-			float strength = smoothstep(128, 32, distance) * 5;
+			float strength = smoothstep(256, 64, distance) * 6;
 			s_v2 dir = dir_from_to(pos[it], game.player.pos);
 			s_v2 push = dir * strength;
 			game.player.vel.x += push.x;
@@ -277,12 +279,12 @@ func void render(s_map* map)
 				if tile == 1 {
 					color = WHITE;
 				}
-				draw_texture(g_textures[e_texture.tile], tile_pos, tile_size, color, 0, &game.camera);
+				draw_texture(g_textures[e_texture.tile], tile_pos, tile_size, color, 0, 0, &game.camera);
 				if tile > 0 && game_state.curr == e_state.editor && editor.tiles_selected[yy][xx] {
 					float size = sin2(time * 10) * tile_size.x;
 					s_color temp_color = GREEN;
 					temp_color.a = 150;
-					draw_texture(g_textures[e_texture.tile], get_center(tile_pos, tile_size), v2(size, size), temp_color, 1, &game.camera);
+					draw_texture(g_textures[e_texture.tile], get_center(tile_pos, tile_size), v2(size, size), temp_color, 0, 1, &game.camera);
 				}
 			}
 		}
@@ -292,7 +294,7 @@ func void render(s_map* map)
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		player render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	{
 		import game.player;
-		draw_texture(g_textures[e_texture.player_body], pos, player_size, WHITE, 1, &game.camera);
+		draw_texture(g_textures[e_texture.player_body], pos, player_size, WHITE, 0, 1, &game.camera);
 
 		{
 			s_v2 face_pos = pos;
@@ -319,7 +321,7 @@ func void render(s_map* map)
 	for c_max_projectiles {
 		import game.projectiles;
 		if !active[it] { continue; }
-		draw_texture(g_textures[e_texture.projectile], pos[it], projectile_size, WHITE, 1, &game.camera);
+		draw_texture(g_textures[e_texture.projectile], pos[it], projectile_size, WHITE, 0, 1, &game.camera);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -327,8 +329,11 @@ func void render(s_map* map)
 	for c_max_spikes {
 		import map.spikes;
 		if !active[it] { continue; }
-		s_v2 draw_pos = tile_index_to_pos(pos[it]);
-		draw_texture(g_textures[e_texture.projectile], draw_pos, spike_size, RED, 0, &game.camera);
+		s_spike_data data = get_spike_data(pos[it], rotation[it]);
+		draw_texture(g_textures[e_texture.spike], data.pos, spike_size, WHITE, data.rotation, 0, &game.camera);
+		s_color c = RED;
+		c.a = 100;
+		draw_rect(data.hitbox.pos, data.hitbox.size, c, &game.camera);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		spikes render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -337,14 +342,14 @@ func void render(s_map* map)
 		import map.save_points;
 		if !active[it] { continue; }
 		s_v2 draw_pos = tile_index_to_pos(pos[it]);
-		draw_texture(g_textures[e_texture.projectile], draw_pos, save_point_size, GREEN, 0, &game.camera);
+		draw_texture(g_textures[e_texture.projectile], draw_pos, save_point_size, GREEN, 0, 0, &game.camera);
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		render save points end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 	for animation_count {
 		s_animation* anim = &animations[it];
 		s_animation_data data = g_animations[anim.id];
-		draw_texture(g_textures[data.frames[anim.curr_frame]], anim.pos, player_size * 2, WHITE, 1, &game.camera);
+		draw_texture(g_textures[data.frames[anim.curr_frame]], anim.pos, player_size * 2, WHITE, 0, 1, &game.camera);
 		anim.time += delta;
 		if anim.time > data.delay {
 			anim.time -= data.delay;
@@ -556,8 +561,9 @@ func s_texture load_texture(char* path)
 	return texture;
 }
 
-func void draw_texture(s_texture texture, s_v2 pos, s_v2 size, s_color color, int centered, s_camera* cam)
+func void draw_texture(s_texture texture, s_v2 pos, s_v2 size, s_color color, float rotation, int centered, s_camera* cam)
 {
+	rotation *= (180.0 / pi);
 	if cam {
 		pos = to_screen(pos, *cam);
 		size *= cam.zoom;
@@ -573,7 +579,7 @@ func void draw_texture(s_texture texture, s_v2 pos, s_v2 size, s_color color, in
 		origin.x = size.x / 2;
 		origin.y = size.y / 2;
 	}
-	DrawTexturePro(texture, src, dst, origin, 0, color);
+	DrawTexturePro(texture, src, dst, origin, rotation, color);
 }
 
 func void draw_texture_scaled(s_texture texture, s_v2 pos, float scale, s_color color, int centered, s_camera* cam)
@@ -861,6 +867,10 @@ func void update_editor()
 			set_next_state(&state, 1);
 		}
 
+		if consume_input(&input.rotate) {
+			curr_rotation = (curr_rotation + 1) % 4;
+		}
+
 		handle_curr_tile(0);
 
 		if painting && consume_input(&input.left_click_released) {
@@ -885,6 +895,7 @@ func void update_editor()
 							editor_save_undo();
 						}
 						spike = add_spike(index, &map);
+						map.spikes.rotation[spike] = curr_rotation;
 					}
 				}
 				if curr_tile == 3 {
@@ -1127,8 +1138,8 @@ func void update_player()
 	for c_max_spikes {
 		import game.map;
 		if !spikes.active[it] { continue; }
-		s_v2 spike_pos = tile_index_to_pos(spikes.pos[it]);
-		if rect_collides_rect(from_center(pos, player_size), player_size, spike_pos, spike_size) {
+		s_spike_data data = get_spike_data(spikes.pos[it], spikes.rotation[it]);
+		if rect_collides_rect(from_center(pos, player_size), player_size, data.hitbox.pos, data.hitbox.size) {
 			kill_player = 1;
 			break;
 		}
@@ -1196,4 +1207,59 @@ func void handle_curr_tile(int change_state)
 func float get_game_speed()
 {
 	return speed_arr[game.speed_index];
+}
+
+func float rotation_index_to_angle(int rotation)
+{
+	if rotation == 0 {
+		return pi * 0.5;
+	}
+	if rotation == 1 {
+		return pi;
+	}
+	if rotation == 2 {
+		return pi * 1.5;
+	}
+	if rotation == 2 {
+		return 0;
+	}
+	return 0;
+}
+
+func s_spike_data get_spike_data(s_v2i index, int in_rotation)
+{
+	s_spike_data data;
+	import data;
+	pos = tile_index_to_pos(index);
+	hitbox.pos = pos;
+	hitbox.size = spike_size;
+	if in_rotation == 0 {
+		pos.x += tile_size.x;
+		hitbox.size.x *= 0.5;
+	}
+	if in_rotation == 1 {
+		pos.x += tile_size.x;
+		pos.y += tile_size.y;
+		hitbox.size.y *= 0.5;
+	}
+	if in_rotation == 2 {
+		pos.y += tile_size.y;
+		hitbox.pos.x += tile_size.x * 0.5;
+		hitbox.size.x *= 0.5;
+	}
+	if in_rotation == 3 {
+		hitbox.pos.y += tile_size.y * 0.5;
+		hitbox.size.y *= 0.5;
+	}
+	rotation = rotation_index_to_angle(in_rotation);
+	return data;
+}
+
+func void draw_rect(s_v2 pos, s_v2 size, s_color color, s_camera* camera)
+{
+	if camera {
+		pos = to_screen(pos, *camera);
+		size *= camera.zoom;
+	}
+	DrawRectangle(pos.x, pos.y, size.x, size.y, color);
 }

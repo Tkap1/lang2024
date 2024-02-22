@@ -59,6 +59,7 @@ struct s_input_data
 	int reset,
 	int speed_up,
 	int speed_down,
+	int rotate,
 }
 
 struct s_projectiles
@@ -122,6 +123,7 @@ enum e_texture
 	explosion11,
 	explosion12,
 	projectile,
+	spike,
 }
 
 struct s_state
@@ -140,6 +142,7 @@ struct s_editor_data
 struct s_editor
 {
 	import s_editor_data data,
+	int curr_rotation,
 	int painting,
 	int undo_count,
 	int undo_index,
@@ -181,11 +184,23 @@ struct s_map
 	s_save_points save_points,
 }
 
+struct s_spike_data
+{
+	s_v2 pos,
+	float rotation,
+	s_rect hitbox,
+}
+
+
+
+
+
+
+
 struct FILE_
 {
 	int* foo,
 }
-
 
 const int SEEK_SET = 0;
 const int SEEK_CUR = 1;

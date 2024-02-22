@@ -15,3 +15,4 @@ const float c_max_walk_vel = 1;
 const float c_gravity = 0.07;
 const int c_map_version = 1;
 const float cam_speed = 5;
+const float pi = 3.1415;
