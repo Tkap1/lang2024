@@ -4,6 +4,7 @@ typedef uint8_t b8;
 typedef uint8_t u8;
 typedef uint64_t u64;
 typedef double f64;
+typedef b8 u8;
 
 #define unreferenced(p) (void)p
 #define zero {}

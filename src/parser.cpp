@@ -277,6 +277,8 @@ func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* rep
 	s_token token = zero;
 
 	breakable_block {
+		result.node.func_decl.is_dll_export = tokenizer.consume_token("dll_export", reporter);
+		// @TODO(tkap, 22/02/2024): We should probably fail if we find "dll_export" but then don't find "func"
 		if(!tokenizer.consume_token("func", reporter)) { break; }
 		result.node.type = e_node_func_decl;
 		s_parse_result pr = parse_type(tokenizer, reporter, arena);

@@ -30,16 +30,33 @@ int main(int argc, char** argv)
 
 	s_lin_arena arena = alloc_arena(100 * c_mb);
 
+	b8 build_dll = false;
+	char output_name[1024] = zero;
+	char input_name[1024] = zero;
 	for(int i = 0; i < argc; i++) {
 		if(strcmp(argv[i], "test") == 0) {
 			run_tests(&arena);
 			return 0;
 		}
+		else if(strcmp(argv[i], "dll") == 0) {
+			build_dll = true;
+		}
+		else if(strncmp(argv[i], "in:", 3) == 0) {
+			strcpy(input_name, argv[i] + 3);
+		}
+		else if(strncmp(argv[i], "out:", 4) == 0) {
+			strcpy(output_name, argv[i] + 4);
+		}
+	}
+	if(!input_name[0]) {
+		strcpy(input_name, "main.tk");
+	}
+	if(!output_name[0]) {
+		strcpy(output_name, "output.exe");
 	}
 
-	char* file_name = "main.tk";
 	s_error_reporter reporter = zero;
-	if(compile(file_name, &arena, false, &reporter)) {
+	if(compile(input_name, &arena, false, &reporter, {.build_dll = build_dll, .output_name = output_name})) {
 		printf("Success!\n");
 		u64 data[] = {c_gb, c_mb, c_kb, 1};
 		char* data_str[] = {"gb", "mb", "kb", "b"};
@@ -140,7 +157,7 @@ func s_node* parse_step(char* file_path, s_error_reporter* reporter, s_lin_arena
 	return ast;
 }
 
-func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_reporter* reporter)
+func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_reporter* reporter, s_compile_options options)
 {
 	s_node* ast = parse_step(file_path, reporter, arena, ignore_errors);
 	if(!ast) {
@@ -154,7 +171,31 @@ func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_r
 		return false;
 	}
 
-	return generate_code(ast, arena);
+	char c_file_name[1024] = zero;
+	int c_file_name_index = 0;
+	char* c = file_path;
+	while(*c) {
+		if(*c == '.') { break; }
+		c_file_name[c_file_name_index++] = *c;
+		c += 1;
+	}
+	c_file_name[c_file_name_index++] = '.';
+	c_file_name[c_file_name_index++] = 'c';
+	c_file_name[c_file_name_index++] = 0;
+
+	b8 result = generate_code(ast, arena, c_file_name);
+	s_str_builder<1024> builder;
+	if(options.compile_c_code) {
+		builder.add("pushd build && ");
+		builder.add("cl ..\\%s -Fe:%s -W4 -wd 4244 -Zi -Od -nologo ", c_file_name, options.output_name);
+		if(options.build_dll) {
+			builder.add("-LD ");
+		}
+		builder.add("-link ..\\raylib.lib");
+		system(builder.data);
+		system(alloc_str(arena, "copy build\\%s %s > NUL", options.output_name, options.output_name));
+	}
+	return result;
 }
 
 func void run_tests(s_lin_arena* arena)
@@ -231,7 +272,7 @@ func void run_tests(s_lin_arena* arena)
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
 		arena->used = 0;
 		s_test test = test_data[test_i];
-		b8 success = compile(test.file_path, arena, true, &reporter);
+		b8 success = compile(test.file_path, arena, true, &reporter, {.compile_c_code = false});
 		if(success == test.should_compile) {
 			SetConsoleTextAttribute(hstdout, FOREGROUND_GREEN);
 			printf("%s ", test.file_path);

@@ -1,0 +1,7 @@
+
+external_func int printf(char*);
+
+dll_export func void game()
+{
+	printf("HELLO KIWI BIG FUCK OkayChamp\n");
+}

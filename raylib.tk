@@ -173,7 +173,6 @@ external_func float sinf(float);
 external_func float sqrtf(float);
 external_func double GetTime();
 external_func float GetFrameTime();
-external_func int printf(char*);
 external_func void SetTargetFPS(int);
 external_func void DrawTexturePro(s_texture, s_rect, s_rect, s_v2, float, s_color);
 external_func void SetExitKey(int);

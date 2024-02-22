@@ -168,6 +168,7 @@ struct s_node
 		struct
 		{
 			b8 is_external;
+			b8 is_dll_export;
 			b8 is_operator_overload;
 			e_node operator_overload;
 			int argument_count;

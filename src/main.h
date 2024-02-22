@@ -11,6 +11,13 @@ enum e_error_level
 	e_error_level_fatal,
 };
 
+struct s_compile_options
+{
+	b8 compile_c_code = true;
+	b8 build_dll = false;
+	char* output_name = "output.exe";
+};
+
 struct s_error_reporter
 {
 	e_error_level error_level;
@@ -24,5 +31,5 @@ struct s_error_reporter
 struct s_node;
 
 func void run_tests(s_lin_arena* arena);
-func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_reporter* reporter);
+func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_reporter* reporter, s_compile_options options = {});
 func s_node* parse_step(char* file_path, s_error_reporter* reporter, s_lin_arena* arena, b8 ignore_errors);

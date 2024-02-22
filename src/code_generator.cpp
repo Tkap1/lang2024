@@ -1,6 +1,6 @@
 
 
-func b8 generate_code(s_node* ast, s_lin_arena* arena)
+func b8 generate_code(s_node* ast, s_lin_arena* arena, char* c_file_name)
 {
 	t_code_builder* builder = (t_code_builder*)arena->alloc_zero(sizeof(t_code_builder));
 	builder->add_line("#include <stdint.h>");
@@ -21,7 +21,7 @@ func b8 generate_code(s_node* ast, s_lin_arena* arena)
 		generate_node(node, builder, context, arena);
 	}
 
-	write_file("output.c", builder->data, builder->len);
+	write_file(c_file_name, builder->data, builder->len);
 
 	return true;
 }
@@ -32,6 +32,9 @@ func void generate_node(s_node* node, t_code_builder* builder, s_code_gen_contex
 
 	switch(node->type) {
 		case e_node_func_decl: {
+			if(node->func_decl.is_dll_export) {
+				builder->add("__declspec(dllexport) ");
+			}
 			node_to_c_str(node->func_decl.return_type, builder, context, arena);
 			builder->add(" %s(", node->func_decl.name.str(arena));
 			if(node->func_decl.argument_count <= 0) {
