@@ -72,6 +72,7 @@ enum e_node
 	e_node_include,
 	e_node_data_enum,
 	e_node_data_enum_member,
+	e_node_func_ptr,
 };
 
 enum e_context
@@ -263,6 +264,14 @@ struct s_node
 			int member_count;
 			s_node* members;
 		} data_enum_member;
+
+		struct
+		{
+			s_node* type;
+			s_token name;
+			int argument_count;
+			s_node* arguments;
+		} func_ptr;
 	};
 };
 

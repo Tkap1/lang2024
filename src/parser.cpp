@@ -774,6 +774,53 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 		goto success;
 	}
 
+	if(tokenizer.consume_token("func_ptr", reporter)) {
+
+		result.node.type = e_node_func_ptr;
+		s_parse_result pr = parse_type(tokenizer, reporter, arena);
+		if(!pr.success) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected a type after 'func_ptr'");
+			return result;
+		}
+		result.node.func_ptr.type = alloc_node(pr.node, arena);
+		tokenizer = pr.tokenizer;
+
+		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected identifier");
+			return result;
+		}
+		result.node.func_ptr.name = token;
+
+		if(!tokenizer.consume_token(e_token_open_paren, &token, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected '('");
+			return result;
+		}
+
+		s_node** curr_arg = &result.node.func_ptr.arguments;
+		while(true) {
+			pr = parse_type(tokenizer, reporter, arena);
+			if(!pr.success) { break; }
+			tokenizer = pr.tokenizer;
+			curr_arg = advance_node(curr_arg, pr.node, arena);
+			result.node.func_ptr.argument_count += 1;
+			if(!tokenizer.consume_token(e_token_comma, reporter)) {
+				break;
+			}
+		}
+
+		if(!tokenizer.consume_token(e_token_close_paren, &token, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ')'");
+			return result;
+		}
+
+		if(!tokenizer.consume_token(e_token_semicolon, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'");
+			return result;
+		}
+
+		goto success;
+	}
+
 	if(tokenizer.consume_token("return", reporter)) {
 
 		result.node.type = e_node_return;

@@ -1,0 +1,7 @@
+
+external_func void* GetProcAddress(void*, char*);
+
+func int main()
+{
+	func_ptr void game_type(int);
+}

@@ -555,6 +555,12 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			return true;
 		} break;
 
+		case e_node_func_ptr: {
+			// @TODO(tkap, 22/02/2024): type check return type and parameters
+			node->type_checked = true;
+			return true;
+		} break;
+
 		case e_node_import: {
 			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;

@@ -33,6 +33,8 @@
 build/
 compiler_output.txt
 output.c
+game.c
+platform.c
 assets/
 kenney_shape-characters/
 .vs/

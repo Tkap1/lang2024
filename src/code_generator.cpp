@@ -245,6 +245,16 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_lin_arena*
 			}
 		} break;
 
+		case e_node_func_ptr: {
+			builder->add_tabs("typedef ");
+			node_to_c_str(node->func_ptr.type, builder, context, arena);
+			builder->add("(*%s)(", node->func_ptr.name.str(arena));
+			for_node(arg, node->func_ptr.arguments) {
+				node_to_c_str(arg, builder, context, arena);
+			}
+			builder->add_line(");");
+		} break;
+
 		case e_node_while: {
 			builder->add_tabs("while(");
 			if(!node->nwhile.condition) {
