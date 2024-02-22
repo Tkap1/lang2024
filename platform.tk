@@ -17,10 +17,14 @@ func int main()
 
 	func_ptr void game_type(void*);
 	void* dll = 0;
+	game_type do_game;
 
 	while !WindowShouldClose() {
+		void* temp = dll;
 		dll = hot_reload("game.dll", "temp_game.dll", dll);
-		game_type do_game = GetProcAddress(dll, "do_game");
+		if temp != dll {
+			do_game = GetProcAddress(dll, "do_game");
+		}
 		do_game(memory);
 		Sleep(1);
 	}
