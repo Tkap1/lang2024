@@ -1,3 +1,3 @@
 @echo off
 
-call run.bat && call build_generated.bat
+call run.bat && start output.exe
