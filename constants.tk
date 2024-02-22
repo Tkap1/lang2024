@@ -1,6 +1,7 @@
 
 
 const int c_max_projectiles = 128;
+const int c_max_save_points = 128;
 const int c_max_spikes = 128;
 const int c_max_tiles = 128;
 const int c_editor_max_undo = 16;

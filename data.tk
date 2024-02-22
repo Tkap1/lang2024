@@ -56,6 +56,9 @@ struct s_input_data
 	int confirm,
 	int delete_char,
 	float wheel,
+	int reset,
+	int speed_up,
+	int speed_down,
 }
 
 struct s_projectiles
@@ -79,11 +82,20 @@ struct s_camera
 	s_v2 offset,
 }
 
+struct s_save_points
+{
+	b8[c_max_save_points] active,
+	s_v2i[c_max_save_points] pos,
+}
+
 struct s_game
 {
+	int speed_index,
+	s_camera camera,
 	s_player player,
-	s_spikes spikes,
 	s_projectiles projectiles,
+	s_map map,
+	int curr_save_point,
 }
 
 enum e_animation
@@ -166,6 +178,7 @@ struct s_map
 {
 	s8[c_max_tiles][c_max_tiles] tiles,
 	s_spikes spikes,
+	s_save_points save_points,
 }
 
 struct FILE_
