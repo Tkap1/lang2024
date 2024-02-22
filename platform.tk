@@ -1,7 +1,28 @@
 
-external_func void* GetProcAddress(void*, char*);
+
+#include "hot_reload.tk"
+#include "raylib.tk"
+#include "shared.tk"
+
+external_func void* calloc(u64, u64);
 
 func int main()
 {
-	func_ptr void game_type(int);
+	SetTraceLogLevel(LOG_WARNING);
+	SetConfigFlags(FLAG_VSYNC_HINT);
+	InitWindow(ww, wh, "GAME");
+	SetExitKey(0);
+
+	void* memory = calloc(1, 1024*1024*100);
+
+	func_ptr void game_type(void*);
+	void* dll = 0;
+
+	while !WindowShouldClose() {
+		dll = hot_reload("game.dll", "temp_game.dll", dll);
+		game_type do_game = GetProcAddress(dll, "do_game");
+		do_game(memory);
+		Sleep(1);
+	}
 }
+

@@ -122,6 +122,7 @@ struct s_scope
 	s_sarray<s_node*, 128> types;
 	s_sarray<s_node*, 256> vars;
 	s_sarray<s_node*, 128> imports;
+	s_sarray<s_node*, 128> func_ptrs;
 };
 
 struct s_node
@@ -134,8 +135,8 @@ struct s_node
 	s_token token;
 	int pointer_level;
 	b8 dont_generate;
-	int size_in_bytes;
-	int array_capacity; // @Note(tkap, 17/02/2024): For e_node_subscript
+	s64 size_in_bytes;
+	s64 array_capacity; // @Note(tkap, 17/02/2024): For e_node_subscript
 	int enum_value;
 	s_node* temp_var_decl;
 	s_node* operator_overload_func;
@@ -223,7 +224,7 @@ struct s_node
 
 		struct
 		{
-			int value;
+			s64 value;
 		} integer;
 
 		struct

@@ -557,7 +557,7 @@ func s_parse_result parse_sub_expression(s_tokenizer tokenizer, s_error_reporter
 	if(tokenizer.consume_token(e_token_integer, &token, reporter)) {
 		result.node.type = e_node_integer;
 		result.node.token = token;
-		result.node.integer.value = atoi(token.str(arena));
+		result.node.integer.value = strtoll(token.str(arena), null, 10);
 		goto success;
 	}
 	if(tokenizer.consume_token(e_token_float, &token, reporter)) {

@@ -91,12 +91,26 @@ struct s_save_points
 
 struct s_game
 {
+	int initialized,
 	int speed_index,
 	s_camera camera,
 	s_player player,
 	s_projectiles projectiles,
 	s_map map,
 	int curr_save_point,
+	int animation_count,
+	s_animation[128] animations,
+	s_input_data input,
+	s_state state,
+	s_v2 tile_size,
+	s_v2 player_size,
+	s_v2 projectile_size,
+	s_v2 spike_size,
+	s_v2 save_point_size,
+	float update_timer,
+	s_editor editor,
+	s_texture[e_texture.count] g_textures,
+	s_animation_data[e_animation.count] g_animations,
 }
 
 enum e_animation

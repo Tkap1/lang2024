@@ -557,6 +557,9 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 
 		case e_node_func_ptr: {
 			// @TODO(tkap, 22/02/2024): type check return type and parameters
+			if(!add_func_pointer_to_scope(data, node, reporter, arena)) {
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
@@ -1193,11 +1196,11 @@ func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data, s_l
 
 			f64 left_val;
 			if(left.value.type == e_node_float) { left_val = left.value.nfloat.value; }
-			else { left_val = left.value.integer.value; }
+			else { left_val = (f64)left.value.integer.value; }
 
 			f64 right_val;
 			if(right.value.type == e_node_float) { right_val = right.value.nfloat.value; }
-			else { right_val = right.value.integer.value; }
+			else { right_val = (f64)right.value.integer.value; }
 
 			f64 val_result = left_val + right_val;
 			b8 is_int = left.value.type != e_node_float && right.value.type != e_node_float;
@@ -1221,11 +1224,11 @@ func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data, s_l
 			if(!right.valid) { return zero; }
 			f64 left_val;
 			if(left.value.type == e_node_float) { left_val = left.value.nfloat.value; }
-			else { left_val = left.value.integer.value; }
+			else { left_val = (f64)left.value.integer.value; }
 
 			f64 right_val;
 			if(right.value.type == e_node_float) { right_val = right.value.nfloat.value; }
-			else { right_val = right.value.integer.value; }
+			else { right_val = (f64)right.value.integer.value; }
 
 			f64 val_result = left_val * right_val;
 			b8 is_int = left.value.type != e_node_float && right.value.type != e_node_float;
@@ -1248,11 +1251,11 @@ func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_arr* data, s_l
 			if(!right.valid) { return zero; }
 			f64 left_val;
 			if(left.value.type == e_node_float) { left_val = left.value.nfloat.value; }
-			else { left_val = left.value.integer.value; }
+			else { left_val = (f64)left.value.integer.value; }
 
 			f64 right_val;
 			if(right.value.type == e_node_float) { right_val = right.value.nfloat.value; }
-			else { right_val = right.value.integer.value; }
+			else { right_val = (f64)right.value.integer.value; }
 
 			f64 val_result = left_val / right_val;
 			b8 is_int = left.value.type != e_node_float && right.value.type != e_node_float;
@@ -1302,6 +1305,22 @@ func b8 add_var_to_scope(t_scope_arr* data, s_node* var, s_error_reporter* repor
 	}
 	s_scope* scope1 = *scope2;
 	scope1->vars.add(var);
+	return true;
+}
+
+func b8 add_func_pointer_to_scope(t_scope_arr* data, s_node* func_ptr, s_error_reporter* reporter, s_lin_arena* arena)
+{
+	assert(func_ptr->type == e_node_func_ptr);
+	s_token token = func_ptr->func_ptr.name;
+	if(!can_thing_be_added_to_scope(token, data, reporter, arena)) {
+		return false;
+	}
+	s_scope** scope2 = data->get(data->count - 1);
+	if(!*scope2) {
+		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
+	}
+	s_scope* scope1 = *scope2;
+	scope1->func_ptrs.add(func_ptr);
 	return true;
 }
 
@@ -1400,6 +1419,17 @@ func s_node* get_type_by_name(char* name, t_scope_arr* data)
 			s_scope* scope1 = *scope2;
 			foreach_val(type_i, type, scope1->types) {
 				if(strcmp(type->basic_type.name, name) == 0) {
+					return type;
+				}
+			}
+		}
+	}
+	for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
+		s_scope** scope2 = data->get(scope2_i);
+		if(*scope2) {
+			s_scope* scope1 = *scope2;
+			foreach_val(type_i, type, scope1->func_ptrs) {
+				if(type->func_ptr.name.equals(name)) {
 					return type;
 				}
 			}
@@ -1592,10 +1622,10 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 }
 
 
-func int get_size_in_bytes(s_node* node, t_scope_arr* data, s_lin_arena* arena)
+func s64 get_size_in_bytes(s_node* node, t_scope_arr* data, s_lin_arena* arena)
 {
 	assert(node->type_checked);
-	int result = 0;
+	s64 result = 0;
 	switch(node->type) {
 		case e_node_array: {
 			assert(node->array.size_expr->type == e_node_integer);

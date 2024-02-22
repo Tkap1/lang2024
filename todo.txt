@@ -84,3 +84,5 @@ do we want to handle alignment bullshit with sizeof?
 having a return something inside a function that returns void says that the function doesnt' exist
 
 import game.projectiles as p;
+
+Raticide: keep a list of includes, skip if already included.
