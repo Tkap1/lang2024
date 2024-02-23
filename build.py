@@ -38,12 +38,9 @@ def main():
 			print(f"Error: Unknown argument '{arg}'")
 			return
 
-	# @Note(tkap, 29/11/2023): DLL
-
 	if do_time:
 		start_time = time.time()
 
-	# @Note(tkap, 29/11/2023): No DLL
 	success = compile(
 		["..\\src\\main.cpp"], name="lang",
 		libs=["user32", "OpenGL32", "Shell32", "Ole32", "Shlwapi", "Winmm"], no_console_in_release=True,

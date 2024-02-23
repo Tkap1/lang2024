@@ -226,4 +226,6 @@ external_func u64 fread(void*, u64, u64, FILE_*);
 external_func u64 fwrite(void*, u64, u64, FILE_*);
 external_func s32 ftell(FILE_*);
 external_func int fseek(FILE_*, s32, s32);
+external_func int fseek(FILE_*, s32, s32);
+external_func int system(char*);
 
