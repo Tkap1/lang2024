@@ -210,12 +210,18 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_lin_arena*
 					node_to_c_str(node->var_decl.type, builder, context, arena);
 					builder->add(" %s", node->var_decl.name.str(arena));
 					get_suffix_str(node->var_decl.type, builder, arena);
-					builder->add_line(";");
 					if(node->var_decl.value) {
-						builder->add_tabs("memcpy(%s, ", node->var_decl.name.str(arena));
-						node_to_c_str(node->var_decl.value, builder, context, arena);
-						builder->add_line(", %i);", node->var_type->size_in_bytes);
+						if(node->var_decl.value->type == e_node_array_literal) {
+							builder->add(" = ");
+							node_to_c_str(node->var_decl.value, builder, context, arena);
+						}
+						else {
+							builder->add_tabs("memcpy(%s, ", node->var_decl.name.str(arena));
+							node_to_c_str(node->var_decl.value, builder, context, arena);
+							builder->add_line(", %i);", node->var_type->size_in_bytes);
+						}
 					}
+					builder->add_line(";");
 				}
 				else {
 					builder->add_tabs("%s", get_name(node->var_decl.type, arena));
@@ -400,6 +406,17 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 				node_to_c_str(node->left, builder, context, arena);
 				builder->add(")");
 			}
+		} break;
+
+		case e_node_array_literal: {
+			builder->add("{");
+			for_node(expr, node->array_literal.expressions) {
+				node_to_c_str(expr, builder, context, arena);
+				if(expr->next) {
+					builder->add(", ");
+				}
+			}
+			builder->add("}");
 		} break;
 
 		case e_node_member_access: {

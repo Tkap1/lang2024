@@ -554,6 +554,33 @@ func s_parse_result parse_sub_expression(s_tokenizer tokenizer, s_error_reporter
 		goto success;
 	}
 
+	if(tokenizer.peek_token(e_token_dot, reporter) && tokenizer.peek_token(e_token_open_bracket, reporter, 1)) {
+		tokenizer.next_token(reporter);
+		tokenizer.next_token(reporter);
+		result.node.type = e_node_array_literal;
+		s_node** curr_expr = &result.node.array_literal.expressions;
+		while(true) {
+			s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
+			if(!pr.success) { break; }
+			tokenizer = pr.tokenizer;
+			curr_expr = advance_node(curr_expr, pr.node, arena);
+			result.node.array_literal.expression_count += 1;
+			if(!tokenizer.consume_token(e_token_comma, reporter)) { break; }
+		}
+
+		if(result.node.array_literal.expression_count <= 0) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected at least 1 expression inside '.[]'");
+			return result;
+		}
+
+		if(!tokenizer.consume_token(e_token_close_bracket, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ']' to end array literal");
+			return result;
+		}
+
+		goto success;
+	}
+
 	if(tokenizer.consume_token(e_token_integer, &token, reporter)) {
 		result.node.type = e_node_integer;
 		result.node.token = token;

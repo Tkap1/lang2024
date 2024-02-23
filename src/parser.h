@@ -73,6 +73,7 @@ enum e_node
 	e_node_data_enum,
 	e_node_data_enum_member,
 	e_node_func_ptr,
+	e_node_array_literal,
 };
 
 enum e_context
@@ -273,6 +274,12 @@ struct s_node
 			int argument_count;
 			s_node* arguments;
 		} func_ptr;
+
+		struct
+		{
+			int expression_count;
+			s_node* expressions;
+		} array_literal;
 	};
 };
 

@@ -774,6 +774,17 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			return true;
 		} break;
 
+		case e_node_array_literal: {
+			// @TODO(tkap, 23/02/2024): check that the type of each expression is the same as the type of the array
+			for_node(expr, node->array_literal.expressions) {
+				if(!type_check_expr(expr, reporter, data, arena, context)) {
+					return false;
+				}
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
 		// case e_node_multiply: {
 		// 	// @TODO(tkap, 11/02/2024):
 		// 	if(!type_check_expr(node->left, reporter, data, arena, context)) { return false; }
