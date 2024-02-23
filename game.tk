@@ -796,16 +796,11 @@ func void update_editor()
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		move tiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		{
-			int[4] move;
-			s_v2i[4] offsets;
-			move[0] = consume_input(&game.input.move_tile_up);
-			move[1] = consume_input(&game.input.move_tile_left);
-			move[2] = consume_input(&game.input.move_tile_right);
-			move[3] = consume_input(&game.input.move_tile_down);
-			offsets[0] = v2i(0, -1);
-			offsets[1] = v2i(-1, 0);
-			offsets[2] = v2i(1, 0);
-			offsets[3] = v2i(0, 1);
+			s_v2i[4] offsets = .[v2i(0, -1), v2i(-1, 0), v2i(1, 0), v2i(0, 1)];
+			int[4] move = .[
+				consume_input(&game.input.move_tile_up), consume_input(&game.input.move_tile_left),
+				consume_input(&game.input.move_tile_right), consume_input(&game.input.move_tile_down)
+			];
 			for offset: offsets {
 				if !move[offset_index] { continue; }
 				int first_move = 1;

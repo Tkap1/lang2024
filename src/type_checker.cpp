@@ -389,16 +389,20 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 		} break;
 
 		case e_node_for: {
-			// @TODO(tkap, 12/02/2024):
 			if(!type_check_expr(node->nfor.expr, reporter, data, arena, context)) {
 				return false;
 			}
+			if(node->nfor.next_expr && !type_check_expr(node->nfor.next_expr, reporter, data, arena, context)) {
+				return false;
+			}
+
 			assert(node->nfor.expr->var_type);
 			assert(node->nfor.body);
 
 			if(!node->nfor.generated_iterators) {
 				node->nfor.generated_iterators = true;
 				if(node->nfor.expr->var_type->type == e_node_array) {
+					assert(!node->nfor.next_expr);
 					if(node->nfor.iterator_name.len <= 0) {
 						node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 8, .at = "it_index"};
 						node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
@@ -413,7 +417,6 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 					iterator_index.var_decl.name.line = node->nfor.expr->token.line;
 					iterator_index.token.file = node->nfor.expr->token.file;
 					iterator_index.token.line = node->nfor.expr->token.line;
-					node->nfor.upper_bound = node->nfor.expr->var_type->array.size_expr;
 
 					s_node iterator = zero;
 					s_node value = zero;
@@ -456,7 +459,14 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 					iterator_index.token.file = node->nfor.expr->token.file;
 					iterator_index.token.line = node->nfor.expr->token.line;
 					node->nfor.body->compound.statements = alloc_node(iterator_index, arena);
-					node->nfor.upper_bound = node->nfor.expr;
+					// @TODO(tkap, 23/02/2024): This is garbage. Just set this in the parser, should be easy.
+					if(node->nfor.next_expr) {
+						node->nfor.upper_bound = node->nfor.next_expr;
+						node->nfor.lower_bound = node->nfor.expr;
+					}
+					else {
+						node->nfor.upper_bound = node->nfor.expr;
+					}
 				}
 			}
 

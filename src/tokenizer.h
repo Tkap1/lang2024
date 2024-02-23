@@ -38,6 +38,7 @@ enum e_token
 	e_token_address_of,
 	e_token_pound,
 	e_token_colon,
+	e_token_dot_dot,
 };
 
 struct s_token

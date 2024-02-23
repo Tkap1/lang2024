@@ -278,7 +278,14 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_lin_arena*
 
 		case e_node_for: {
 			char* iterator_name = node->nfor.iterator_index_name.str(arena);
-			builder->add_tabs("for(int %s = 0; %s < ", iterator_name, iterator_name);
+			builder->add_tabs("for(int %s = ", iterator_name);
+			if(node->nfor.lower_bound) {
+				node_to_c_str(node->nfor.lower_bound, builder, context, arena);
+			}
+			else {
+				builder->add("0");
+			}
+			builder->add("; %s < ", iterator_name);
 			node_to_c_str(node->nfor.upper_bound, builder, context, arena);
 			builder->add_line("; %s += 1)", iterator_name);
 			generate_statement(node->nfor.body, builder, arena);

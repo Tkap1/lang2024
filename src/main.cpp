@@ -265,6 +265,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/operator_overload4.tk", true},
 		{"tests/dereference4.tk", true},
 		{"tests/array_literal.tk", true},
+		{"tests/for_starting_index.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

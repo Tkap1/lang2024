@@ -74,6 +74,7 @@ enum e_node
 	e_node_data_enum_member,
 	e_node_func_ptr,
 	e_node_array_literal,
+	e_node_for_range,
 };
 
 enum e_context
@@ -239,7 +240,9 @@ struct s_node
 			s_token iterator_index_name;
 			s_token iterator_name;
 			s_node* expr;
+			s_node* next_expr; // @TODO(tkap, 23/02/2024): better name
 			s_node* body;
+			s_node* lower_bound;
 			s_node* upper_bound;
 		} nfor;
 

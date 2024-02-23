@@ -913,6 +913,16 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 		result.node.nfor.expr = alloc_node(pr.node, arena);
 		tokenizer = pr.tokenizer;
 
+		if(tokenizer.consume_token(e_token_dot_dot, reporter)) {
+			pr = parse_expression(tokenizer, reporter, 0, arena);
+			if(!pr.success) {
+				reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after '..'");
+				return result;
+			}
+			result.node.nfor.next_expr = alloc_node(pr.node, arena);
+			tokenizer = pr.tokenizer;
+		}
+
 		pr = parse_statement(tokenizer, reporter, arena);
 		if(!pr.success || pr.node.type != e_node_compound) {
 			reporter->fatal(tokenizer.file, tokenizer.line, "Expected '{' after 'for'");

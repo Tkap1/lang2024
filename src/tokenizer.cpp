@@ -73,18 +73,16 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 
 	else if(is_number(*at)) {
 		e_token token_type = e_token_integer;
-		b8 found_dot = false;
 		char* start = at;
 		at += 1;
 		while(true) {
 			while(is_number(*at)) {
 				at += 1;
 			}
-			if(*at == '.') {
-				if(found_dot) {
-					reporter->fatal(file, line, "Bad number");
-				}
-				found_dot = true;
+			if(*at == '.' && at[1] == '.') {
+				break;
+			}
+			else if(*at == '.') {
 				token_type = e_token_float;
 				at += 1;
 				continue;
@@ -175,6 +173,13 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 
 	else if(*at == '<' && at[1] == '=') {
 		token.type = e_token_less_than_or_equal;
+		token.at = at;
+		token.len = 2;
+		at += 2;
+	}
+
+	else if(*at == '.' && at[1] == '.') {
+		token.type = e_token_dot_dot;
 		token.at = at;
 		token.len = 2;
 		at += 2;
