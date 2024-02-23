@@ -242,6 +242,8 @@ struct s_node
 			s_node* expr;
 			s_node* next_expr; // @TODO(tkap, 23/02/2024): better name
 			s_node* body;
+
+			// @TODO(tkap, 23/02/2024): Get rid of expr and next expr? Just use these two. And set them at parsing time, not in typecheck
 			s_node* lower_bound;
 			s_node* upper_bound;
 		} nfor;

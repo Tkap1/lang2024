@@ -80,6 +80,7 @@ struct s_camera
 {
 	float zoom,
 	s_v2 pos,
+	s_v2 target_pos,
 	s_v2 offset,
 }
 
@@ -92,6 +93,7 @@ struct s_save_points
 struct s_game
 {
 	int initialized,
+	float time,
 	int speed_index,
 	s_camera camera,
 	s_player player,
@@ -151,6 +153,8 @@ struct s_editor_data
 {
 	s_map map,
 	int[c_max_tiles][c_max_tiles] tiles_selected,
+	int[c_max_spikes] spikes_selected,
+	int[c_max_save_points] save_points_selected,
 }
 
 struct s_editor
@@ -228,4 +232,4 @@ external_func s32 ftell(FILE_*);
 external_func int fseek(FILE_*, s32, s32);
 external_func int fseek(FILE_*, s32, s32);
 external_func int system(char*);
-
+external_func int printf(char*);

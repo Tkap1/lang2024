@@ -86,7 +86,7 @@ dll_export func void do_game(void* memory)
 	if(game.state.curr == e_state.editor) {
 		map = &game.editor.map;
 	}
-	render(map);
+	render(map, game.update_timer / c_update_delay);
 
 }
 
@@ -232,8 +232,8 @@ func void update()
 		}
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-		game.camera.pos.x = game.player.x;
-		game.camera.pos.y = game.player.y;
+		game.camera.target_pos = game.player.pos;
+		game.camera.pos = lerp_v2(game.camera.pos, game.camera.target_pos, 0.05);
 
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		gameplay end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -244,12 +244,12 @@ func void update()
 
 }
 
-func void render(s_map* map)
+func void render(s_map* map, float dt)
 {
 	BeginDrawing();
 	ClearBackground(BLACK);
 
-	float time = GetTime();
+	game.time = GetTime();
 
 	mouse = GetMousePosition();
 	world_mouse = to_world(mouse, game.camera);
@@ -261,19 +261,17 @@ func void render(s_map* map)
 		int right = bounds.size.x / game.tile_size.x + 1;
 		int top = bounds.y / game.tile_size.y - 1;
 		int bottom = bounds.size.y / game.tile_size.y + 1;
-		for y: (bottom - top) {
-			int yy = top + y;
-			if yy < 0 { continue; }
-			if yy >= c_max_tiles { continue; }
-			for x: (right - left) {
-				int xx = left + x;
-				if xx < 0 { continue; }
-				if xx >= c_max_tiles { continue; }
-				s8 tile = map.tiles[yy][xx];
-				s_v2 tile_pos = v2(xx * game.tile_size.x, yy * game.tile_size.y);
+		for y: top..bottom {
+			if y < 0 { continue; }
+			if y >= c_max_tiles { continue; }
+			for x: left..right {
+				if x < 0 { continue; }
+				if x >= c_max_tiles { continue; }
+				s8 tile = map.tiles[y][x];
+				s_v2 tile_pos = v2(x * game.tile_size.x, y * game.tile_size.y);
 				s_color color = DARK;
 				if tile == 0 {
-					if xx % 2 == 0 {
+					if x % 2 == 0 {
 						color = {100, 25, 25, 255};
 					}
 				}
@@ -281,11 +279,8 @@ func void render(s_map* map)
 					color = WHITE;
 				}
 				draw_texture(game.g_textures[e_texture.tile], tile_pos, game.tile_size, color, 0, 0, &game.camera);
-				if tile > 0 && game.state.curr == e_state.editor && game.editor.tiles_selected[yy][xx] {
-					float size = sin2(time * 10) * game.tile_size.x;
-					s_color temp_color = GREEN;
-					temp_color.a = 150;
-					draw_texture(game.g_textures[e_texture.tile], get_center(tile_pos, game.tile_size), v2(size, size), temp_color, 0, 1, &game.camera);
+				if game.state.curr == e_state.editor && game.editor.tiles_selected[y][x] {
+					draw_highlight(get_center(tile_pos, game.tile_size));
 				}
 			}
 		}
@@ -305,14 +300,14 @@ func void render(s_map* map)
 		{
 			s_v2 hand_pos = pos;
 			hand_pos.x -= game.player_size.x * 0.9;
-			hand_pos.y += sinf(time * 6) * 5;
+			hand_pos.y += sinf(game.time * 6) * 5;
 			draw_texture_scaled(game.g_textures[e_texture.player_hand], hand_pos, 0.5, WHITE, 1, &game.camera);
 		}
 
 		{
 			s_v2 hand_pos = pos;
 			hand_pos.x += game.player_size.x * 0.9;
-			hand_pos.y += sinf(time * 6) * 5;
+			hand_pos.y += sinf(game.time * 6) * 5;
 			draw_texture_scaled(game.g_textures[e_texture.player_hand], hand_pos, 0.5, WHITE, 1, &game.camera);
 		}
 	}
@@ -335,6 +330,9 @@ func void render(s_map* map)
 		s_color c = RED;
 		c.a = 100;
 		draw_rect(data.hitbox.pos, data.hitbox.size, c, &game.camera);
+		if game.state.curr == e_state.editor && game.editor.spikes_selected[it] {
+			draw_highlight(get_center(tile_index_to_pos(pos[it]), game.spike_size));
+		}
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		spikes render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -344,6 +342,9 @@ func void render(s_map* map)
 		if !active[it] { continue; }
 		s_v2 draw_pos = tile_index_to_pos(pos[it]);
 		draw_texture(game.g_textures[e_texture.projectile], draw_pos, game.save_point_size, GREEN, 0, 0, &game.camera);
+		if game.state.curr == e_state.editor && game.editor.save_points_selected[it] {
+			draw_highlight(get_center(draw_pos, game.save_point_size));
+		}
 	}
 	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		render save points end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -412,11 +413,9 @@ func void render(s_map* map)
 func s_v2i get_tile_collision(s_v2 pos, s_v2 size)
 {
 	s_v2i base_index = v2i(floorf(pos.x / game.tile_size.x), floorf(pos.y / game.tile_size.y));
-	for y: 7 {
-		int yy = -3 + y;
-		for x: 7 {
-			int xx = -3 + x;
-			s_v2i index = v2i(base_index.x + xx, base_index.y + yy);
+	for y: -3..4 {
+		for x: -3..4 {
+			s_v2i index = v2i(base_index.x + x, base_index.y + y);
 			if index.x < 0 || index.x >= c_max_tiles { continue; }
 			if index.y < 0 || index.y >= c_max_tiles { continue; }
 
@@ -792,6 +791,26 @@ func void update_editor()
 					}
 				}
 			}
+
+			for c_max_spikes {
+				import map.spikes;
+				if !active[it] { continue; }
+				spikes_selected[it] = 0;
+				s_v2 spike_pos = tile_index_to_pos(pos[it]);
+				if rect_collides_rect(rect.pos, rect.size, spike_pos, game.spike_size) {
+					spikes_selected[it] = 1;
+				}
+			}
+
+			for c_max_save_points {
+				import map.save_points;
+				if !active[it] { continue; }
+				save_points_selected[it] = 0;
+				s_v2 save_point_pos = tile_index_to_pos(pos[it]);
+				if rect_collides_rect(rect.pos, rect.size, save_point_pos, game.save_point_size) {
+					save_points_selected[it] = 1;
+				}
+			}
 		}
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		move tiles start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
@@ -839,6 +858,26 @@ func void update_editor()
 				}
 				map.tiles = new_tiles;
 				tiles_selected = new_tiles_selected;
+
+				for c_max_spikes {
+					import map.spikes;
+					if !active[it] { continue; }
+					if !spikes_selected[it] { continue; }
+					s_v2i index = v2i(pos[it].x + offset.x, pos[it].y + offset.y);
+					if !is_valid_tile_index(index) { continue; }
+					// @TODO(tkap, 23/02/2024): Handle spikes overlapping
+					pos[it] = index;
+				}
+
+				for c_max_save_points {
+					import map.save_points;
+					if !active[it] { continue; }
+					if !save_points_selected[it] { continue; }
+					s_v2i index = v2i(pos[it].x + offset.x, pos[it].y + offset.y);
+					if !is_valid_tile_index(index) { continue; }
+					// @TODO(tkap, 23/02/2024): Handle save points overlapping
+					pos[it] = index;
+				}
 			}
 		}
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		move tiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -858,6 +897,33 @@ func void update_editor()
 				}
 			}
 			memset(tiles_selected, 0, sizeof(tiles_selected));
+
+			for c_max_spikes {
+				import map.spikes;
+				if !active[it] { continue; }
+				if !spikes_selected[it] { continue; }
+
+				if !deleted_something {
+					editor_save_undo();
+					deleted_something = 1;
+				}
+				active[it] = 0;
+			}
+			memset(spikes_selected, 0, sizeof(spikes_selected));
+
+			for c_max_save_points {
+				import map.save_points;
+				if !active[it] { continue; }
+				if !save_points_selected[it] { continue; }
+
+				if !deleted_something {
+					editor_save_undo();
+					deleted_something = 1;
+				}
+				active[it] = 0;
+			}
+			memset(save_points_selected, 0, sizeof(save_points_selected));
+
 		}
 	}
 
@@ -1071,11 +1137,9 @@ func void update_player()
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		x collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	{
 		s_v2i player_index = v2i(floorf(x / game.tile_size.x), floorf(y / game.tile_size.y));
-		for loop_y: 7 {
-			int yy = -3 + loop_y;
-			for loop_x: 7 {
-				int xx = -3 + loop_x;
-				s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
+		for loop_y: -3..4 {
+			for loop_x: -3..4 {
+				s_v2i index = v2i(player_index.x + loop_x, player_index.y + loop_y);
 				if index.x < 0 || index.x >= c_max_tiles { continue; }
 				if index.y < 0 || index.y >= c_max_tiles { continue; }
 
@@ -1104,11 +1168,9 @@ func void update_player()
 	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		y collision start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 	{
 		s_v2i player_index = v2i(floorf(x / game.tile_size.x), floorf(y / game.tile_size.y));
-		for loop_y: 7 {
-			int yy = -3 + loop_y;
-			for loop_x: 7 {
-				int xx = -3 + loop_x;
-				s_v2i index = v2i(player_index.x + xx, player_index.y + yy);
+		for loop_y: -3..4 {
+			for loop_x: -3..4 {
+				s_v2i index = v2i(player_index.x + loop_x, player_index.y + loop_y);
 				if index.x < 0 || index.x >= c_max_tiles { continue; }
 				if index.y < 0 || index.y >= c_max_tiles { continue; }
 
@@ -1269,4 +1331,26 @@ func void draw_rect(s_v2 pos, s_v2 size, s_color color, s_camera* camera)
 		size *= camera.zoom;
 	}
 	DrawRectangle(pos.x, pos.y, size.x, size.y, color);
+}
+
+
+func float lerp(float a, float b, float t)
+{
+	return a + (b - a) * t;
+}
+
+func s_v2 lerp_v2(s_v2 a, s_v2 b, float t)
+{
+	s_v2 result;
+	result.x = lerp(a.x, b.x, t);
+	result.y = lerp(a.y, b.y, t);
+	return result;
+}
+
+func void draw_highlight(s_v2 pos)
+{
+	float size = sin2(game.time * 10) * game.tile_size.x;
+	s_color temp_color = GREEN;
+	temp_color.a = 150;
+	draw_texture(game.g_textures[e_texture.tile], pos, v2(size, size), temp_color, 0, 1, &game.camera);
 }

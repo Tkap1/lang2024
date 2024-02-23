@@ -86,3 +86,8 @@ having a return something inside a function that returns void says that the func
 import game.projectiles as p;
 
 Raticide: keep a list of includes, skip if already included.
+
+
+
+game:
+	handle overlap between spikes/save points??
