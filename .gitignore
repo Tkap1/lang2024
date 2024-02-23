@@ -40,3 +40,4 @@ kenney_shape-characters/
 .vs/
 explosions-pack-web/
 .tags
+tests/*.c
