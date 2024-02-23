@@ -115,7 +115,7 @@ func s_parse_result parse_struct(s_tokenizer tokenizer, s_error_reporter* report
 			member.var_decl.name = token;
 			member.var_decl.type = alloc_node(pr.node, arena);
 			curr_struct_member = advance_node(curr_struct_member, member, arena);
-			if(!tokenizer.consume_token(e_token_comma, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ','"); return result; }
+			if(!tokenizer.consume_token(e_token_semicolon, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'"); return result; }
 			result.node.nstruct.member_count += 1;
 		}
 		if(result.node.nstruct.member_count <= 0) {
@@ -155,7 +155,7 @@ func s_parse_result parse_enum(s_tokenizer tokenizer, s_error_reporter* reporter
 			if(is_keyword(token)) {reporter->fatal(tokenizer.file, tokenizer.line, "Enum member name cannot be a reserved keyword"); }
 			curr_member = advance_node(curr_member, member, arena);
 			result.node.nenum.member_count += 1;
-			if(!tokenizer.consume_token(e_token_comma, &token, reporter)) { break; }
+			if(!tokenizer.consume_token(e_token_semicolon, &token, reporter)) { break; }
 		}
 		if(result.node.nenum.member_count <= 0) {
 			reporter->fatal(tokenizer.file, tokenizer.line, "Enums must have at least 1 member");
@@ -240,7 +240,7 @@ func s_parse_result parse_data_enum(s_tokenizer tokenizer, s_error_reporter* rep
 				field.left = alloc_node(pr.node, arena);
 				member.data_enum_member.member_count += 1;
 				curr_field = advance_node(curr_field, field, arena);
-				if(!tokenizer.consume_token(e_token_comma, &token, reporter)) { break; }
+				if(!tokenizer.consume_token(e_token_semicolon, &token, reporter)) { break; }
 			}
 			// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		fields end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

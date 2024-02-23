@@ -1,18 +1,18 @@
 
 struct s_color
 {
-	u8 r,
-	u8 g,
-	u8 b,
-	u8 a,
+	u8 r;
+	u8 g;
+	u8 b;
+	u8 a;
 }
 struct s_texture
 {
-	u32 id,
-	int width,
-	int height,
-	int mipmaps,
-	int format,
+	u32 id;
+	int width;
+	int height;
+	int mipmaps;
+	int format;
 }
 
 const int LOG_WARNING = 4;
@@ -140,14 +140,14 @@ const int TEXTURE_FILTER_ANISOTROPIC_16X = 5;
 
 struct s_v2
 {
-	float x,
-	float y,
+	float x;
+	float y;
 }
 
 struct s_rect
 {
-	import s_v2 pos,
-	s_v2 size,
+	import s_v2 pos;
+	s_v2 size;
 }
 
 external_func void SetTraceLogLevel(s32);

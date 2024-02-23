@@ -2,8 +2,8 @@
 
 struct FILETIME
 {
-	u32 dwLowDateTime,
-	u32 dwHighDateTime,
+	u32 dwLowDateTime;
+	u32 dwHighDateTime;
 }
 
 const u32 GENERIC_READ = 2147483648;

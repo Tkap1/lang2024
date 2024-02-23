@@ -3,210 +3,210 @@
 
 struct s_v2i
 {
-	int x,
-	int y,
+	int x;
+	int y;
 }
 
 enum e_editor_state
 {
-	invalid,
-	select,
-	paint,
-	save,
-	load,
+	invalid;
+	select;
+	paint;
+	save;
+	load;
 }
 
 enum e_state
 {
-	invalid,
-	game,
-	editor,
+	invalid;
+	game;
+	editor;
 }
 
 struct s_player
 {
-	import s_v2 pos,
-	int on_ground,
-	s_v2 vel,
-	int shoot_timer,
+	import s_v2 pos;
+	int on_ground;
+	s_v2 vel;
+	int shoot_timer;
 }
 
 struct s_input_data
 {
-	int shoot,
-	int move_left,
-	int move_right,
-	int move_up,
-	int move_down,
-	int move_tile_left,
-	int move_tile_right,
-	int move_tile_up,
-	int move_tile_down,
-	int jump,
-	int place_tile,
-	int[10] numbers,
-	int cancel,
-	int left_click_down,
-	int left_click_pressed,
-	int left_click_released,
-	int remove_tiles,
-	int undo,
-	int save_map,
-	int load_map,
-	int confirm,
-	int delete_char,
-	float wheel,
-	int reset,
-	int speed_up,
-	int speed_down,
-	int rotate,
+	int shoot;
+	int move_left;
+	int move_right;
+	int move_up;
+	int move_down;
+	int move_tile_left;
+	int move_tile_right;
+	int move_tile_up;
+	int move_tile_down;
+	int jump;
+	int place_tile;
+	int[10] numbers;
+	int cancel;
+	int left_click_down;
+	int left_click_pressed;
+	int left_click_released;
+	int remove_tiles;
+	int undo;
+	int save_map;
+	int load_map;
+	int confirm;
+	int delete_char;
+	float wheel;
+	int reset;
+	int speed_up;
+	int speed_down;
+	int rotate;
 }
 
 struct s_projectiles
 {
-	b8[c_max_projectiles] active,
-	s_v2[c_max_projectiles] pos,
-	s_v2[c_max_projectiles] vel,
+	b8[c_max_projectiles] active;
+	s_v2[c_max_projectiles] pos;
+	s_v2[c_max_projectiles] vel;
 }
 
 struct s_spikes
 {
-	b8[c_max_spikes] active,
-	int[c_max_spikes] rotation,
-	s_v2i[c_max_spikes] pos,
+	b8[c_max_spikes] active;
+	int[c_max_spikes] rotation;
+	s_v2i[c_max_spikes] pos;
 }
 
 struct s_camera
 {
-	float zoom,
-	s_v2 pos,
-	s_v2 target_pos,
-	s_v2 offset,
+	float zoom;
+	s_v2 pos;
+	s_v2 target_pos;
+	s_v2 offset;
 }
 
 struct s_save_points
 {
-	b8[c_max_save_points] active,
-	s_v2i[c_max_save_points] pos,
+	b8[c_max_save_points] active;
+	s_v2i[c_max_save_points] pos;
 }
 
 struct s_game
 {
-	int initialized,
-	float time,
-	int speed_index,
-	s_camera camera,
-	s_player player,
-	s_projectiles projectiles,
-	s_map map,
-	int curr_save_point,
-	int animation_count,
-	s_animation[128] animations,
-	s_input_data input,
-	s_state state,
-	s_v2 tile_size,
-	s_v2 player_size,
-	s_v2 projectile_size,
-	s_v2 spike_size,
-	s_v2 save_point_size,
-	float update_timer,
-	s_editor editor,
-	s_texture[e_texture.count] g_textures,
-	s_animation_data[e_animation.count] g_animations,
+	int initialized;
+	float time;
+	int speed_index;
+	s_camera camera;
+	s_player player;
+	s_projectiles projectiles;
+	s_map map;
+	int curr_save_point;
+	int animation_count;
+	s_animation[128] animations;
+	s_input_data input;
+	s_state state;
+	s_v2 tile_size;
+	s_v2 player_size;
+	s_v2 projectile_size;
+	s_v2 spike_size;
+	s_v2 save_point_size;
+	float update_timer;
+	s_editor editor;
+	s_texture[e_texture.count] g_textures;
+	s_animation_data[e_animation.count] g_animations;
 }
 
 enum e_animation
 {
-	explosion,
+	explosion;
 }
 
 enum e_texture
 {
-	player_face,
-	player_body,
-	player_hand,
-	tile,
-	explosion1,
-	explosion2,
-	explosion3,
-	explosion4,
-	explosion5,
-	explosion6,
-	explosion7,
-	explosion8,
-	explosion9,
-	explosion10,
-	explosion11,
-	explosion12,
-	projectile,
-	spike,
+	player_face;
+	player_body;
+	player_hand;
+	tile;
+	explosion1;
+	explosion2;
+	explosion3;
+	explosion4;
+	explosion5;
+	explosion6;
+	explosion7;
+	explosion8;
+	explosion9;
+	explosion10;
+	explosion11;
+	explosion12;
+	projectile;
+	spike;
 }
 
 struct s_state
 {
-	int curr,
-	int next,
+	int curr;
+	int next;
 }
 
 // @Note(tkap, 15/02/2024): For things that get undone/redone by undo system
 struct s_editor_data
 {
-	s_map map,
-	int[c_max_tiles][c_max_tiles] tiles_selected,
-	int[c_max_spikes] spikes_selected,
-	int[c_max_save_points] save_points_selected,
+	s_map map;
+	int[c_max_tiles][c_max_tiles] tiles_selected;
+	int[c_max_spikes] spikes_selected;
+	int[c_max_save_points] save_points_selected;
 }
 
 struct s_editor
 {
-	import s_editor_data data,
-	int curr_rotation,
-	int painting,
-	int undo_count,
-	int undo_index,
-	s_editor_data[c_editor_max_undo] undo_stack,
-	s_v2 selection_start,
-	int selecting,
-	s_state state,
-	int curr_tile,
-	int save_load_cursor,
-	char[128] save_load_input,
+	import s_editor_data data;
+	int curr_rotation;
+	int painting;
+	int undo_count;
+	int undo_index;
+	s_editor_data[c_editor_max_undo] undo_stack;
+	s_v2 selection_start;
+	int selecting;
+	s_state state;
+	int curr_tile;
+	int save_load_cursor;
+	char[128] save_load_input;
 }
 
 struct s_animation
 {
-	s_v2 pos,
-	int id,
-	float time,
-	int curr_frame,
+	s_v2 pos;
+	int id;
+	float time;
+	int curr_frame;
 }
 
 struct s_animation_data
 {
-	float delay,
-	int frame_count,
-	int[32] frames,
+	float delay;
+	int frame_count;
+	int[32] frames;
 }
 
 enum e_tile
 {
-	invalid,
-	basic,
+	invalid;
+	basic;
 }
 
 #pack
 struct s_map
 {
-	s8[c_max_tiles][c_max_tiles] tiles,
-	s_spikes spikes,
-	s_save_points save_points,
+	s8[c_max_tiles][c_max_tiles] tiles;
+	s_spikes spikes;
+	s_save_points save_points;
 }
 
 struct s_spike_data
 {
-	s_v2 pos,
-	float rotation,
-	s_rect hitbox,
+	s_v2 pos;
+	float rotation;
+	s_rect hitbox;
 }
 
 
@@ -217,7 +217,7 @@ struct s_spike_data
 
 struct FILE_
 {
-	int* foo,
+	int* foo;
 }
 
 const int SEEK_SET = 0;
