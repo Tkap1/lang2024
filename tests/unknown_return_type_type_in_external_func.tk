@@ -1,0 +1,3 @@
+
+
+external_func bad_type bad_func();

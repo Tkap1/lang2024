@@ -94,9 +94,14 @@ game:
 
 allow struct literals in func call arguments
 
+better var args. C's var args are dog shit
 
-type check func args -> array (non ptr) to func
+array (non ptr) to func
 better errors:
 	if we fail to parse a struct, we get an error that the we cant find the struct, rahter than the error inside the struct.
 		same for functions
 function overloading
+
+shouldnt all e_node_type have a proper basic_type member? it is not the case currently
+
+pretty sure that if we find foo(1) but foo doesnt take any arguments, we will fail an assert/crash instead of reporting an error

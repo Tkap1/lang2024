@@ -76,6 +76,7 @@ enum e_node
 	e_node_array_literal,
 	e_node_for_range,
 	e_node_var_args,
+	e_node_auto_cast,
 };
 
 enum e_context
@@ -112,6 +113,7 @@ global constexpr s_operator_data c_operator_data[] = {
 	{e_token_not_equals, e_node_not_equals, 8},
 	{e_token_open_paren, e_node_func_call, 16},
 	{e_token_open_bracket, e_node_subscript, 16},
+	{e_token_auto_cast, e_node_auto_cast, 15},
 };
 
 struct s_node;
@@ -275,7 +277,7 @@ struct s_node
 
 		struct
 		{
-			s_node* type;
+			s_node* return_type;
 			s_token name;
 			int argument_count;
 			s_node* arguments;

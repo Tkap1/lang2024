@@ -5,6 +5,7 @@ struct s_type_check_context
 	s_node* expected_return_type;
 	s_node* expected_literal_type;
 	s_node* member_access;
+	s_node* wanted_type;
 	int subscript_level;
 	b8 inside_sizeof;
 };
@@ -68,3 +69,4 @@ func void get_flat_array_of_struct_members_(s_node* nstruct, t_flat_struct_membe
 func s_node* get_data_enum_by_name(char* name, t_scope_arr* data);
 func void add_data_enum_to_scope(t_scope_arr* data, s_node* data_enum, s_lin_arena* arena);
 func b8 add_func_pointer_to_scope(t_scope_arr* data, s_node* var, s_error_reporter* reporter, s_lin_arena* arena);
+func b8 can_type_a_be_converted_to_b(s_node* a, s_node* b);

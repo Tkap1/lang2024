@@ -1,0 +1,11 @@
+
+
+func void f(int x)
+{
+
+}
+
+func void f2()
+{
+	f(xx 5.0);
+}

@@ -198,7 +198,7 @@ external_func void DrawTexturePro(s_texture, s_rect, s_rect, s_v2, float, s_colo
 external_func void SetExitKey(int);
 external_func void DrawText(char*, int, int, int, s_color);
 external_func void DrawRectangleLines(int, int, int, int, s_color);
-external_func void* memset(void*, int, size_t);
+external_func void* memset(void*, int, u64);
 external_func int GetCharPressed();
 external_func int GetKeyPressed();
 external_func b32 IsKeyPressedRepeat(int);

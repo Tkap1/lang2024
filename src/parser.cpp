@@ -638,6 +638,10 @@ func s_parse_result parse_sub_expression(s_tokenizer tokenizer, s_error_reporter
 			node_type = e_node_dereference;
 			pr.operator_data.precedence = 15;
 		}
+		else if(pr.operator_data.node_type == e_node_auto_cast) {
+			node_type = e_node_auto_cast;
+			pr.operator_data.precedence = 15;
+		}
 		else {
 			goto end;
 		}
@@ -823,7 +827,7 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 			reporter->fatal(tokenizer.file, tokenizer.line, "Expected a type after 'func_ptr'");
 			return result;
 		}
-		result.node.func_ptr.type = alloc_node(pr.node, arena);
+		result.node.func_ptr.return_type = alloc_node(pr.node, arena);
 		tokenizer = pr.tokenizer;
 
 		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) {

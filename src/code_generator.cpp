@@ -258,7 +258,7 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_lin_arena*
 
 		case e_node_func_ptr: {
 			builder->add_tabs("typedef ");
-			node_to_c_str(node->func_ptr.type, builder, context, arena);
+			node_to_c_str(node->func_ptr.return_type, builder, context, arena);
 			builder->add("(*%s)(", node->func_ptr.name.str(arena));
 			if(node->func_ptr.argument_count <= 0) {
 				builder->add("void");
@@ -479,6 +479,15 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 					node_to_c_str(node->right, builder, context, arena);
 				}
 			}
+		} break;
+
+		case e_node_auto_cast: {
+			// @TODO(tkap, 24/02/2024): Need to handle pointers, arrays, etc... ?
+			builder->add("(");
+			node_to_c_str(node->var_type, builder, context, arena);
+			builder->add(")");
+			node_to_c_str(node->left, builder, context, arena);
+
 		} break;
 
 		case e_node_func_call: {

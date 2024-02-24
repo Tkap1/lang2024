@@ -1,0 +1,8 @@
+
+
+func void f()
+{
+	func_ptr void game_type(int);
+	game_type do_game;
+	do_game(1);
+}

@@ -59,6 +59,14 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 		token.type = e_token_eof;
 	}
 
+	// @Note(tkap, 24/02/2024): auto cast
+	else if(*at == 'x' && at[1] == 'x' && !continues_identifier(at[2])) {
+		token.type = e_token_auto_cast;
+		token.at = at;
+		token.len = 2;
+		at += 2;
+	}
+
 	else if(begins_identifier(*at)) {
 		char* start = at;
 		at += 1;

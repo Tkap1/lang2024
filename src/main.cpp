@@ -271,6 +271,11 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/array_literal.tk", true},
 		{"tests/for_starting_index.tk", true},
 		{"tests/array_size.tk", true},
+		{"tests/bad_function_call.tk", false},
+		{"tests/auto_cast.tk", true},
+		{"tests/unknown_arg_type_in_external_func.tk", false},
+		{"tests/unknown_return_type_type_in_external_func.tk", false},
+		{"tests/func_ptr_call.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -290,7 +295,9 @@ func void run_tests(s_lin_arena* arena)
 			SetConsoleTextAttribute(hstdout, FOREGROUND_RED);
 			printf("%s ", test.file_path);
 			printf("FAILED!\n");
-			printf("\t%s\n", reporter.error_str);
+			if(reporter.error_level > e_error_level_none) {
+				printf("\t%s\n", reporter.error_str);
+			}
 			SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 		}
 		reporter = zero;

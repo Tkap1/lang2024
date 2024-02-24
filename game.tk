@@ -660,7 +660,7 @@ func void set_next_state(s_state* state, int next)
 
 func void draw_text(char* text, s_v2 pos)
 {
-	DrawText(text, pos.x, pos.y, 32, WHITE);
+	DrawText(text, xx pos.x, xx pos.y, 32, WHITE);
 }
 
 func int consume_input(int* i)

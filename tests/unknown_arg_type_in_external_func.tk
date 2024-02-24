@@ -1,0 +1,2 @@
+
+external_func void* bad_func(bad_type);

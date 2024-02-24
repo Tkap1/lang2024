@@ -309,7 +309,13 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 	int func_index;
 	{
 		s_scope* scope = *data->get_last();
-		func_index = scope->funcs.count;
+		// @Hack(tkap, 24/02/2024): I'm not sure what's going on in here
+		if(!scope) {
+			func_index = 0;
+		}
+		else {
+			func_index = scope->funcs.count;
+		}
 	}
 	add_func_to_scope(data, node, arena);
 
@@ -324,15 +330,21 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 	}
 	node->var_type = node->func_decl.return_type->var_type;
 
-	// @TODO(tkap, 12/02/2024):
-	#if 1
-	// @TODO(tkap, 12/02/2024): Type check args
-	if(!node->func_decl.is_external) {
-		for_node(arg, node->func_decl.arguments) {
-			if(arg->type == e_node_var_args) {
-				assert(!arg->next);
-				break;
+	for_node(arg, node->func_decl.arguments) {
+		if(arg->type == e_node_var_args) {
+			assert(!arg->next);
+			break;
+		}
+		if(node->func_decl.is_external) {
+			if(!type_check_expr(arg, reporter, data, arena, context)) {
+				data->pop();
+				s_scope* scope = *data->get(scope_index);
+				scope->funcs.remove_and_shift(func_index);
+				reporter->recoverable_error(arg->var_decl.name.file, arg->var_decl.name.line, "Function argument '%s' has unknown type '%s'", arg->token.str(arena), node_to_str(arg, arena));
+				return false;
 			}
+		}
+		else {
 			assert(arg->type == e_node_var_decl);
 			if(!type_check_statement(arg, reporter, data, arena, context)) {
 				data->pop();
@@ -343,7 +355,6 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 			}
 		}
 	}
-	#endif
 
 	if(!node->func_decl.is_external) {
 		if(!type_check_statement(node->func_decl.body, reporter, data, arena, context)) {
@@ -522,6 +533,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			if(!type_check_node(node->var_decl.type, reporter, data, arena, context)) {
 				return false;
 			}
+
 			if(node->var_decl.is_const && !node->var_decl.value) {
 				reporter->fatal(node->token.file, node->token.line, "Constant variable declaration must have a value");
 				return false;
@@ -571,6 +583,16 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 
 		case e_node_func_ptr: {
 			// @TODO(tkap, 22/02/2024): type check return type and parameters
+			if(!type_check_expr(node->func_ptr.return_type, reporter, data, arena, context)) {
+				reporter->recoverable_error(node->token.file, node->token.line, "bad return type TODO");
+				return false;
+			}
+			for_node(arg, node->func_ptr.arguments) {
+				if(!type_check_expr(arg, reporter, data, arena, context)) {
+					reporter->recoverable_error(node->token.file, node->token.line, "bad arg type TODO");
+					return false;
+				}
+			}
 			if(!add_func_pointer_to_scope(data, node, reporter, arena)) {
 				return false;
 			}
@@ -727,6 +749,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 					if(nfunc) {
 						assert(nfunc->var_type);
 						node->var_type = nfunc->var_type;
+						node->temp_var_decl = nfunc;
 						success = true;
 						break;
 					}
@@ -805,6 +828,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 		} break;
 
 		case e_node_string: {
+			// @TODO(tkap, 24/02/2024): This is kinda cringe, lots of allocating
+			node->var_type = alloc_node(*get_type_by_id(e_type_char, data), arena);
+			node->var_type->pointer_level = 1;
 			node->type_checked = true;
 			return true;
 		} break;
@@ -858,13 +884,44 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				return false;
 			}
 			s_type_check_context temp = context;
-			if(node->left->type == e_node_identifier && node->left->token.equals("sizeof")) {
+			b8 is_sizeof = node->left->type == e_node_identifier && node->left->token.equals("sizeof");
+			if(is_sizeof) {
 				temp.inside_sizeof = true;
 			}
-			for_node(arg, node->func_call.arguments) {
-				if(!type_check_expr(arg, reporter, data, arena, temp)) {
+			s_node* decl_arg = null;
+			if(node->left->temp_var_decl->type == e_node_func_decl) {
+				decl_arg = node->left->temp_var_decl->func_decl.arguments;
+			}
+			else if(node->left->temp_var_decl->var_type->type == e_node_func_ptr) {
+				decl_arg = node->left->temp_var_decl->var_type->func_ptr.arguments;
+			}
+			invalid_else;
+
+			b8 found_var_args = false;
+			for_node(call_arg, node->func_call.arguments) {
+				assert(decl_arg || is_sizeof);
+				if(!is_sizeof && decl_arg->type == e_node_var_args) {
+					found_var_args = true;
+				}
+
+				s_type_check_context temp2 = temp;
+				if(!found_var_args && !is_sizeof) {
+					assert(decl_arg->var_type);
+					temp2.wanted_type = decl_arg->var_type;
+				}
+				if(!type_check_expr(call_arg, reporter, data, arena, temp2)) {
 					return false;
 				}
+
+				// @Note(tkap, 24/02/2024): If we haven't found var args, then we should check that the call argument and the decl argument types are compatible
+				if(!found_var_args && !is_sizeof) {
+					if(!can_type_a_be_converted_to_b(call_arg->var_type, decl_arg->var_type)) {
+						reporter->fatal(call_arg->token.file, call_arg->token.line, "bad type TODO");
+						return false;
+					}
+					decl_arg = decl_arg->next;
+				}
+
 			}
 			node->var_type = node->left->var_type;
 			// @TODO(tkap, 10/02/2024): check that function exists
@@ -914,6 +971,25 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			// @TODO(tkap, 10/02/2024):
 			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_auto_cast: {
+			// @TODO(tkap, 10/02/2024):
+			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			// @Fixme(tkap, 24/02/2024): check that auto cast makes sense
+			if(!context.wanted_type) {
+				node->var_type = node->left->var_type;
+				// @TODO(tkap, 24/02/2024): Remove this assert eventually... maybe
+				// Unless we want to allow this kind of statement: "xx 5.0;"
+				assert(false);
+			}
+			else {
+				node->var_type = context.wanted_type;
 			}
 			node->type_checked = true;
 			return true;
@@ -1103,7 +1179,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
-			// @Note(tkap, 15/02/2024): Can't really do that here. We want to say pointer_level += 1 somehow
+			// @TODO(tkap, 24/02/2024): Check that getting the address of this makes sense. We shouldn't allow &5
+			node->var_type = alloc_node(*node->left->var_type, arena);
+			node->var_type->pointer_level += 1;
 			// node->var_type = node->left->var_type;
 			node->type_checked = true;
 			return true;
@@ -1795,4 +1873,18 @@ func void get_flat_array_of_struct_members_(s_node* nstruct, t_flat_struct_membe
 			result->add(member);
 		}
 	}
+}
+
+func b8 can_type_a_be_converted_to_b(s_node* a, s_node* b)
+{
+	assert(a);
+	assert(b);
+
+	// @Note(tkap, 24/02/2024): Allow any pointer to work as void*
+	if(b->type == e_node_type && b->basic_type.id == e_type_void && b->pointer_level >= 1 && a->pointer_level >= 1) { return true; }
+	if(a->type == e_node_type && a->basic_type.id == e_type_void && a->pointer_level >= 1 && b->pointer_level >= 1) { return true; }
+
+	if(a->type == e_node_struct && b->type != e_node_struct) { return false; }
+
+	return true;
 }
