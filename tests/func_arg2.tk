@@ -1,8 +1,8 @@
 
 struct s_v2
 {
-	float x,
-	float y,
+	float x;
+	float y;
 }
 
 func s_v2 foo(s_v2 x)

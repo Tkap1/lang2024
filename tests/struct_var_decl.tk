@@ -2,7 +2,7 @@
 
 struct s_foo
 {
-	int member,
+	int member;
 }
 
 const s_foo c_foo = 10;

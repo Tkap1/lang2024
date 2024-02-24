@@ -3,7 +3,7 @@
 
 struct s_foo
 {
-	int[32] member,
+	int[32] member;
 }
 
 func int main()

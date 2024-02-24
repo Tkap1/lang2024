@@ -1,8 +1,8 @@
 
 struct s_foo
 {
-	int a,
-	int b,
+	int a;
+	int b;
 }
 
 func s_foo foo()

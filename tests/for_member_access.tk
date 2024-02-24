@@ -2,7 +2,7 @@
 
 struct s_foo
 {
-	int x,
+	int x;
 }
 
 func void bar()

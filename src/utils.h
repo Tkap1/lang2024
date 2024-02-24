@@ -39,5 +39,5 @@ struct s_maybe
 };
 
 func char* read_file(char* path, s_lin_arena* arena);
-
+func int align_to_8(int x);
 

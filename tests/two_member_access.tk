@@ -2,12 +2,12 @@
 
 struct s_a
 {
-	int a_member,
+	int a_member;
 }
 
 struct s_b
 {
-	s_a b_member,
+	s_a b_member;
 }
 
 func int main()

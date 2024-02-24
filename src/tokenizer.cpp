@@ -455,6 +455,6 @@ func char* token_to_str(s_token token, s_lin_arena* arena)
 	char* buffer = (char*)arena->alloc(1024);
 	int written = sprintf(buffer, "%.*s", ft(token));
 	assert(written >= 0);
-	arena->used -= 1024 - (written + 1);
+	arena->used -= 1024 - (align_to_8(written + 1));
 	return buffer;
 }

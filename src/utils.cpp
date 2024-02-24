@@ -85,7 +85,7 @@ func char* alloc_str(s_lin_arena* arena, char* str, ...)
 	int written = vsnprintf(buffer, 1024, str, args);
 	va_end(args);
 	assert(written >= 0);
-	arena->used -= 1024 - (written + 1);
+	arena->used -= 1024 - (align_to_8(written + 1));
 	return buffer;
 }
 
@@ -180,4 +180,9 @@ template <typename t>
 func s_maybe<t> maybe()
 {
 	return {.valid = false};
+}
+
+func int align_to_8(int x)
+{
+	return (x + 7) & ~7;
 }

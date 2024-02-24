@@ -2,18 +2,18 @@
 
 struct s_a
 {
-	int a,
+	int a;
 }
 
 struct s_b
 {
-	s_a b,
+	s_a b;
 }
 
 struct s_c
 {
-	s_b c,
-	int kiwi,
+	s_b c;
+	int kiwi;
 }
 
 func void f()

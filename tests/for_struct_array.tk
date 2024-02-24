@@ -2,8 +2,8 @@
 
 struct s_v2i
 {
-	int x,
-	int y,
+	int x;
+	int y;
 }
 
 func int main()

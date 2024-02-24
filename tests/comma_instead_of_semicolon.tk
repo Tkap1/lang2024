@@ -3,5 +3,5 @@
 
 struct s_a
 {
-	int a_member;
+	int a_member,
 }

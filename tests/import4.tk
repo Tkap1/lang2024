@@ -1,13 +1,13 @@
 
 struct s_foo
 {
-	int x,
+	int x;
 }
 
 struct s_bar
 {
-	import s_foo foo,
-	int y,
+	import s_foo foo;
+	int y;
 }
 
 func void func_a()

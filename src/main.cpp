@@ -211,7 +211,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/bar.tk", true},
 		{"tests/subscript0.tk", true},
 		{"tests/subscript_2d.tk", true},
-		{"tests/semicolon_instead_of_comma.tk", false},
+		{"tests/comma_instead_of_semicolon.tk", false},
 		{"tests/two_member_access.tk", true},
 		{"tests/for_int.tk", true},
 		{"tests/for_int_array.tk", true},

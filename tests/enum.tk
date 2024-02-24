@@ -1,7 +1,7 @@
 
 enum e_foo
 {
-	a,
-	b,
-	c,
+	a;
+	b;
+	c;
 }

@@ -5,10 +5,10 @@ data_enum e_foo
 {
 	struct s_foo
 	{
-		int value,
+		int value;
 	}
 	a {
-		value = 1,
+		value = 1;
 	}
 }
 

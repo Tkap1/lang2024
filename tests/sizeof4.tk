@@ -1,9 +1,9 @@
 
 struct s_foo
 {
-	int x,
-	int y,
-	int z,
+	int x;
+	int y;
+	int z;
 }
 
 func void f()

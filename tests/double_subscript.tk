@@ -3,12 +3,12 @@
 
 struct s_foo
 {
-	int[32] foo,
+	int[32] foo;
 }
 
 struct s_bar
 {
-	s_foo[64] foos,
+	s_foo[64] foos;
 }
 
 func void baz()
