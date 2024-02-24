@@ -75,6 +75,7 @@ enum e_node
 	e_node_func_ptr,
 	e_node_array_literal,
 	e_node_for_range,
+	e_node_var_args,
 };
 
 enum e_context

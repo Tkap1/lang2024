@@ -307,19 +307,24 @@ func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* rep
 
 		s_node** curr_argument = &result.node.func_decl.arguments;
 		while(true) {
-			pr = parse_type(tokenizer, reporter, arena);
-			if(!pr.success) { break; }
-			tokenizer = pr.tokenizer;
-			if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected argument name"); }
-			if(is_keyword(token)) { reporter->fatal(token.file, token.line, "Argument name cannot be a reserved keyword"); }
 			s_node node = zero;
-			node.type = e_node_var_decl;
-			node.var_decl.type = alloc_node(pr.node, arena);
-			node.var_decl.name = token;
+			pr = parse_type(tokenizer, reporter, arena);
+			if(pr.success) {
+				tokenizer = pr.tokenizer;
+				if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected argument name"); }
+				if(is_keyword(token)) { reporter->fatal(token.file, token.line, "Argument name cannot be a reserved keyword"); }
+				node.type = e_node_var_decl;
+				node.var_decl.type = alloc_node(pr.node, arena);
+				node.var_decl.name = token;
+			}
+			else {
+				if(!tokenizer.consume_token(e_token_var_args, reporter)) { break; }
+				node.type = e_node_var_args;
+			}
 			curr_argument = advance_node(curr_argument, node, arena);
 			result.node.func_decl.argument_count += 1;
-
 			if(!tokenizer.consume_token(e_token_comma, reporter)) { break; }
+			if(node.type == e_node_var_args) { break; }
 		}
 
 		if(result.node.func_decl.is_operator_overload && result.node.func_decl.argument_count != 2) {
@@ -405,11 +410,20 @@ func s_parse_result parse_external_func_decl(s_tokenizer tokenizer, s_error_repo
 		s_node** curr_argument = &result.node.func_decl.arguments;
 		while(true) {
 			pr = parse_type(tokenizer, reporter, arena);
-			if(!pr.success) { break; }
-			tokenizer = pr.tokenizer;
-			curr_argument = advance_node(curr_argument, pr.node, arena);
-			result.node.func_decl.argument_count += 1;
-			if(!tokenizer.consume_token(e_token_comma, reporter)) { break; }
+			if(pr.success) {
+				tokenizer = pr.tokenizer;
+				curr_argument = advance_node(curr_argument, pr.node, arena);
+				result.node.func_decl.argument_count += 1;
+				if(!tokenizer.consume_token(e_token_comma, reporter)) { break; }
+			}
+			else {
+				if(!tokenizer.consume_token(e_token_var_args, reporter)) { break; }
+				s_node node = zero;
+				node.type = e_node_var_args;
+				curr_argument = advance_node(curr_argument, node, arena);
+				result.node.func_decl.argument_count += 1;
+				break;
+			}
 		}
 
 		if(!tokenizer.consume_token(e_token_close_paren, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ')'"); }

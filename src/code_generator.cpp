@@ -124,6 +124,11 @@ func void generate_node(s_node* node, t_code_builder* builder, s_code_gen_contex
 
 func void generate_func_decl_arg(s_node* node, t_code_builder* builder, b8 is_external, s_lin_arena* arena)
 {
+	if(node->type == e_node_var_args) {
+		builder->add("...");
+		return;
+	}
+
 	s_code_gen_context context = zero;
 	context.is_func_arg = true;
 	if(is_external) {

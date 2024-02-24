@@ -250,4 +250,4 @@ external_func s32 ftell(FILE_*);
 external_func int fseek(FILE_*, s32, s32);
 external_func int fseek(FILE_*, s32, s32);
 external_func int system(char*);
-external_func int printf(char*);
+external_func int printf(char*, ...);

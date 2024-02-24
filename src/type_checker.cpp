@@ -329,6 +329,10 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 	// @TODO(tkap, 12/02/2024): Type check args
 	if(!node->func_decl.is_external) {
 		for_node(arg, node->func_decl.arguments) {
+			if(arg->type == e_node_var_args) {
+				assert(!arg->next);
+				break;
+			}
 			assert(arg->type == e_node_var_decl);
 			if(!type_check_statement(arg, reporter, data, arena, context)) {
 				data->pop();

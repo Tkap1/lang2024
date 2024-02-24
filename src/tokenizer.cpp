@@ -108,6 +108,13 @@ s_token s_tokenizer::next_token(s_error_reporter* reporter)
 		at += 1;
 	}
 
+	else if(*at == '.' && at[1] == '.' && at[2] == '.') {
+		token.type = e_token_var_args;
+		token.at = at;
+		token.len = 3;
+		at += 3;
+	}
+
 	else if(*at == '|' && at[1] == '|') {
 		token.type = e_token_logic_or;
 		token.at = at;

@@ -203,7 +203,7 @@ external_func int GetCharPressed();
 external_func int GetKeyPressed();
 external_func b32 IsKeyPressedRepeat(int);
 external_func float GetMouseWheelMove();
-external_func char* TextFormat(char*);
+external_func char* TextFormat(char*, ...);
 external_func s_render_texture LoadRenderTexture(int, int);
 external_func void BeginTextureMode(s_render_texture);
 external_func void EndTextureMode();
