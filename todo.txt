@@ -91,3 +91,5 @@ Raticide: keep a list of includes, skip if already included.
 
 game:
 	handle overlap between spikes/save points??
+
+allow struct literals in func call arguments

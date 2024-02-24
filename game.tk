@@ -12,6 +12,8 @@ func void init()
 	game.state.curr = 1;
 	game.editor.state.curr = 1;
 
+	game.light = LoadRenderTexture(ww, wh);
+
 	game.speed_index = 4;
 
 	game.g_textures[e_texture.player_body] = load_texture("assets/pink_body_square.png");
@@ -32,6 +34,7 @@ func void init()
 	game.g_textures[e_texture.explosion12] = load_texture("assets/explosion-d12.png");
 	game.g_textures[e_texture.projectile] = load_texture("assets/blue_body_circle.png");
 	game.g_textures[e_texture.spike] = load_texture("assets/spike.png");
+	game.g_textures[e_texture.light] = load_texture("assets/light.png");
 
 	game.g_animations[e_animation.explosion].delay = 0.025;
 	game.g_animations[e_animation.explosion].frame_count = 12;
@@ -229,6 +232,8 @@ func void update()
 			anim.pos = pos[it];
 			game.animations[game.animation_count] = anim;
 			game.animation_count += 1;
+
+			add_temp_light(pos[it], 2, 0.5, RED);
 		}
 		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		projectiles end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -329,7 +334,7 @@ func void render(s_map* map, float dt)
 		draw_texture(game.g_textures[e_texture.spike], data.pos, game.spike_size, WHITE, data.rotation, 0, &game.camera);
 		s_color c = RED;
 		c.a = 100;
-		draw_rect(data.hitbox.pos, data.hitbox.size, c, &game.camera);
+		// draw_rect(data.hitbox.pos, data.hitbox.size, c, &game.camera);
 		if game.state.curr == e_state.editor && game.editor.spikes_selected[it] {
 			draw_highlight(get_center(tile_index_to_pos(pos[it]), game.spike_size));
 		}
@@ -364,42 +369,52 @@ func void render(s_map* map, float dt)
 		}
 	}
 
-	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		render editor start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-	if game.state.curr == e_state.editor {
-		if game.editor.state.curr == e_editor_state.select {
-			draw_text("select", v2(400, 100));
+	if game.state.curr == e_state.game {
+		BeginTextureMode(game.light);
+		ClearBackground(rrr(150));
+		BeginBlendMode(BLEND_MODE.ADDITIVE);
 
-			if game.editor.selecting {
-				s_rect rect = get_editor_selection_rectangle();
-				rect.pos = to_screen(rect.pos, game.camera);
-				rect.size *= game.camera.zoom;
-				DrawRectangleLines(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, WHITE);
+		for game.light_count {
+			import game.lights[it];
+			s_color c = color;
+			c.a = (1.0 - timer.time / timer.duration) * 255;
+			draw_texture_scaled(game.g_textures[e_texture.light], pos, scale, c, 1, &game.camera);
+			timer.time += delta * get_game_speed();
+			if timer.time > timer.duration {
+				game.light_count -= 1;
+				game.lights[it] = game.lights[game.light_count];
+				it -= 1;
 			}
 		}
-
-		if game.editor.state.curr == e_editor_state.paint {
-			draw_text("paint", v2(400, 100));
+		for c_max_save_points {
+			import map.save_points;
+			if !active[it] { continue; }
+			draw_texture_scaled(game.g_textures[e_texture.light], get_center(tile_index_to_pos(pos[it]), game.save_point_size), 2, GREEN, 1, &game.camera);
 		}
-
-		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor save render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		if game.editor.state.curr == e_editor_state.save {
-			draw_text("save", v2(400, 100));
-			if(game.editor.save_load_input[0]) {
-				draw_text(game.editor.save_load_input, v2(400, 500));
-			}
+		for c_max_spikes {
+			import map.spikes;
+			if !active[it] { continue; }
+			s_spike_data data = get_spike_data(pos[it], rotation[it]);
+			draw_texture_scaled(game.g_textures[e_texture.light], get_center(data.hitbox.pos, data.hitbox.size), 0.5, YELLOW, 1, &game.camera);
 		}
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor save render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		draw_texture_scaled(game.g_textures[e_texture.light], game.player.pos, 3, rrr(100), 1, &game.camera);
+		EndBlendMode();
 
-		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor load render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		if game.editor.state.curr == e_editor_state.load {
-			draw_text("load", v2(400, 100));
-			if(game.editor.save_load_input[0]) {
-				draw_text(game.editor.save_load_input, v2(400, 500));
-			}
-		}
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor load render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+		EndTextureMode();
+		s_rect src;
+		src.size.x = ww;
+		src.size.y = -wh;
+		s_rect dst;
+		dst.size.x = ww;
+		dst.size.y = wh;
+		BeginBlendMode(BLEND_MODE.MULTIPLIED);
+		DrawTexturePro(game.light.texture, src, dst, v2(0, 0), 0, WHITE);
+		EndBlendMode();
 	}
-	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		render editor end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	if game.state.curr == e_state.editor {
+		render_editor();
+	}
 
 	if game.speed_index != 4 {
 		draw_text(TextFormat("Speed: %.2f", get_game_speed()), v2(400, 100));
@@ -1353,4 +1368,67 @@ func void draw_highlight(s_v2 pos)
 	s_color temp_color = GREEN;
 	temp_color.a = 150;
 	draw_texture(game.g_textures[e_texture.tile], pos, v2(size, size), temp_color, 0, 1, &game.camera);
+}
+
+func void render_editor()
+{
+	import game.editor;
+	if state.curr == e_editor_state.select {
+		draw_text("select", v2(400, 100));
+
+		if selecting {
+			s_rect rect = get_editor_selection_rectangle();
+			rect.pos = to_screen(rect.pos, game.camera);
+			rect.size *= game.camera.zoom;
+			DrawRectangleLines(rect.pos.x, rect.pos.y, rect.size.x, rect.size.y, WHITE);
+		}
+	}
+
+	if state.curr == e_editor_state.paint {
+		draw_text("paint", v2(400, 100));
+	}
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor save render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	if state.curr == e_editor_state.save {
+		draw_text("save", v2(400, 100));
+		if(save_load_input[0]) {
+			draw_text(save_load_input, v2(400, 500));
+		}
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor save render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		editor load render start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	if state.curr == e_editor_state.load {
+		draw_text("load", v2(400, 100));
+		if(save_load_input[0]) {
+			draw_text(save_load_input, v2(400, 500));
+		}
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		editor load render end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+}
+
+func s_color rgb(u8 r, u8 g, u8 b)
+{
+	return {r, g, b, 255};
+}
+
+func s_color rgba(u8 r, u8 g, u8 b, u8 a)
+{
+	return {r, g, b, a};
+}
+
+func s_color rrr(u8 r)
+{
+	return {r, r, r, 255};
+}
+
+func void add_temp_light(s_v2 pos, float scale, float duration, s_color color)
+{
+	s_temp_light light;
+	light.pos = pos;
+	light.scale = scale;
+	light.color = color;
+	light.timer.duration = duration;
+	game.lights[game.light_count] = light;
+	game.light_count += 1;
 }

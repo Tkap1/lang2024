@@ -90,6 +90,20 @@ struct s_save_points
 	s_v2i[c_max_save_points] pos;
 }
 
+struct s_timer
+{
+	float time;
+	float duration;
+}
+
+struct s_temp_light
+{
+	s_v2 pos;
+	s_timer timer;
+	float scale;
+	s_color color;
+}
+
 struct s_game
 {
 	int initialized;
@@ -113,6 +127,9 @@ struct s_game
 	s_editor editor;
 	s_texture[e_texture.count] g_textures;
 	s_animation_data[e_animation.count] g_animations;
+	s_render_texture light;
+	int light_count;
+	s_temp_light[c_max_temp_lights] lights;
 }
 
 enum e_animation
@@ -140,6 +157,7 @@ enum e_texture
 	explosion12;
 	projectile;
 	spike;
+	light;
 }
 
 struct s_state

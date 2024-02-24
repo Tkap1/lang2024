@@ -15,6 +15,18 @@ struct s_texture
 	int format;
 }
 
+enum BLEND_MODE {
+
+	ALPHA;
+	ADDITIVE;
+	MULTIPLIED;
+	ADD_COLORS;
+	SUBTRACT_COLORS;
+	ALPHA_PREMULTIPLY;
+	CUSTOM;
+	CUSTOM_SEPARATE;
+}
+
 const int LOG_WARNING = 4;
 const int FLAG_VSYNC_HINT = 64;
 const s_color BLACK = {0, 0, 0, 0};
@@ -23,6 +35,7 @@ const s_color GREEN = {0, 228, 48, 255};
 const s_color BLUE = {0, 121, 241, 255};
 const s_color WHITE = {255, 255, 255, 255};
 const s_color DARK = {50, 50, 50, 255};
+const s_color YELLOW = {253, 249, 0, 255};
 const int MOUSE_BUTTON_LEFT = 0;
 const int MOUSE_BUTTON_RIGHT = 1;
 
@@ -150,6 +163,13 @@ struct s_rect
 	s_v2 size;
 }
 
+struct s_render_texture
+{
+	u32 id;
+	s_texture texture;
+	s_texture depth;
+}
+
 external_func void SetTraceLogLevel(s32);
 external_func void SetConfigFlags(u32);
 external_func void InitWindow(s32, s32, char*);
@@ -184,3 +204,9 @@ external_func int GetKeyPressed();
 external_func b32 IsKeyPressedRepeat(int);
 external_func float GetMouseWheelMove();
 external_func char* TextFormat(char*);
+external_func s_render_texture LoadRenderTexture(int, int);
+external_func void BeginTextureMode(s_render_texture);
+external_func void EndTextureMode();
+external_func void DrawCircleV(s_v2, float, s_color);
+external_func void BeginBlendMode(int);
+external_func void EndBlendMode();
