@@ -2,7 +2,7 @@
 
 
 
-#define breakable_block for(int breakable_i_ = 0; breakable_i_ < 1; breakable_i_++)
+#define breakable_block for(int _breakable_i_ = 0; _breakable_i_++ < 1;)
 
 #define foreach_ptr__(a, index_name, element_name, array) if(0) finished##a: ; else for(auto element_name = &(array).elements[0];;) if(1) goto body##a; else while(1) if(1) goto finished##a; else body##a: for(int index_name = 0; index_name < (array).count && (bool)(element_name = &(array)[index_name]); index_name++)
 #define foreach_ptr_(a, index_name, element_name, array) foreach_ptr__(a, index_name, element_name, array)

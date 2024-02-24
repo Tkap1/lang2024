@@ -93,3 +93,9 @@ game:
 	handle overlap between spikes/save points??
 
 allow struct literals in func call arguments
+
+
+var args -> type check func args -> array (non ptr) to func
+better errors:
+	if we fail to parse a struct, we get an error that the we cant find the struct, rahter than the error inside the struct.
+		same for functions
