@@ -493,8 +493,10 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 		case e_node_func_call: {
 			node_to_c_str(node->left, builder, context, arena);
 			builder->add("(");
+			s_code_gen_context temp = context;
+			temp.prefix_struct_literal = true;
 			for_node(arg, node->func_call.arguments) {
-				node_to_c_str(arg, builder, context, arena);
+				node_to_c_str(arg, builder, temp, arena);
 				if(arg->next) {
 					builder->add(", ");
 				}

@@ -1,0 +1,19 @@
+
+
+struct s_rect
+{
+	int x;
+	int y;
+	int z;
+	int w;
+}
+
+func void f()
+{
+	f2({1,2,3,4});
+}
+
+func void f2(s_rect r)
+{
+
+}

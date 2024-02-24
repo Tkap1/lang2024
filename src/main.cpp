@@ -276,6 +276,7 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/unknown_arg_type_in_external_func.tk", false},
 		{"tests/unknown_return_type_type_in_external_func.tk", false},
 		{"tests/func_ptr_call.tk", true},
+		{"tests/struct_literal_in_func_arguments.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);

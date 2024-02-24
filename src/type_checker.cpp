@@ -908,6 +908,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 				if(!found_var_args && !is_sizeof) {
 					assert(decl_arg->var_type);
 					temp2.wanted_type = decl_arg->var_type;
+					if(decl_arg->var_type->type == e_node_struct) {
+						temp2.expected_literal_type = decl_arg->var_type;
+					}
 				}
 				if(!type_check_expr(call_arg, reporter, data, arena, temp2)) {
 					return false;
