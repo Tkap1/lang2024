@@ -432,6 +432,10 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 				// @TODO(tkap, 17/02/2024): We want the enum member somewhere
 				builder->add("%i", node->right->temp_var_decl->enum_value);
 			}
+			else if(node->left->var_type->type == e_node_array) {
+				assert(node->right->token.equals("size"));
+				node_to_c_str(node->left->var_type->array.size_expr, builder, context, arena);
+			}
 			else if(node->var_type->type == e_node_data_enum) {
 				assert(node->right->type == e_node_identifier);
 				// @TODO(tkap, 17/02/2024): We want the enum member somewhere

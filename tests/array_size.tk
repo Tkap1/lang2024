@@ -1,0 +1,7 @@
+
+
+func void f()
+{
+	int[32] foo;
+	foo.size;
+}

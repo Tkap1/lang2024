@@ -6,6 +6,10 @@
 
 #include "custom_win32.h"
 
+#ifdef __SANITIZE_ADDRESS__
+#include <sanitizer/asan_interface.h>
+#endif
+
 
 #include "types.h"
 #include "memory.h"
@@ -266,13 +270,14 @@ func void run_tests(s_lin_arena* arena)
 		{"tests/dereference4.tk", true},
 		{"tests/array_literal.tk", true},
 		{"tests/for_starting_index.tk", true},
+		{"tests/array_size.tk", true},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
 
 	s_error_reporter reporter = zero;
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
-		arena->used = 0;
+		arena->push();
 		s_test test = test_data[test_i];
 		b8 success = compile(test.file_path, arena, true, &reporter, {.compile_c_code = false});
 		if(success == test.should_compile) {
@@ -289,5 +294,6 @@ func void run_tests(s_lin_arena* arena)
 			SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
 		}
 		reporter = zero;
+		arena->pop();
 	}
 }

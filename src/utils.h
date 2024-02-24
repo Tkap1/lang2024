@@ -15,6 +15,14 @@
 #define invalid_default_case default: assert(!"Invalid default case");
 #define invalid_else else { assert(!"Invalid else"); }
 
+#ifdef __SANITIZE_ADDRESS__
+#define poison_memory(memory, size) __asan_poison_memory_region(memory, size)
+#define unpoison_memory(memory, size) __asan_unpoison_memory_region(memory, size)
+#else
+#define poison_memory(memory, size)
+#define unpoison_memory(memory, size)
+#endif
+
 template <int n>
 struct s_str_builder
 {

@@ -135,15 +135,15 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 
 
 	{
-		s_node node = zero;
-		node.func_decl.is_external = true;
-		node.func_decl.argument_count = 1;
-		node.type = e_node_func_decl;
-		node.func_decl.name = {.type = e_token_identifier, .len = 6, .at = "sizeof"};
-		node.func_decl.return_type = get_type_by_id(e_type_u64, data);
-		b8 result = type_check_func_decl(&node, reporter, data, arena, zero);
+		s_node* node = alloc_node(zero, arena);
+		node->func_decl.is_external = true;
+		node->func_decl.argument_count = 1;
+		node->type = e_node_func_decl;
+		node->func_decl.name = {.type = e_token_identifier, .len = 6, .at = "sizeof"};
+		node->func_decl.return_type = get_type_by_id(e_type_u64, data);
+		b8 result = type_check_func_decl(node, reporter, data, arena, zero);
 		assert(result);
-		add_func_to_scope(data, alloc_node(node, arena), arena);
+		add_func_to_scope(data, node, arena);
 	}
 
 	while(true) {
@@ -671,6 +671,11 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 						}
 					}
 				}
+				else if(context.member_access->type == e_node_array) {
+					assert(node->token.equals("size"));
+					node->var_type = get_type_by_id(e_type_s32, data);
+					success = true;
+				}
 				invalid_else;
 			}
 			else {
@@ -795,56 +800,6 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			return true;
 		} break;
 
-		// case e_node_multiply: {
-		// 	// @TODO(tkap, 11/02/2024):
-		// 	if(!type_check_expr(node->left, reporter, data, arena, context)) { return false; }
-		// 	if(!type_check_expr(node->right, reporter, data, arena, context)) { return false; }
-
-		// 	b8 success = false;
-		// 	if(node->left->var_type->type != e_node_type || node->right->var_type->type != e_node_type) {
-		// 		// @Note(tkap, 18/02/2024): Look for operator overloads
-		// 		for(int scope2_i = data->count - 1; scope2_i >= 0; scope2_i -= 1) {
-		// 			s_scope** scope2 = data->get(scope2_i);
-		// 			if(*scope2) {
-		// 				s_scope* scope1 = *scope2;
-		// 				foreach_val(nfunc_i, nfunc, scope1->funcs) {
-		// 					assert(nfunc->type == e_node_func_decl);
-		// 					if(nfunc->func_decl.argument_count != 2) { continue; }
-		// 					if(nfunc->func_decl.is_external) { continue; }
-		// 					s_node* first_arg = nfunc->func_decl.arguments;
-		// 					s_node* second_arg = first_arg->next;
-		// 					if(is_same_type(first_arg->var_type, node->left->var_type) && is_same_type(second_arg->var_type, node->right->var_type)) {
-		// 						node->operator_overload_func = nfunc;
-		// 						success = true;
-		// 						break;
-		// 					}
-		// 				}
-		// 			}
-		// 		}
-		// 	}
-		// 	else {
-		// 		e_type left = node->left->var_type->basic_type.id;
-		// 		e_type right = node->right->var_type->basic_type.id;
-		// 		for(int i = 0; i < array_count(c_op_table); i++) {
-		// 			s_op_table table = c_op_table[i];
-		// 			if(
-		// 				(table.left == left && table.right == right) ||
-		// 				(table.left == right && table.right == left)
-		// 			) {
-		// 				node->var_type = get_type_by_id(table.result, data);
-		// 				success = true;
-		// 				break;
-		// 			}
-		// 		}
-		// 	}
-		// 	if(!success) {
-		// 		reporter->recoverable_error(node->token.file, node->token.line, "Bad multiply");
-		// 		return false;
-		// 	}
-		// 	node->type_checked = true;
-		// 	return true;
-		// } break;
-
 		case e_node_string: {
 			node->type_checked = true;
 			return true;
@@ -862,10 +817,22 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_expr(node->left, reporter, data, arena, context)) {
 				return false;
 			}
-			if(!node->left->var_type || (node->left->var_type->type != e_node_struct && node->left->var_type->type != e_node_enum && node->left->var_type->type != e_node_data_enum)) {
+
+			if(!node->left->var_type) {
 				reporter->fatal(node->token.file, node->token.line, "todo bad member access");
 				return false;
 			}
+			breakable_block {
+				if(node->left->var_type->type == e_node_array && node->right->token.equals("size")) {
+					break;
+				}
+				if(node->left->var_type->type == e_node_struct) { break; }
+				if(node->left->var_type->type == e_node_enum) { break; }
+				if(node->left->var_type->type == e_node_data_enum) { break; }
+				reporter->fatal(node->token.file, node->token.line, "todo bad member access");
+				return false;
+			}
+
 			s_type_check_context temp = context;
 			// temp.expected_literal_type = node->left->var_type; // @TODO(tkap, 13/02/2024): Do I need this?
 			temp.member_access = node->left->var_type;
@@ -1608,17 +1575,12 @@ func s_get_struct_member get_struct_member(char* name, s_node* nstruct, t_scope_
 	return result;
 }
 
-
 func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* data, s_lin_arena* arena)
 {
 	assert(nstruct->type == e_node_struct);
 	assert(node->type == e_node_member_access);
 	assert(node->type_checked);
 
-	// @TODO(tkap, 15/02/2024): Do we need this???
-	// if(node->left->type == e_node_member_access) {
-	// 	maybe_fix_member_access(node->left, node->left->left->var_type, data, arena);
-	// }
 	s_get_struct_member member = get_struct_member(node->right->token.str(arena), nstruct, data);
 	assert(member.node);
 	if(member.is_imported) {
@@ -1627,7 +1589,10 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 		s_node* old_next = node->next;
 		new_right.type = e_node_identifier;
 		new_right.token = member.import_source->var_decl.name;
+		// @TODO(tkap, 24/02/2024): I feel like this wont work recursively? maybe it does, because the deepest nodes are the one that reach this function first
+		new_right.var_type = member.import_source->var_type;
 		node->right = alloc_node(new_right, arena);
+		node->var_type = member.import_source->var_type;
 
 		s_node temp = zero;
 		temp.type_checked = true;
@@ -1635,7 +1600,7 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 		temp.left = alloc_node(*node, arena);
 		temp.right = old_right;
 		temp.temp_var_decl = member.node->temp_var_decl;
-		temp.var_type = member.node->var_type;
+		temp.var_type = old_right->var_type;
 		temp.next = old_next;
 		*node = temp;
 		maybe_fix_member_access(node, member.import_source->var_type, data, arena);

@@ -1,9 +1,5 @@
 
 
-// @Fixme(tkap, 21/02/2024): delete
-global constexpr int c_static_buffers = 1024;
-global constexpr int c_static_buffer_len = 1024;
-
 enum e_error_level
 {
 	e_error_level_none,
