@@ -540,12 +540,27 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_a
 			}
 			node->var_type = node->var_decl.type->var_type;
 			if(node->var_decl.value) {
-				if(!type_check_expr(node->var_decl.value, reporter, data, arena, context)) {
+				s_type_check_context temp = context;
+				temp.wanted_type = node->var_decl.type->var_type;
+				temp.expected_literal_type = node->var_decl.type->var_type;
+				if(!type_check_expr(node->var_decl.value, reporter, data, arena, temp)) {
 					return false;
 				}
 			}
 
 			// @TODO(tkap, 25/02/2024): check that left type and right type are compatible
+			if(node->var_decl.value) {
+				if(!can_type_a_be_converted_to_b(node->var_decl.type->var_type, node->var_decl.value->var_type)) {
+					reporter->fatal(
+						node->token.file, node->token.line, "Can't assign '%s' of type '%s' to '%s' of type '%s'",
+						node_to_str(node->var_decl.value, arena),
+						node_to_str(node->var_decl.value->var_type, arena),
+						node->var_decl.name.str(arena),
+						node_to_str(node->var_decl.type, arena)
+					);
+					return false;
+				}
+			}
 
 			// @Hack(tkap, 14/02/2024): we need a better system. if we find "float foo = 7;", we have to turn that 7 into a float, because it is an int
 			// @TODO(tkap, 17/02/2024): DISASTER!
@@ -826,6 +841,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 					return false;
 				}
 			}
+			node->var_type = context.wanted_type;
 			node->type_checked = true;
 			return true;
 		} break;
@@ -1099,6 +1115,8 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_expr(node->right, reporter, data, arena, context)) {
 				return false;
 			}
+			// @TODO(tkap, 25/02/2024): proper bool
+			node->var_type = get_type_by_id(e_type_s32, data);
 			node->type_checked = true;
 			return true;
 		} break;
@@ -1123,6 +1141,8 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			if(!type_check_expr(node->right, reporter, data, arena, context)) {
 				return false;
 			}
+			// @TODO(tkap, 25/02/2024): We want a proper bool
+			node->var_type = get_type_by_id(e_type_s32, data);
 			node->type_checked = true;
 			return true;
 		} break;
@@ -1237,6 +1257,10 @@ func char* node_to_str(s_node* node, s_lin_arena* arena)
 		case e_node_array: {
 			char* str = node_to_str(node->left, arena);
 			return alloc_str(arena, "%s[]", str);
+		} break;
+
+		case e_node_integer: {
+			return alloc_str(arena, "%lli", node->integer.value);
 		} break;
 
 		invalid_default_case;
