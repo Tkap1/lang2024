@@ -2,19 +2,26 @@
 
 struct s_v2
 {
-	float x;
-	float y;
+	int x;
+	int y;
 }
 
 func s_v2 foo()
 {
 	s_v2 a;
+	a.x = 21;
 	return a * 2;
 }
 
-func s_v2 operator*(s_v2 a, float b)
+func s_v2 operator*(s_v2 a, int b)
 {
 	a.x *= b;
 	a.y *= b;
 	return a;
+}
+
+func int main()
+{
+	s_v2 a = foo();
+	return a.x;
 }

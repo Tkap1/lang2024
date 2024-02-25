@@ -89,6 +89,21 @@ func char* alloc_str(s_lin_arena* arena, char* str, ...)
 	return buffer;
 }
 
+printf_warnings(1, 2)
+func char* format_str(char* str, ...)
+{
+	static char buffers[16][1024];
+	static int index = 0;
+	char* buffer = buffers[index];
+	index = (index + 1) % 16;
+	va_list args;
+	va_start(args, str);
+	int written = vsnprintf(buffer, 1024, str, args);
+	va_end(args);
+	assert(written >= 0);
+	return buffer;
+}
+
 template <int n>
 void s_str_builder<n>::add_(char* str, b8 add_newline, b8 add_tabs, va_list args)
 {

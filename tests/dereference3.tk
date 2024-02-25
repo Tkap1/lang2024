@@ -5,3 +5,8 @@ func void foo()
 	int *bar;
 	*bar = 420;
 }
+
+func int main()
+{
+	return 42;
+}

@@ -11,4 +11,5 @@ func int main()
 	s_v2i[32] foo;
 	for foo {
 	}
+	return 42;
 }

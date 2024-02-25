@@ -29,3 +29,5 @@ struct s_node;
 func void run_tests(s_lin_arena* arena);
 func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_reporter* reporter, s_compile_options options = {});
 func s_node* parse_step(char* file_path, s_error_reporter* reporter, s_lin_arena* arena, b8 ignore_errors);
+func int compile_c_code(char* file_path);
+func int run_c_program(char* file_path);

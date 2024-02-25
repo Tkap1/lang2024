@@ -15,3 +15,8 @@ func void f2(int a)
 {
 
 }
+
+func int main()
+{
+	return 42;
+}

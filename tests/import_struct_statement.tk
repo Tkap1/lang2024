@@ -6,10 +6,11 @@ struct s_v2
 	float y;
 }
 
-func void foo()
+func int main()
 {
 	s_v2 v;
 	import v;
-	x = 1;
-	y = 2;
+	x = 42;
+	y = 43;
+	return x;
 }

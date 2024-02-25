@@ -1,7 +1,8 @@
 
 
-func void foo()
+func int main()
 {
 	int* bar;
 	*bar;
+	return 42;
 }

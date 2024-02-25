@@ -1,6 +1,7 @@
 
 
-func void f()
+func int main()
 {
-	int[3] foo = .[1, 2, 3];
+	int[3] foo = .[1, 2, 42];
+	return foo[2];
 }

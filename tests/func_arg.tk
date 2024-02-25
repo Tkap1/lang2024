@@ -5,3 +5,8 @@ func int foo(int x)
 	int y = x;
 	return y;
 }
+
+func int main()
+{
+	return 42;
+}

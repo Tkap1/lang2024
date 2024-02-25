@@ -19,8 +19,9 @@ struct s_d
 	import s_c d_member;
 }
 
-func void foo()
+func int main()
 {
 	s_d d;
-	d.a_member;
+	d.a_member = 42;
+	return d.a_member;
 }

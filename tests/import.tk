@@ -2,8 +2,8 @@
 
 struct s_v2
 {
-	float x;
-	float y;
+	int x;
+	int y;
 }
 
 struct s_player
@@ -11,8 +11,9 @@ struct s_player
 	import s_v2 pos;
 }
 
-func void foo()
+func int main()
 {
 	s_player player;
-	player.pos.x = 1;
+	player.pos.x = 42;
+	return player.pos.x;
 }

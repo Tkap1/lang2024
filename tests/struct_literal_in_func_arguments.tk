@@ -8,12 +8,13 @@ struct s_rect
 	int w;
 }
 
-func void f()
+func int main()
 {
-	f2({1,2,3,4});
+	s_rect r = f2({1,2,3,42});
+	return r.w;
 }
 
-func void f2(s_rect r)
+func s_rect f2(s_rect r)
 {
-
+	return r;
 }

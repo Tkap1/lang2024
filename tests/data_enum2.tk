@@ -7,11 +7,12 @@ data_enum e_foo
 		int value;
 	}
 	a {
-		value = 1;
+		value = 42;
 	}
 }
 
-func void f()
+func int main()
 {
 	int x = e_foo.a.value;
+	return x;
 }

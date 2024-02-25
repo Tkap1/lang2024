@@ -1,3 +1,8 @@
 
 
 external_func bad_type bad_func();
+
+func int main()
+{
+	return 42;
+}

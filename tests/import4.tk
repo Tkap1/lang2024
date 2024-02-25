@@ -10,10 +10,11 @@ struct s_bar
 	int y;
 }
 
-func void func_a()
+func int main()
 {
 	s_bar bar;
 	func_b(bar.x, 420);
+	return 42;
 }
 
 func void func_b(int a, int b)

@@ -1,5 +1,6 @@
 
-func void f()
+func int main()
 {
 	int x = sizeof(int);
+	return x;
 }

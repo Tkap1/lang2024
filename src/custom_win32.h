@@ -1094,6 +1094,9 @@ WINUSERAPI BOOL WINAPI SetForegroundWindow(HWND hWnd);
 SHFOLDERAPI SHGetFolderPathA(HWND hwnd, int csidl, HANDLE hToken, DWORD dwFlags, LPSTR pszPath);
 STDAPI SHGetKnownFolderPath(REFKNOWNFOLDERID rfid, DWORD dwFlags, HANDLE hToken, PWSTR *ppszPath);
 WINOLEAPI_(void) CoTaskMemFree(LPVOID pv);
+BOOL DeleteFileA(LPCSTR lpFileName);
+
+BOOL GetExitCodeProcess(HANDLE  hProcess, LPDWORD lpExitCode);
 
 int
 WINAPI

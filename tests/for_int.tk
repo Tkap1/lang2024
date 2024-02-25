@@ -4,4 +4,5 @@ func int main()
 	for 69 {
 		it;
 	}
+	return 42;
 }

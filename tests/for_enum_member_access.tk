@@ -8,9 +8,10 @@ enum e_foo
 	c;
 }
 
-func void bar()
+func int main()
 {
 	for e_foo.count {
 
 	}
+	return 42;
 }

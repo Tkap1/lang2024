@@ -3,7 +3,7 @@
 
 struct s_foo
 {
-	int[32] foo;
+	int foo;
 }
 
 struct s_bar
@@ -11,8 +11,9 @@ struct s_bar
 	s_foo[64] foos;
 }
 
-func void baz()
+func int main()
 {
 	s_bar[128] bar;
-	bar[4].foos[9];
+	bar[4].foos[9].foo = 42;
+	return bar[4].foos[9].foo;
 }

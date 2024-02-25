@@ -11,3 +11,8 @@ func void bar()
 {
 
 }
+
+func int main()
+{
+	return 42;
+}

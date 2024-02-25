@@ -6,7 +6,8 @@ struct s_foo
 	int z;
 }
 
-func void f()
+func int main()
 {
 	int x = sizeof(s_foo);
+	return x;
 }

@@ -1,8 +1,8 @@
 
 
-func void f()
+func int main()
 {
-	for 1..5 {
-		it;
+	for 42..44 {
+		return it;
 	}
 }

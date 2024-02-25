@@ -208,75 +208,77 @@ func void run_tests(s_lin_arena* arena)
 	{
 		char* file_path;
 		b8 should_compile;
+		int expected_exit_code = 42;
 	};
 
 	constexpr s_test test_data[] = {
-		{"tests/foo.tk", false},
-		{"tests/bar.tk", true},
-		{"tests/subscript0.tk", true},
-		{"tests/subscript_2d.tk", true},
-		{"tests/comma_instead_of_semicolon.tk", false},
-		{"tests/two_member_access.tk", true},
-		{"tests/for_int.tk", true},
-		{"tests/for_int_array.tk", true},
-		{"tests/for_struct_array.tk", true},
-		{"tests/struct_var_decl.tk", true},
-		{"tests/function.tk", true},
-		{"tests/return_struct_literal.tk", true},
-		{"tests/func_arg.tk", true},
-		{"tests/func_arg2.tk", true},
-		{"tests/member_access_subscript.tk", true},
-		{"tests/no_forward_decl.tk", true},
-		{"tests/import.tk", true},
-		{"tests/import2.tk", true},
-		{"tests/import3.tk", false},
-		{"tests/import_nest.tk", true},
-		{"tests/array_in_struct.tk", true},
-		{"tests/import_nest.tk", true},
-		{"tests/assign_array.tk", true},
-		{"tests/assign_array_ptr.tk", true},
-		{"tests/address_of_array_in_struct.tk", true},
-		{"tests/assign_to_array_element.tk", true},
-		{"tests/enum.tk", true},
-		{"tests/for_member_access.tk", true},
-		{"tests/for_enum_member_access.tk", true},
-		{"tests/double_subscript.tk", true},
-		{"tests/operator_overload.tk", true},
-		{"tests/operator_overload2.tk", true},
-		{"tests/operator_overload3.tk", true},
-		{"tests/dereference.tk", true},
-		{"tests/dereference2.tk", true},
-		{"tests/dereference3.tk", true},
-		{"tests/import4.tk", true},
-		{"tests/import_struct_statement.tk", true},
-		{"tests/import_shadow.tk", false},
-		{"tests/nested_for_loops.tk", false},
-		{"tests/nonsense.tk", false},
-		{"tests/const_without_value.tk", false},
-		{"tests/data_enum.tk", true},
-		{"tests/data_enum2.tk", true},
-		{"tests/data_enum3.tk", true},
-		{"tests/data_enum4.tk", true},
-		{"tests/import5.tk", true},
-		{"tests/import6.tk", true},
-		{"tests/sizeof.tk", true},
-		{"tests/sizeof2.tk", true},
-		{"tests/sizeof3.tk", true},
-		{"tests/sizeof4.tk", true},
-		{"tests/sizeof5.tk", true},
-		{"tests/sizeof6.tk", true},
-		{"tests/sizeof7.tk", true},
-		{"tests/operator_overload4.tk", true},
-		{"tests/dereference4.tk", true},
-		{"tests/array_literal.tk", true},
-		{"tests/for_starting_index.tk", true},
-		{"tests/array_size.tk", true},
-		{"tests/bad_function_call.tk", false},
-		{"tests/auto_cast.tk", true},
-		{"tests/unknown_arg_type_in_external_func.tk", false},
-		{"tests/unknown_return_type_type_in_external_func.tk", false},
-		{"tests/func_ptr_call.tk", true},
-		{"tests/struct_literal_in_func_arguments.tk", true},
+		{"foo", false},
+		{"bar", true},
+		{"subscript0", true},
+		{"subscript_2d", true},
+		{"comma_instead_of_semicolon", false},
+		{"two_member_access", true},
+		{"for_int", true},
+		{"for_int_array", true},
+		{"for_struct_array", true},
+		{"struct_var_decl", true},
+		{"function", true},
+		{"return_struct_literal", true},
+		{"func_arg", true},
+		{"func_arg2", true},
+		{"member_access_subscript", true},
+		{"no_forward_decl", true},
+		{"import", true},
+		{"import2", true},
+		{"import3", false},
+		{"import_nest", true},
+		{"array_in_struct", true},
+		{"import_nest", true},
+		{"assign_array", true},
+		{"assign_array_ptr", true},
+		{"address_of_array_in_struct", true},
+		{"assign_to_array_element", true},
+		{"enum", true},
+		{"for_member_access", true},
+		{"for_enum_member_access", true},
+		{"double_subscript", true},
+		{"operator_overload", true},
+		{"operator_overload2", true},
+		{"operator_overload3", true},
+		{"dereference", true},
+		{"dereference2", true},
+		{"dereference3", true},
+		{"import4", true},
+		{"import_struct_statement", true},
+		{"import_shadow", false},
+		{"nested_for_loops", false},
+		{"nonsense", false},
+		{"const_without_value", false},
+		{"data_enum", true},
+		{"data_enum2", true},
+		{"data_enum3", true},
+		{"data_enum4", true},
+		{"import5", true},
+		{"import6", true},
+		{"sizeof", true, 4},
+		{"sizeof2", true, 4},
+		{"sizeof3", true, 128},
+		{"sizeof4", true, 12},
+		{"sizeof5", true, 12},
+		{"sizeof6", true, 4},
+		{"sizeof7", true, 128},
+		{"operator_overload4", true},
+		{"dereference4", true},
+		{"array_literal", true},
+		{"for_starting_index", true},
+		{"array_size", true},
+		{"bad_function_call", false},
+		{"auto_cast", true},
+		{"unknown_arg_type_in_external_func", false},
+		{"unknown_return_type_type_in_external_func", false},
+		{"func_ptr_call", true},
+		{"struct_literal_in_func_arguments", true},
+		{"struct_set_to_int", false},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -285,23 +287,86 @@ func void run_tests(s_lin_arena* arena)
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
 		arena->push();
 		s_test test = test_data[test_i];
-		b8 success = compile(test.file_path, arena, true, &reporter, {.compile_c_code = false});
-		if(success == test.should_compile) {
-			SetConsoleTextAttribute(hstdout, FOREGROUND_GREEN);
-			printf("%s ", test.file_path);
-			printf("PASSED!\n");
-			SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+		b8 our_success = compile(format_str("tests/%s.tk", test.file_path), arena, true, &reporter, {.compile_c_code = false});
+		int c_success = 0;
+		if(!test.should_compile && our_success) {
+			goto fail;
 		}
-		else {
-			SetConsoleTextAttribute(hstdout, FOREGROUND_RED);
-			printf("%s ", test.file_path);
-			printf("FAILED!\n");
-			if(reporter.error_level > e_error_level_none) {
-				printf("\t%s\n", reporter.error_str);
+		if(our_success) {
+			c_success = compile_c_code(format_str("tests/%s.c", test.file_path));
+			if(test.should_compile && c_success != 0) {
+				goto fail;
 			}
-			SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+			int exit_code = run_c_program(format_str("%s.exe", test.file_path));
+			if(exit_code != test.expected_exit_code) { goto fail; }
 		}
+
+		goto success;
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		fail start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		fail:
+		SetConsoleTextAttribute(hstdout, FOREGROUND_RED);
+		printf("%s ", test.file_path);
+		printf("FAILED!\n");
+		if(reporter.error_level > e_error_level_none) {
+			printf("\t%s\n", reporter.error_str);
+		}
+		SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+		goto end;
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		fail end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		success start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+		success:
+		SetConsoleTextAttribute(hstdout, FOREGROUND_GREEN);
+		printf("%s ", test.file_path);
+		printf("PASSED!\n");
+		SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+		goto end;
+		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		success end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+		end:
+
 		reporter = zero;
 		arena->pop();
 	}
+
+	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
+		s_test test = test_data[test_i];
+		DeleteFileA(format_str("%s.exe", test.file_path));
+		DeleteFileA(format_str("%s.obj", test.file_path));
+	}
+
+}
+
+func int compile_c_code(char* file_path)
+{
+	STARTUPINFO startup = zero;
+	PROCESS_INFORMATION info = zero;
+	char* compiler_path = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.35.32215\\bin\\Hostx64\\x64\\cl.exe -nologo -Od";
+	constexpr int CREATE_NO_WINDOW = 134217728;
+	BOOL success = CreateProcessA(null, format_str("%s %s", compiler_path, file_path), null, null, false, CREATE_NO_WINDOW, null, null, &startup, &info);
+	assert(success);
+
+	WaitForSingleObject(info.hProcess, INFINITE);
+	DWORD exit_code = 0;
+	GetExitCodeProcess(info.hProcess, &exit_code);
+	CloseHandle(info.hProcess);
+	CloseHandle(info.hThread);
+	return exit_code;
+}
+
+func int run_c_program(char* file_path)
+{
+	STARTUPINFO startup = zero;
+	PROCESS_INFORMATION info = zero;
+	constexpr int CREATE_NO_WINDOW = 134217728;
+	BOOL success = CreateProcessA(null, file_path, null, null, false, CREATE_NO_WINDOW, null, null, &startup, &info);
+	assert(success);
+
+	WaitForSingleObject(info.hProcess, INFINITE);
+	DWORD exit_code = 0;
+	GetExitCodeProcess(info.hProcess, &exit_code);
+	CloseHandle(info.hProcess);
+	CloseHandle(info.hThread);
+	return exit_code;
 }

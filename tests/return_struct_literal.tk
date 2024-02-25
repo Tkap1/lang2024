@@ -9,3 +9,8 @@ func s_foo foo()
 {
 	return {69, 420};
 }
+
+func int main()
+{
+	return 42;
+}

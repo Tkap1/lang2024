@@ -5,10 +5,11 @@ struct s_foo
 	int x;
 }
 
-func void bar()
+func int main()
 {
 	s_foo foo;
 	for foo.x {
 
 	}
+	return 42;
 }

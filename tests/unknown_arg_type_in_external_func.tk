@@ -1,2 +1,7 @@
 
 external_func void* bad_func(bad_type);
+
+func int main()
+{
+	return 42;
+}

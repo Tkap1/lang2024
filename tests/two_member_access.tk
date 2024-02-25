@@ -13,5 +13,6 @@ struct s_b
 func int main()
 {
 	s_b b;
-	b.b_member.a_member;
+	b.b_member.a_member = 42;
+	return b.b_member.a_member;
 }

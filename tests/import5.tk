@@ -15,9 +15,10 @@ struct s_c
 	int kiwi;
 }
 
-func void f()
+func int main()
 {
 	s_c d;
 	import d.c;
-	b.a = 1;
+	b.a = 42;
+	return b.a;
 }

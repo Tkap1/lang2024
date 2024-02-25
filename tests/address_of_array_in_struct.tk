@@ -9,5 +9,7 @@ struct s_foo
 func int main()
 {
 	s_foo foo;
+	foo.member[1] = 42;
 	int[32]* bar = &foo.member;
+	return bar[1];
 }

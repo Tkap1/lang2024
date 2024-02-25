@@ -1,8 +1,10 @@
 
 external_func void* memcpy(void*, void*, u64);
 
-func void foo()
+func int main()
 {
 	int[32][32] bar;
+	bar[1][2] = 42;
 	int[32][32] baz = bar;
+	return baz[1][2];
 }

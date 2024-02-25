@@ -1,9 +1,11 @@
 
 // @Note(tkap, 15/02/2024): Doesn't generate the correct code!
-func void foo()
+func int main()
 {
 	int[32][32] bar;
+	bar[1][2] = 42;
 	int[32][32]* baz = &bar;
+	return baz[1][2];
 }
 
 

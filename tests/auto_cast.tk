@@ -1,11 +1,11 @@
 
 
-func void f(int x)
+func int f(int x)
 {
-
+	return x ;
 }
 
-func void f2()
+func int main()
 {
-	f(xx 5.0);
+	return f(xx 42.0);
 }

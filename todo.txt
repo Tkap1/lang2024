@@ -103,3 +103,6 @@ function overloading
 shouldnt all e_node_type have a proper basic_type member? it is not the case currently
 
 pretty sure that if we find foo(1) but foo doesnt take any arguments, we will fail an assert/crash instead of reporting an error
+
+
+see if this works "s_v2 a; return (a * 2).x;

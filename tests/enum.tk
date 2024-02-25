@@ -5,3 +5,8 @@ enum e_foo
 	b;
 	c;
 }
+
+func int main()
+{
+	return 42;
+}

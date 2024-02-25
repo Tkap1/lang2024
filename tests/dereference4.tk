@@ -2,12 +2,15 @@
 
 struct s_v2
 {
-	float x;
-	float y;
+	int x;
+	int y;
 }
 
-func void f()
+func int main()
 {
-	s_v2* v;
-	*v;
+	s_v2 a;
+	a.x = 42;
+	s_v2* b = &a;
+	*b;
+	return b.x;
 }

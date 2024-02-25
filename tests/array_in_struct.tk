@@ -9,8 +9,9 @@ struct s_foo
 {
 	import s_bar bar;
 }
-func void f()
+func int main()
 {
 	s_foo foo;
-	foo.arr[0];
+	foo.arr[1] = 42;
+	return foo.arr[1];
 }

@@ -6,3 +6,8 @@ func void f()
 	game_type do_game;
 	do_game(1);
 }
+
+func int main()
+{
+	return 42;
+}

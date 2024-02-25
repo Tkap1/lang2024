@@ -221,6 +221,7 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_lin_arena*
 							node_to_c_str(node->var_decl.value, builder, context, arena);
 						}
 						else {
+							builder->add_line(";");
 							builder->add_tabs("memcpy(%s, ", node->var_decl.name.str(arena));
 							node_to_c_str(node->var_decl.value, builder, context, arena);
 							builder->add_line(", %i);", node->var_type->size_in_bytes);

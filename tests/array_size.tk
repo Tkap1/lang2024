@@ -1,7 +1,7 @@
 
 
-func void f()
+func int main()
 {
-	int[32] foo;
-	foo.size;
+	int[42] foo;
+	return foo.size;
 }

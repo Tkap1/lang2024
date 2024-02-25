@@ -5,3 +5,8 @@ func void foo(int* bar)
 	int ignore;
 	*bar;
 }
+
+func int main()
+{
+	return 42;
+}

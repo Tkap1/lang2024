@@ -2,8 +2,8 @@
 
 struct s_v2
 {
-	float x;
-	float y;
+	int x;
+	int y;
 }
 
 func s_v2 operator+(s_v2 a, s_v2 b)
@@ -13,16 +13,19 @@ func s_v2 operator+(s_v2 a, s_v2 b)
 	return a;
 }
 
-func s_v2 operator*(s_v2 a, float b)
+func s_v2 operator*(s_v2 a, int b)
 {
 	a.x *= b;
 	a.y *= b;
 	return a;
 }
 
-func void f()
+func int main()
 {
 	s_v2 a;
+	a.x = 21;
 	s_v2 b;
-	a + b * 1.0;
+	b.x = 21;
+	s_v2 c = a + b * 1.0;
+	return c.x;
 }

@@ -10,3 +10,8 @@ func s_v2 foo(s_v2 x)
 	s_v2 result = x;
 	return result;
 }
+
+func int main()
+{
+	return 42;
+}
