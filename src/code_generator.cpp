@@ -37,10 +37,16 @@ func void generate_node(s_node* node, t_code_builder* builder, s_code_gen_contex
 			}
 			node_to_c_str(node->func_decl.return_type, builder, context, arena);
 			builder->add(" %s(", node->func_decl.name.str(arena));
-			if(node->func_decl.argument_count <= 0) {
+			if(!node->func_decl.is_method && node->func_decl.argument_count <= 0) {
 				builder->add("void");
 			}
 			else {
+				if(node->func_decl.is_method) {
+					builder->add("%s* this", node->func_decl.base_struct.str(arena));
+					if(node->func_decl.argument_count > 0) {
+						builder->add(", ");
+					}
+				}
 				for_node(arg, node->func_decl.arguments) {
 					generate_func_decl_arg(arg, builder, node->func_decl.is_external, arena);
 					// builder->add("%s", node_to_c_str(arg));
@@ -492,17 +498,39 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 		} break;
 
 		case e_node_func_call: {
-			node_to_c_str(node->left, builder, context, arena);
-			builder->add("(");
-			s_code_gen_context temp = context;
-			temp.prefix_struct_literal = true;
-			for_node(arg, node->func_call.arguments) {
-				node_to_c_str(arg, builder, temp, arena);
-				if(arg->next) {
+			if(node->left->temp_var_decl && node->left->temp_var_decl->type == e_node_func_decl && node->left->temp_var_decl->func_decl.is_method) {
+				s_code_gen_context temp = context;
+				temp.prefix_struct_literal = true;
+				node_to_c_str(node->left->right, builder, context, arena);
+				builder->add("(");
+				if(node->left->left->var_type->pointer_level <= 0) {
+					builder->add("&");
+				}
+				node_to_c_str(node->left->left, builder, context, arena);
+				if(node->func_call.arguments) {
 					builder->add(", ");
 				}
+				for_node(arg, node->func_call.arguments) {
+					node_to_c_str(arg, builder, temp, arena);
+					if(arg->next) {
+						builder->add(", ");
+					}
+				}
+				builder->add(")");
 			}
-			builder->add(")");
+			else {
+				node_to_c_str(node->left, builder, context, arena);
+				builder->add("(");
+				s_code_gen_context temp = context;
+				temp.prefix_struct_literal = true;
+				for_node(arg, node->func_call.arguments) {
+					node_to_c_str(arg, builder, temp, arena);
+					if(arg->next) {
+						builder->add(", ");
+					}
+				}
+				builder->add(")");
+			}
 		} break;
 
 		case e_node_modulo: {

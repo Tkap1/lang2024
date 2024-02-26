@@ -1,0 +1,18 @@
+
+
+struct s_foo
+{
+	int x;
+}
+
+func int main()
+{
+	s_foo a;
+	a.x = 42;
+	return a.f();
+}
+
+func int s_foo.f()
+{
+	return x;
+}

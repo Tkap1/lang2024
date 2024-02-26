@@ -195,7 +195,8 @@ def compile(files, name="main", do_dll=False, pdb_name=None, include_dirs=[], li
 		comp_msvc.append("/MT")
 
 	if no_console_in_release and debug == optimized:
-		link_msvc.append("-SUBSYSTEM:WINDOWS")
+		pass
+		# link_msvc.append("-SUBSYSTEM:WINDOWS")
 
 	if not "m_debug" in comp_msvc:
 		comp_msvc.append("-wd 4127")

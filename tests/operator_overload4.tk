@@ -26,6 +26,6 @@ func int main()
 	a.x = 21;
 	s_v2 b;
 	b.x = 21;
-	s_v2 c = a + b * 1.0;
+	s_v2 c = a + b * 1;
 	return c.x;
 }

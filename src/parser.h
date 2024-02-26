@@ -177,6 +177,8 @@ struct s_node
 			b8 is_external;
 			b8 is_dll_export;
 			b8 is_operator_overload;
+			b8 is_method;
+			b8 method_import_added_to_scope;
 			e_node operator_overload;
 			int argument_count;
 			s_node* return_type;
@@ -184,6 +186,7 @@ struct s_node
 			s_node* arguments;
 			s_node* body;
 			s_scope* scope;
+			s_token base_struct;
 		} func_decl;
 
 		struct
@@ -211,6 +214,7 @@ struct s_node
 
 		struct
 		{
+			int argument_count;
 			s_node* arguments;
 		} func_call;
 

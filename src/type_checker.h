@@ -70,3 +70,7 @@ func s_node* get_data_enum_by_name(char* name, t_scope_arr* data);
 func void add_data_enum_to_scope(t_scope_arr* data, s_node* data_enum, s_lin_arena* arena);
 func b8 add_func_pointer_to_scope(t_scope_arr* data, s_node* var, s_error_reporter* reporter, s_lin_arena* arena);
 func b8 can_type_a_be_converted_to_b(s_node* a, s_node* b);
+func s_token make_identifier_token(char* str);
+func s_node make_identifier_node(char* str);
+func s_tokenizer quick_tokenizer(char* str);
+func int get_func_argument_count(s_node* node);

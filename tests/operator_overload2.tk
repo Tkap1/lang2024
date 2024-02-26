@@ -8,10 +8,8 @@ struct s_v2
 
 func int main()
 {
-	s_v2 a;
-	a.x = 21;
-	s_v2 b = v2() * 2.0;
-	return b.x;
+	s_v2 a = v2() * 2;
+	return a.x;
 }
 
 func s_v2 v2()

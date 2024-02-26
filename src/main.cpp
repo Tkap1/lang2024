@@ -243,7 +243,7 @@ func void run_tests(s_lin_arena* arena)
 		{"for_enum_member_access", true},
 		{"double_subscript", true},
 		{"operator_overload", true},
-		{"operator_overload2", true},
+		{"operator_overload2", true, 2},
 		{"operator_overload3", true},
 		{"dereference", true},
 		{"dereference2", true},
@@ -279,9 +279,15 @@ func void run_tests(s_lin_arena* arena)
 		{"func_ptr_call", true},
 		{"struct_literal_in_func_arguments", true},
 		{"struct_set_to_int", false},
+		{"method", true},
+		{"method2", false},
+		{"method3", false},
 	};
 
 	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
+
+	int success_count = 0;
+	int fail_count = 0;
 
 	s_error_reporter reporter = zero;
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
@@ -290,6 +296,9 @@ func void run_tests(s_lin_arena* arena)
 		b8 our_success = compile(format_str("tests/%s.tk", test.file_path), arena, true, &reporter, {.compile_c_code = false});
 		int c_success = 0;
 		if(!test.should_compile && our_success) {
+			goto fail;
+		}
+		if(!our_success && test.should_compile) {
 			goto fail;
 		}
 		if(our_success) {
@@ -305,6 +314,7 @@ func void run_tests(s_lin_arena* arena)
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		fail start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		fail:
+		fail_count += 1;
 		SetConsoleTextAttribute(hstdout, FOREGROUND_RED);
 		printf("%s ", test.file_path);
 		printf("FAILED!\n");
@@ -317,6 +327,7 @@ func void run_tests(s_lin_arena* arena)
 
 		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		success start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 		success:
+		success_count += 1;
 		SetConsoleTextAttribute(hstdout, FOREGROUND_GREEN);
 		printf("%s ", test.file_path);
 		printf("PASSED!\n");
@@ -335,6 +346,8 @@ func void run_tests(s_lin_arena* arena)
 		DeleteFileA(format_str("%s.exe", test.file_path));
 		DeleteFileA(format_str("%s.obj", test.file_path));
 	}
+
+	printf("Passed %i/%i\n", success_count, success_count + fail_count);
 
 }
 

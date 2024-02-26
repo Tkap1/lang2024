@@ -106,3 +106,16 @@ pretty sure that if we find foo(1) but foo doesnt take any arguments, we will fa
 
 
 see if this works "s_v2 a; return (a * 2).x;
+
+multithread tests!
+
+test a method call with a pointer variable
+
+re-do how we handle scopes? ft. aruseus
+	struct s_scope
+	{
+		s_scope* parent;
+		funcs;
+		nodes;
+		...;
+	}

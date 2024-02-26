@@ -284,6 +284,14 @@ func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* rep
 		s_parse_result pr = parse_type(tokenizer, reporter, arena);
 		if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected a type after 'func'"); }
 		tokenizer = pr.tokenizer;
+
+		if(tokenizer.peek_token(e_token_identifier, reporter) && tokenizer.peek_token(e_token_dot, reporter, 1)) {
+			tokenizer.consume_token(e_token_identifier, &token, reporter);
+			result.node.func_decl.is_method = true;
+			result.node.func_decl.base_struct = token;
+			tokenizer.consume_token(e_token_dot, reporter);
+		}
+
 		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected function name"); return result; }
 		result.node.func_decl.name = token;
 		result.node.func_decl.return_type = alloc_node(pr.node, arena);
@@ -695,6 +703,7 @@ func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* re
 					if(!pr.success) { break; }
 					tokenizer = pr.tokenizer;
 					curr_arg = advance_node(curr_arg, pr.node, arena);
+					result.node.func_call.argument_count += 1;
 
 					if(!tokenizer.consume_token(e_token_comma, reporter)) { break; }
 				}

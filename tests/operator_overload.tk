@@ -10,7 +10,7 @@ func int main()
 {
 	s_v2 a;
 	a.x = 21;
-	s_v2 b = a * 2.0;
+	s_v2 b = a * 2;
 	return b.x;
 }
 

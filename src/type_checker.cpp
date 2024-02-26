@@ -356,6 +356,61 @@ func b8 type_check_func_decl(s_node* node, s_error_reporter* reporter, t_scope_a
 		}
 	}
 
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		handle methods start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	if(node->func_decl.is_method) {
+		s_node* nstruct = get_struct_by_name_except(node->func_decl.base_struct.str(arena), null, data);
+		if(!nstruct) {
+			reporter->recoverable_error(node->func_decl.name.file, node->func_decl.name.line, "TODO");
+			data->pop();
+			s_scope* scope = *data->get(scope_index);
+			scope->funcs.remove_and_shift(func_index);
+			return false;
+		}
+
+		// @TODO(tkap, 25/02/2024): Turn this into an if check after we fail it once.
+		assert(!node->func_decl.method_import_added_to_scope);
+		{
+			s_node var_decl = zero;
+			var_decl.type = e_node_var_decl;
+			{
+				s_tokenizer tokenizer = quick_tokenizer(alloc_str(arena, "%s*", nstruct->token.str(arena)));
+				var_decl.var_decl.type = alloc_node(parse_type(tokenizer, reporter, arena).node, arena);
+			}
+			var_decl.var_decl.name = make_identifier_token("this");
+			if(!type_check_statement(alloc_node(var_decl, arena), reporter, data, arena, context)) { assert(false); }
+		}
+
+		{
+			s_node import = zero;
+			import.type = e_node_import;
+			{
+				s_node left = zero;
+				left.type = e_node_identifier;
+				left.token = make_identifier_token("this");
+				import.left = alloc_node(left, arena);
+			}
+			if(!type_check_statement(alloc_node(import, arena), reporter, data, arena, context)) { assert(false); }
+		}
+		node->func_decl.method_import_added_to_scope = true;
+
+		{
+			// s_node left = zero;
+			// left.type = e_node_identifier;
+			// left.var_type = nstruct;
+			// left.token = {.type = e_token_identifier, .len = 8, .at = "__this__"};
+			// import->left = alloc_node(left, arena);
+		}
+		// if(!add_import_to_scope(data, import, reporter, arena)) {
+		// 	node->func_decl.method_import_added_to_scope = true;
+		// 	reporter->fatal(node->func_decl.name.file, node->func_decl.name.line, "TODO");
+		// 	data->pop();
+		// 	s_scope* scope = *data->get(scope_index);
+		// 	scope->funcs.remove_and_shift(func_index);
+		// 	return false;
+		// }
+	}
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		handle methods end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 	if(!node->func_decl.is_external) {
 		if(!type_check_statement(node->func_decl.body, reporter, data, arena, context)) {
 			data->pop();
@@ -676,7 +731,16 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 					s_get_struct_member member = get_struct_member(node->token.str(arena), context.member_access, data);
 					if(member.node) {
 						node->var_type = member.node->var_type;
+						node->temp_var_decl = member.node->var_type;
 						success = true;
+					}
+					if(!success) {
+						s_node* nfunc = get_func_by_name(node->token.str(arena), data);
+						if(nfunc && nfunc->func_decl.is_method && nfunc->func_decl.base_struct.equals(context.member_access->token)) {
+							node->var_type = nfunc->func_decl.return_type->var_type;
+							node->temp_var_decl = nfunc;
+							success = true;
+						}
 					}
 				}
 				else if(context.member_access->type == e_node_enum) {
@@ -886,11 +950,12 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 			// temp.expected_literal_type = node->left->var_type; // @TODO(tkap, 13/02/2024): Do I need this?
 			temp.member_access = node->left->var_type;
 			if(!type_check_expr(node->right, reporter, data, arena, temp)) {
-				reporter->fatal(node->token.file, node->token.line, "todo bad member access 2");
+				reporter->recoverable_error(node->token.file, node->token.line, "todo bad member access 2");
 				return false;
 			}
 			node->var_type = node->right->var_type;
-			node->temp_var_decl = node->var_type;
+			// @TODO(tkap, 25/02/2024): Questionble
+			node->temp_var_decl = node->right->temp_var_decl;
 			node->type_checked = true;
 			if(node->left->var_type->type == e_node_struct) {
 				maybe_fix_member_access(node, node->left->var_type, data, arena);
@@ -900,6 +965,21 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_arr* d
 
 		case e_node_func_call: {
 			if(!type_check_expr(node->left, reporter, data, arena, context)) {
+				return false;
+			}
+			if(node->left->temp_var_decl->func_decl.is_method && node->left->type != e_node_member_access) {
+				reporter->fatal(
+					node->token.file, node->token.line, "bad func call TODO"
+				);
+				return false;
+			}
+			int decl_arg_count = get_func_argument_count(node->left);
+			if(node->func_call.argument_count != decl_arg_count) {
+				int call_count = node->func_call.argument_count;
+				reporter->fatal(
+					node->token.file, node->token.line, "Function %s wants %i argument%s but %i %s given",
+					node_to_str(node->left, arena), decl_arg_count, decl_arg_count == 1 ? "": "s", call_count, call_count == 1 ? "was" : "were"
+				);
 				return false;
 			}
 			s_type_check_context temp = context;
@@ -1261,6 +1341,18 @@ func char* node_to_str(s_node* node, s_lin_arena* arena)
 
 		case e_node_integer: {
 			return alloc_str(arena, "%lli", node->integer.value);
+		} break;
+
+		case e_node_add: {
+			return alloc_str(arena, "%s + %s", node_to_str(node->left, arena), node_to_str(node->right, arena));
+		} break;
+
+		case e_node_multiply: {
+			return alloc_str(arena, "%s * %s", node_to_str(node->left, arena), node_to_str(node->right, arena));
+		} break;
+
+		case e_node_identifier: {
+			return node->token.str(arena);
 		} break;
 
 		invalid_default_case;
@@ -1693,6 +1785,14 @@ func void maybe_fix_member_access(s_node* node, s_node* nstruct, t_scope_arr* da
 	assert(node->type == e_node_member_access);
 	assert(node->type_checked);
 
+	// @TODO(tkap, 25/02/2024): May not work with imports... should it?
+	if(node->right->temp_var_decl && node->right->temp_var_decl->type == e_node_func_decl) {
+		auto decl = node->right->temp_var_decl->func_decl;
+		assert(decl.is_method);
+		assert(decl.base_struct.equals(nstruct->token));
+		return;
+	}
+
 	s_get_struct_member member = get_struct_member(node->right->token.str(arena), nstruct, data);
 	assert(member.node);
 	if(member.is_imported) {
@@ -1812,8 +1912,7 @@ func b8 type_check_arithmetic(s_node* node, s_error_reporter* reporter, t_scope_
 					}
 					else {
 						if(is_same_type(first_arg->var_type, node->left->var_type) && is_same_type(second_arg->var_type, node->right->var_type)) {
-							// @TODO(tkap, 18/02/2024): Or do we want return_type->var_type?
-							node->var_type = nfunc->func_decl.return_type;
+							node->var_type = nfunc->func_decl.return_type->var_type;
 							node->operator_overload_func = nfunc;
 							success = true;
 							break;
@@ -1917,4 +2016,36 @@ func b8 can_type_a_be_converted_to_b(s_node* a, s_node* b)
 	if(a->type == e_node_struct && b->type != e_node_struct) { return false; }
 
 	return true;
+}
+
+func s_token make_identifier_token(char* str)
+{
+	return {.type = e_token_identifier, .len = (int)strlen(str), .at = str};
+}
+
+func s_node make_identifier_node(char* str)
+{
+	s_node node = zero;
+	node.type = e_node_identifier;
+	node.token = make_identifier_token(str);
+	return node;
+}
+
+func s_tokenizer quick_tokenizer(char* str)
+{
+	s_tokenizer tokenizer = zero;
+	tokenizer.at = str;
+	return tokenizer;
+}
+
+func int get_func_argument_count(s_node* node)
+{
+	if(node->var_type->type == e_node_func_ptr) {
+		return node->var_type->func_ptr.argument_count;
+	}
+	else if(node->temp_var_decl->type == e_node_func_decl) {
+		return node->temp_var_decl->func_decl.argument_count;
+	}
+	invalid_else;
+	return 0;
 }
