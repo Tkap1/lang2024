@@ -1,10 +1,7 @@
 
-// @TODO(tkap, 18/02/2024): Global alert
-global int overload_id = 0;
-
 func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
 {
-	overload_id = 0;
+	s_parse_context context = zero;
 	s_node* ast = null;
 	s_node** current = &ast;
 	while(true) {
@@ -31,7 +28,7 @@ func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_aren
 			continue;
 		}
 
-		pr = parse_func_decl(tokenizer, reporter, arena);
+		pr = parse_func_decl(tokenizer, reporter, arena, &context);
 		if(pr.success) {
 			tokenizer = pr.tokenizer;
 			current = advance_node(current, pr.node, arena);
@@ -271,7 +268,7 @@ func s_parse_result parse_data_enum(s_tokenizer tokenizer, s_error_reporter* rep
 	return result;
 }
 
-func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
+func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena, s_parse_context* context)
 {
 	s_parse_result result = zero;
 	s_token token = zero;
@@ -350,7 +347,7 @@ func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* rep
 		result.node.func_decl.body = alloc_node(pr.node, arena);
 
 		if(result.node.func_decl.is_operator_overload) {
-			char* name = alloc_str(arena, "__overload%i__", overload_id++);
+			char* name = alloc_str(arena, "__overload%i__", context->overload_id++);
 			result.node.func_decl.name = {.type = e_token_identifier, .len = (int)strlen(name), .at = name};
 		}
 

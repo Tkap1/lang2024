@@ -86,6 +86,11 @@ enum e_context
 	e_context_global = 1 << 2,
 };
 
+struct s_parse_context
+{
+	int overload_id;
+};
+
 struct s_operator_data
 {
 	e_token token_type;
@@ -316,7 +321,7 @@ func s_parse_result parse_type(s_tokenizer tokenizer, s_error_reporter* reporter
 func s_parse_result parse_array(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* reporter, int in_operator_level, s_lin_arena* arena);
 func void print_expression(s_node* node, s_lin_arena* arena);
-func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
+func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena, s_parse_context* context);
 func s_parse_result parse_external_func_decl(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_var_decl(s_tokenizer tokenizer, s_error_reporter* reporter, int context, s_lin_arena* arena);
