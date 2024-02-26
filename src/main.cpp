@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 	char input_name[1024] = zero;
 	for(int i = 0; i < argc; i++) {
 		if(strcmp(argv[i], "test") == 0) {
-			run_tests(&arena);
+			run_tests();
 			return 0;
 		}
 		else if(strcmp(argv[i], "dll") == 0) {
@@ -202,14 +202,17 @@ func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_r
 	return result;
 }
 
-func void run_tests(s_lin_arena* arena)
+global volatile int g_tests_done = 0;
+global volatile int g_success_count = 0;
+global volatile int g_fail_count = 0;
+global volatile HANDLE g_mutex;
+global volatile HANDLE g_hstdout;
+func void run_tests()
 {
-	struct s_test
-	{
-		char* file_path;
-		b8 should_compile;
-		int expected_exit_code = 42;
-	};
+
+	g_mutex = CreateMutex(null, false, null);
+	g_hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
+	assert(g_mutex);
 
 	constexpr s_test test_data[] = {
 		{"foo", false},
@@ -231,7 +234,6 @@ func void run_tests(s_lin_arena* arena)
 		{"import", true},
 		{"import2", true},
 		{"import3", false},
-		{"import_nest", true},
 		{"array_in_struct", true},
 		{"import_nest", true},
 		{"assign_array", true},
@@ -284,62 +286,26 @@ func void run_tests(s_lin_arena* arena)
 		{"method3", false},
 	};
 
-	HANDLE hstdout = GetStdHandle(STD_OUTPUT_HANDLE);
-
-	int success_count = 0;
-	int fail_count = 0;
-
-	s_error_reporter reporter = zero;
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
-		arena->push();
-		s_test test = test_data[test_i];
-		b8 our_success = compile(format_str("tests/%s.tk", test.file_path), arena, true, &reporter, {.compile_c_code = false});
-		int c_success = 0;
-		if(!test.should_compile && our_success) {
-			goto fail;
-		}
-		if(!our_success && test.should_compile) {
-			goto fail;
-		}
-		if(our_success) {
-			c_success = compile_c_code(format_str("tests/%s.c", test.file_path));
-			if(test.should_compile && c_success != 0) {
-				goto fail;
+		for(int other_i = 0; other_i < array_count(test_data); other_i++) {
+			if(test_i == other_i) { continue; }
+			if(strcmp(test_data[test_i].file_path, test_data[other_i].file_path) == 0) {
+				printf("Test '%s' is duplicated!\n", test_data[test_i].file_path);
+				exit(1);
 			}
-			int exit_code = run_c_program(format_str("%s.exe", test.file_path));
-			if(exit_code != test.expected_exit_code) { goto fail; }
 		}
-
-		goto success;
-
-		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		fail start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		fail:
-		fail_count += 1;
-		SetConsoleTextAttribute(hstdout, FOREGROUND_RED);
-		printf("%s ", test.file_path);
-		printf("FAILED!\n");
-		if(reporter.error_level > e_error_level_none) {
-			printf("\t%s\n", reporter.error_str);
-		}
-		SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-		goto end;
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		fail end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-		// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		success start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-		success:
-		success_count += 1;
-		SetConsoleTextAttribute(hstdout, FOREGROUND_GREEN);
-		printf("%s ", test.file_path);
-		printf("PASSED!\n");
-		SetConsoleTextAttribute(hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-		goto end;
-		// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		success end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-		end:
-
-		reporter = zero;
-		arena->pop();
 	}
+
+	s_thread_data thread_data[array_count(test_data)] = zero;
+
+	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
+		thread_data[test_i].arena = alloc_arena(20 * c_mb);
+		thread_data[test_i].test = test_data[test_i];
+		CreateThread(null, 0, run_a_test, (void*)&thread_data[test_i], 0, null);
+		// run_a_test(&thread_data[test_i]);
+	}
+
+	while(g_tests_done != array_count(test_data)) { Sleep(10); }
 
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
 		s_test test = test_data[test_i];
@@ -347,17 +313,17 @@ func void run_tests(s_lin_arena* arena)
 		DeleteFileA(format_str("%s.obj", test.file_path));
 	}
 
-	printf("Passed %i/%i\n", success_count, success_count + fail_count);
+	printf("Passed %i/%i\n", g_success_count, g_success_count + g_fail_count);
 
 }
 
-func int compile_c_code(char* file_path)
+func int compile_c_code(char* file_path, s_lin_arena* arena)
 {
 	STARTUPINFO startup = zero;
 	PROCESS_INFORMATION info = zero;
 	char* compiler_path = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.35.32215\\bin\\Hostx64\\x64\\cl.exe -nologo -Od";
 	constexpr int CREATE_NO_WINDOW = 134217728;
-	BOOL success = CreateProcessA(null, format_str("%s %s", compiler_path, file_path), null, null, false, CREATE_NO_WINDOW, null, null, &startup, &info);
+	BOOL success = CreateProcessA(null, alloc_str(arena, "%s %s", compiler_path, file_path), null, null, false, CREATE_NO_WINDOW, null, null, &startup, &info);
 	assert(success);
 
 	WaitForSingleObject(info.hProcess, INFINITE);
@@ -382,4 +348,61 @@ func int run_c_program(char* file_path)
 	CloseHandle(info.hProcess);
 	CloseHandle(info.hThread);
 	return exit_code;
+}
+
+DWORD WINAPI run_a_test(void* arg)
+{
+	s_thread_data data = *(s_thread_data*)arg;
+	s_error_reporter reporter = zero;
+
+	b8 our_success = compile(alloc_str(&data.arena, "tests/%s.tk", data.test.file_path), &data.arena, true, &reporter, {.compile_c_code = false});
+	int c_success = 0;
+	if(!data.test.should_compile && our_success) {
+		goto fail;
+	}
+	if(!our_success && data.test.should_compile) {
+		goto fail;
+	}
+	if(our_success) {
+		c_success = compile_c_code(alloc_str(&data.arena, "tests/%s.c", data.test.file_path), &data.arena);
+		if(data.test.should_compile && c_success != 0) {
+			goto fail;
+		}
+		int exit_code = run_c_program(alloc_str(&data.arena, "%s.exe", data.test.file_path));
+		if(exit_code != data.test.expected_exit_code) { goto fail; }
+	}
+
+	goto success;
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		fail start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	fail:
+	InterlockedIncrement((LONG*)&g_fail_count);
+	WaitForSingleObject(g_mutex, INFINITE);
+	SetConsoleTextAttribute(g_hstdout, FOREGROUND_RED);
+	printf("%s ", data.test.file_path);
+	printf("FAILED!\n");
+	if(reporter.error_level > e_error_level_none) {
+		printf("\t%s\n", reporter.error_str);
+	}
+	SetConsoleTextAttribute(g_hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+	ReleaseMutex(g_mutex);
+	goto end;
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		fail end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	// vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv		success start		vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+	success:
+	InterlockedIncrement((LONG*)&g_success_count);
+	WaitForSingleObject(g_mutex, INFINITE);
+	SetConsoleTextAttribute(g_hstdout, FOREGROUND_GREEN);
+	printf("%s ", data.test.file_path);
+	printf("PASSED!\n");
+	SetConsoleTextAttribute(g_hstdout, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
+	ReleaseMutex(g_mutex);
+	goto end;
+	// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^		success end		^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+	end:
+	InterlockedIncrement((LONG*)&g_tests_done);
+
+	return 0;
 }

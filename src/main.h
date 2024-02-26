@@ -24,10 +24,24 @@ struct s_error_reporter
 	void recoverable_error(char* file, int line, char* str = null, ...);
 };
 
+struct s_test
+{
+	char* file_path;
+	b8 should_compile;
+	int expected_exit_code = 42;
+};
+
+struct s_thread_data
+{
+	s_test test;
+	s_lin_arena arena;
+};
+
 struct s_node;
 
-func void run_tests(s_lin_arena* arena);
+func void run_tests();
 func b8 compile(char* file_path, s_lin_arena* arena, b8 ignore_errors, s_error_reporter* reporter, s_compile_options options = {});
 func s_node* parse_step(char* file_path, s_error_reporter* reporter, s_lin_arena* arena, b8 ignore_errors);
-func int compile_c_code(char* file_path);
+func int compile_c_code(char* file_path, s_lin_arena* arena);
 func int run_c_program(char* file_path);
+DWORD WINAPI run_a_test(void* arg);
