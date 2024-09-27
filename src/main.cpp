@@ -321,7 +321,7 @@ func int compile_c_code(char* file_path, s_lin_arena* arena)
 {
 	STARTUPINFO startup = zero;
 	PROCESS_INFORMATION info = zero;
-	char* compiler_path = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.35.32215\\bin\\Hostx64\\x64\\cl.exe -nologo -Od";
+	char* compiler_path = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.41.34120\\bin\\Hostx64\\x64\\cl.exe -nologo -Od";
 	constexpr int CREATE_NO_WINDOW = 134217728;
 	BOOL success = CreateProcessA(null, alloc_str(arena, "%s %s", compiler_path, file_path), null, null, false, CREATE_NO_WINDOW, null, null, &startup, &info);
 	assert(success);

@@ -107,6 +107,8 @@ def compile(files, name="main", do_dll=False, pdb_name=None, include_dirs=[], li
 		"-wd 4191",
 		"-wd 4711",
 		"-wd 4324", # Structure was padded due to alignment modifier
+
+		"-wd 4577",
 	]
 
 	comp_clang = [
