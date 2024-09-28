@@ -9,7 +9,6 @@ struct s_type_check_context
 	int subscript_level;
 	b8 inside_sizeof;
 	b8 inside_iterator; // @Fixme(tkap, 28/09/2024): useless?
-	b8 inside_iterator_arguments;
 };
 
 struct s_get_struct_member

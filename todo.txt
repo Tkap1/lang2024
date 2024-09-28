@@ -1,4 +1,7 @@
 
+maybe get rid of external_func? we know if it's external because it doesn't have a body? unless we can have functions without a body for whatever reason
+	in the future
+
 maybe instead of adding a node for the iterator variable in for loops, we just know that we are in a for loop when looking for variables from
 	an identifier and then we just check if the name matches the iterator name?? idk
 

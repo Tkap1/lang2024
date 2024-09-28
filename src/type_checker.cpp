@@ -275,22 +275,12 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_index_
 			// @TODO(tkap, 28/09/2024): make sure that we found a "yield" inside the body!
 			// @TODO(tkap, 28/09/2024):
 			// @TODO(tkap, 28/09/2024): prevent name collision etc
+			// @TODO(tkap, 28/09/2024): Make sure that the iterator variable is the first argument
 			auto iterator = &node->iterator;
 
 			if(iterator->argument_count <= 0) {
 				reporter->fatal(iterator->name.file, iterator->name.line, "Iterators need at least 1 parameter");
 				return false;
-			}
-			for_node(argument, iterator->arguments) {
-				s_type_check_context temp_context = context;
-				temp_context.inside_iterator_arguments = true;
-				if(!type_check_statement(argument, reporter, data, arena, temp_context, scope_arr)) {
-					reporter->recoverable_error(
-						iterator->name.file, iterator->name.line, "Argument '%s' on iterator '%s' has unknown type '%s'",
-						token_to_str(argument->var_decl.name, arena), iterator->name.str(arena), "TODO"
-					);
-					return false;
-				}
 			}
 
 			if(iterator->scope_index <= 0) {
@@ -299,7 +289,17 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_index_
 			s_scope* scope_before = &scope_arr->get(data->get_last());
 			int iterator_index = scope_before->iterator_arr.add(node, arena);
 			data->add(iterator->scope_index);
-			s_scope* scope_after = &scope_arr->get(data->get_last());
+
+			// @Note(tkap, 28/09/2024): ->next because we never want to type-check the first argument, because that is just the name of the iterator variable
+			for_node(argument, iterator->arguments->next) {
+				if(!type_check_statement(argument, reporter, data, arena, context, scope_arr)) {
+					reporter->recoverable_error(
+						iterator->name.file, iterator->name.line, "Argument '%s' on iterator '%s' has unknown type '%s'",
+						token_to_str(argument->var_decl.name, arena), iterator->name.str(arena), "TODO"
+					);
+					return false;
+				}
+			}
 
 			s_type_check_context temp_context = context;
 			temp_context.inside_iterator = true;
@@ -665,11 +665,8 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_i
 			// if(node->var_decl.type->ntype.is_const) {
 			// 	node->dont_generate = true;
 			// }
-			// @TODO(tkap, 28/09/2024): We only want this for "declare int i" type of thing
-			if(!context.inside_iterator_arguments) {
-				if(!add_var_to_scope(data, node, reporter, arena, scope_arr)) {
-					return false;
-				}
+			if(!add_var_to_scope(data, node, reporter, arena, scope_arr)) {
+				return false;
 			}
 			node->type_checked = true;
 			return true;
@@ -1061,10 +1058,13 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 
 				s_type_check_context temp2 = temp;
 				if(!found_var_args && !is_sizeof) {
-					assert(decl_arg->var_type);
-					temp2.wanted_type = decl_arg->var_type;
-					if(decl_arg->var_type->type == e_node_struct) {
-						temp2.expected_literal_type = decl_arg->var_type;
+					// @Note(tkap, 28/09/2024): Skip the first argument if this is an iterator
+					if(!is_iterator || call_arg != node->func_call.arguments) {
+						assert(decl_arg->var_type);
+						temp2.wanted_type = decl_arg->var_type;
+						if(decl_arg->var_type->type == e_node_struct) {
+							temp2.expected_literal_type = decl_arg->var_type;
+						}
 					}
 				}
 
@@ -1080,9 +1080,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 							reporter->fatal(call_arg->token.file, call_arg->token.line, "bad type TODO");
 							return false;
 						}
-						decl_arg = decl_arg->next;
 					}
 				}
+				decl_arg = decl_arg->next;
 			}
 
 			if(is_iterator) {

@@ -12,7 +12,8 @@ external_func int printf(char*, ...);
 func int main()
 {
 	int[32] arr;
-	arr[0] = 69;
-	arr[31] = 420;
+	for_arr(it, arr) {
+		printf("%i: %i\n", it_index, it);
+	}
 	return 42;
 }

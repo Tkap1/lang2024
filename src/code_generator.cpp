@@ -251,7 +251,12 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_code_gen_c
 			else {
 				builder->add_tabs("");
 				node_to_c_str(node->var_decl.type, builder, context, arena);
-				builder->add(" %s", node->var_decl.name.str(arena));
+
+				s_token name_token = node->var_decl.name;
+				if(context.identifier_replacement.active && context.identifier_replacement.to_be_replaced.equals(name_token)) {
+					name_token = context.identifier_replacement.replacement;
+				}
+				builder->add(" %s", name_token.str(arena));
 				get_suffix_str(node->var_decl.type, builder, arena);
 
 				if(node->var_decl.value) {
