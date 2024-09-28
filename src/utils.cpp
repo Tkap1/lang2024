@@ -29,11 +29,13 @@ func int ptrs_to_int(void* a, void* b)
 }
 
 template <typename t, int n>
-void s_sarray<t, n>::add(t new_element)
+int s_sarray<t, n>::add(t new_element)
 {
 	assert(count < n);
+	int result = count;
 	elements[count] = new_element;
 	count += 1;
+	return result;
 }
 
 template <typename t, int n>

@@ -44,7 +44,7 @@ struct s_sarray
 	t elements[n];
 	int count = 0;
 
-	void add(t new_element);
+	int add(t new_element);
 	t pop();
 	t& get(int index);
 	t& operator[](int index);

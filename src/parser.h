@@ -190,7 +190,7 @@ struct s_node
 			s_token name;
 			s_node* arguments;
 			s_node* body;
-			s_scope* scope;
+			int scope_index;
 			s_token base_struct;
 		} func_decl;
 
@@ -209,7 +209,7 @@ struct s_node
 		struct
 		{
 			s_node* statements;
-			s_scope* scope;
+			int scope_index;
 		} compound;
 
 		struct
