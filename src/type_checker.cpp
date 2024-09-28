@@ -1085,17 +1085,14 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 				}
 			}
 
-			// if(is_iterator) {
-			// 	s_node* next = node->next;
-			// 	s_node* next2 = node->next->next;
-			// 	node->func_call.body = next;
-			// 	next->next = null;
-			// 	node->next = next2;
-
-			// 	node->left->var_type->iterator.
-			// 	*node = node->left->var_type;
-
-			// }
+			if(is_iterator) {
+				s_node* next = node->next;
+				s_node* next2 = node->next->next;
+				node->func_call.body = next;
+				next->next = null;
+				node->next = next2;
+				node->type = e_node_iterator_call;
+			}
 
 			node->var_type = node->left->var_type;
 			// @TODO(tkap, 10/02/2024): check that function exists

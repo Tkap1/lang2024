@@ -62,7 +62,7 @@ func void generate_node(s_node* node, t_code_builder* builder, s_code_gen_contex
 			}
 			else {
 				builder->add_line(")");
-				generate_statement(node->func_decl.body, builder, arena);
+				generate_statement(node->func_decl.body, builder, context, arena);
 			}
 		} break;
 
@@ -83,7 +83,7 @@ func void generate_node(s_node* node, t_code_builder* builder, s_code_gen_contex
 		} break;
 
 		case e_node_var_decl: {
-			generate_statement(node, builder, arena);
+			generate_statement(node, builder, context, arena);
 		} break;
 
 		case e_node_enum: {
@@ -124,6 +124,10 @@ func void generate_node(s_node* node, t_code_builder* builder, s_code_gen_contex
 
 		} break;
 
+		case e_node_iterator: {
+
+		} break;
+
 		invalid_default_case;
 	}
 }
@@ -149,11 +153,10 @@ func void generate_func_decl_arg(s_node* node, t_code_builder* builder, b8 is_ex
 	}
 }
 
-func void generate_statement(s_node* node, t_code_builder* builder, s_lin_arena* arena)
+func void generate_statement(s_node* node, t_code_builder* builder, s_code_gen_context context, s_lin_arena* arena)
 {
 	if(node->dont_generate) { return; }
 
-	s_code_gen_context context = zero;
 	switch(node->type) {
 		// case e_node_func_call: {
 		// 	node_to_c_str(node->left, builder, context);
@@ -285,11 +288,14 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_lin_arena*
 				node_to_c_str(node->nwhile.condition, builder, context, arena);
 			}
 			builder->add_line(")");
-			generate_statement(node->nwhile.body, builder, arena);
+			generate_statement(node->nwhile.body, builder, context, arena);
 		} break;
 
 		case e_node_for: {
 			char* iterator_name = node->nfor.iterator_index_name.str(arena);
+			if(context.identifier_replacement.active && context.identifier_replacement.to_be_replaced.equals(iterator_name)) {
+				iterator_name = token_to_str(context.identifier_replacement.replacement, arena);
+			}
 			builder->add_tabs("for(int %s = ", iterator_name);
 			if(node->nfor.lower_bound) {
 				node_to_c_str(node->nfor.lower_bound, builder, context, arena);
@@ -300,7 +306,7 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_lin_arena*
 			builder->add("; %s < ", iterator_name);
 			node_to_c_str(node->nfor.upper_bound, builder, context, arena);
 			builder->add_line("; %s += 1)", iterator_name);
-			generate_statement(node->nfor.body, builder, arena);
+			generate_statement(node->nfor.body, builder, context, arena);
 		} break;
 
 		case e_node_continue: {
@@ -315,19 +321,23 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_lin_arena*
 			builder->add_tabs("if(");
 			node_to_c_str(node->nwhile.condition, builder, context, arena);
 			builder->add_line(")");
-			generate_statement(node->nif.body, builder, arena);
+			generate_statement(node->nif.body, builder, context, arena);
 			if(node->nif.nelse) {
 				builder->add_line_tabs("else");
-				generate_statement(node->nif.nelse, builder, arena);
+				generate_statement(node->nif.nelse, builder, context, arena);
 			}
 		} break;
 
 		case e_node_compound: {
 			builder->push_scope();
 			for_node(statement, node->compound.statements) {
-				generate_statement(statement, builder, arena);
+				generate_statement(statement, builder, context, arena);
 			}
 			builder->pop_scope();
+		} break;
+
+		case e_node_yield: {
+			generate_statement(context.yield_replacement, builder, context, arena);
 		} break;
 
 		default: {
@@ -377,7 +387,12 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 		} break;
 
 		case e_node_identifier: {
-			builder->add("%s", node->token.str(arena));
+			s_token token = node->token;
+			if(context.identifier_replacement.active && context.identifier_replacement.to_be_replaced.equals(token)) {
+				token = context.identifier_replacement.replacement;
+			}
+
+			builder->add("%s", token.str(arena));
 			if(context.is_data_enum_struct_access) {
 				builder->add("_data");
 			}
@@ -495,6 +510,16 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 			builder->add(")");
 			node_to_c_str(node->left, builder, context, arena);
 
+		} break;
+
+		case e_node_iterator_call: {
+			s_code_gen_context temp_context = context;
+			temp_context.yield_replacement = node->func_call.body;
+			temp_context.identifier_replacement.active = true;
+			// @TODO(tkap, 28/09/2024): assert?? this wont work for multiple arguments
+			temp_context.identifier_replacement.to_be_replaced = node->var_type->iterator.arguments->var_decl.name;
+			temp_context.identifier_replacement.replacement = node->func_call.arguments->token;
+			generate_statement(node->var_type->iterator.body, builder, temp_context, arena);
 		} break;
 
 		case e_node_func_call: {
@@ -671,6 +696,10 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 				builder->add("))");
 			}
 		} break;
+
+		// case e_node_yield: {
+		// 	generate_statement(context.yield_replacement, builder, arena);
+		// } break;
 
 		invalid_default_case;
 	}

@@ -1,0 +1,18 @@
+
+
+
+iterator for_arr(int i, int[32] arr)
+{
+	for i: arr {
+		yield;
+	}
+}
+
+external_func int printf(char*, ...);
+func int main()
+{
+	int[32] arr;
+	arr[0] = 69;
+	arr[31] = 420;
+	return 42;
+}

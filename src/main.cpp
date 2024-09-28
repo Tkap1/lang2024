@@ -284,7 +284,8 @@ func void run_tests()
 		// {"method", true},
 		// {"method2", false},
 		// {"method3", false},
-		{"iterator0", true},
+		// {"iterator0", true},
+		{"iterator1", true},
 	};
 
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {

@@ -79,6 +79,7 @@ enum e_node
 	e_node_auto_cast,
 	e_node_iterator,
 	e_node_yield,
+	e_node_iterator_call,
 };
 
 enum e_context

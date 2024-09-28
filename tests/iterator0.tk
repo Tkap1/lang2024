@@ -1,19 +1,19 @@
 
 
 
-iterator for_even_only(int i)
+iterator for_even(int i)
 {
 	for i: 10 {
-		// if i % 2 == 0 {
+		if i % 2 == 0 {
 			yield;
-		// }
+		}
 	}
 }
 
 external_func int printf(char*, ...);
 func int main()
 {
-	for_even_only(it) {
+	for_even(it) {
 		printf("%i\n", it);
 	}
 	return 42;
