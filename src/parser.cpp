@@ -35,6 +35,13 @@ func s_node* parse(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_aren
 			continue;
 		}
 
+		pr = parse_iterator(tokenizer, reporter, arena);
+		if(pr.success) {
+			tokenizer = pr.tokenizer;
+			current = advance_node(current, pr.node, arena);
+			continue;
+		}
+
 		pr = parse_include(tokenizer, reporter, arena);
 		if(pr.success) {
 			tokenizer = pr.tokenizer;
@@ -350,6 +357,61 @@ func s_parse_result parse_func_decl(s_tokenizer tokenizer, s_error_reporter* rep
 			char* name = alloc_str(arena, "__overload%i__", context->overload_id++);
 			result.node.func_decl.name = {.type = e_token_identifier, .len = (int)strlen(name), .at = name};
 		}
+
+		result.tokenizer = tokenizer;
+		result.success = true;
+	}
+
+	return result;
+}
+
+func s_parse_result parse_iterator(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena)
+{
+	s_parse_result result = zero;
+	s_token token = zero;
+
+	breakable_block {
+		if(!tokenizer.consume_token("iterator", reporter)) { break; }
+		result.node.type = e_node_iterator;
+
+		if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected identifier");
+			return result;
+		}
+		result.node.iterator.name = token;
+
+		if(is_keyword(token)) {
+			reporter->fatal(token.file, token.line, "Iterator name cannot be a reserved keyword");
+			return result;
+		}
+		if(!tokenizer.consume_token(e_token_open_paren, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected '('"); return result; }
+
+		s_node** curr_argument = &result.node.iterator.arguments;
+		while(true) {
+			s_node node = zero;
+			s_parse_result pr = parse_type(tokenizer, reporter, arena);
+			if(pr.success) {
+				tokenizer = pr.tokenizer;
+				if(!tokenizer.consume_token(e_token_identifier, &token, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected argument name"); }
+				if(is_keyword(token)) { reporter->fatal(token.file, token.line, "Argument name cannot be a reserved keyword"); }
+				node.type = e_node_var_decl;
+				node.var_decl.type = alloc_node(pr.node, arena);
+				node.var_decl.name = token;
+			}
+			else { break; }
+			curr_argument = advance_node(curr_argument, node, arena);
+			result.node.iterator.argument_count += 1;
+			if(!tokenizer.consume_token(e_token_comma, reporter)) { break; }
+		}
+
+		if(!tokenizer.consume_token(e_token_close_paren, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ')'"); }
+
+		s_parse_result pr = parse_statement(tokenizer, reporter, arena);
+		if(!pr.success || pr.node.type != e_node_compound) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected '{'");
+		}
+		tokenizer = pr.tokenizer;
+		result.node.iterator.body = alloc_node(pr.node, arena);
 
 		result.tokenizer = tokenizer;
 		result.success = true;
@@ -809,6 +871,15 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 		goto success;
 	}
 
+	if(tokenizer.consume_token("yield", reporter)) {
+		result.node.type = e_node_yield;
+		if(!tokenizer.consume_token(e_token_semicolon, reporter)) {
+			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'");
+		}
+
+		goto success;
+	}
+
 	if(tokenizer.consume_token("import", reporter)) {
 
 		result.node.type = e_node_import;
@@ -1050,7 +1121,8 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 			}
 		}
 
-		if(!tokenizer.consume_token(e_token_semicolon, reporter)) {
+		// @TODO(tkap, 28/09/2024): We need to know if it's an iterator, not just a func call. Otherwise "foo(23) {}" will be legal
+		if(!tokenizer.consume_token(e_token_semicolon, reporter) && result.node.type != e_node_func_call) {
 			reporter->fatal(tokenizer.file, tokenizer.line, "Expected ';'");
 		}
 		goto success;
@@ -1094,7 +1166,7 @@ func b8 is_keyword(s_token token)
 {
 	// @TODO(tkap, 10/02/2024):
 	constexpr char* c_keywords[] = {
-		"if", "struct", "for", "while", "enum", "else", "import", "operator", "data_enum",
+		"if", "struct", "for", "while", "enum", "else", "import", "operator", "data_enum", "iterator", "yield",
 	};
 	for(int keyword_i = 0; keyword_i < array_count(c_keywords); keyword_i++) {
 		if(token.equals(c_keywords[keyword_i])) { return true; }

@@ -1,4 +1,7 @@
 
+maybe instead of adding a node for the iterator variable in for loops, we just know that we are in a for loop when looking for variables from
+	an identifier and then we just check if the name matches the iterator name?? idk
+
 change how we handle struct members. we probably want a var_decl node which contains type and name.
 
 prevent duplicate arguments

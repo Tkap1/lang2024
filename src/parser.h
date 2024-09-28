@@ -77,6 +77,8 @@ enum e_node
 	e_node_for_range,
 	e_node_var_args,
 	e_node_auto_cast,
+	e_node_iterator,
+	e_node_yield,
 };
 
 enum e_context
@@ -123,6 +125,7 @@ global constexpr s_operator_data c_operator_data[] = {
 
 struct s_node;
 
+// @TODO(tkap, 28/09/2024): rename to _arr
 struct s_scope
 {
 	s_dynamic_array<s_node*> structs;
@@ -133,6 +136,7 @@ struct s_scope
 	s_dynamic_array<s_node*> vars;
 	s_dynamic_array<s_node*> imports;
 	s_dynamic_array<s_node*> func_ptrs;
+	s_dynamic_array<s_node*> iterator_arr;
 };
 
 struct s_node
@@ -196,6 +200,15 @@ struct s_node
 
 		struct
 		{
+			int argument_count;
+			s_token name;
+			s_node* arguments;
+			s_node* body;
+			int scope_index;
+		} iterator;
+
+		struct
+		{
 			s_node* size_expr;
 		} array;
 
@@ -221,6 +234,7 @@ struct s_node
 		{
 			int argument_count;
 			s_node* arguments;
+			s_node* body; // @Note(tkap, 28/09/2024): For calls to iterators
 		} func_call;
 
 		struct
@@ -331,3 +345,4 @@ func s_parse_result parse_operator(s_tokenizer tokenizer, s_error_reporter* repo
 func s_parse_result parse_include(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_data_enum(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);
 func s_parse_result parse_pack(s_tokenizer tokenizer, s_error_reporter* reporter);
+func s_parse_result parse_iterator(s_tokenizer tokenizer, s_error_reporter* reporter, s_lin_arena* arena);

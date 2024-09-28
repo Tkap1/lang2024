@@ -271,6 +271,50 @@ func b8 type_check_node(s_node* node, s_error_reporter* reporter, t_scope_index_
 			return type_check_expr(node, reporter, data, arena, context, scope_arr);
 		} break;
 
+		case e_node_iterator: {
+			// @TODO(tkap, 28/09/2024): make sure that we found a "yield" inside the body!
+			// @TODO(tkap, 28/09/2024):
+			// @TODO(tkap, 28/09/2024): prevent name collision etc
+			auto iterator = &node->iterator;
+
+			if(iterator->argument_count <= 0) {
+				reporter->fatal(iterator->name.file, iterator->name.line, "Iterators need at least 1 parameter");
+				return false;
+			}
+			for_node(argument, iterator->arguments) {
+				s_type_check_context temp_context = context;
+				temp_context.inside_iterator_arguments = true;
+				if(!type_check_statement(argument, reporter, data, arena, temp_context, scope_arr)) {
+					reporter->recoverable_error(
+						iterator->name.file, iterator->name.line, "Argument '%s' on iterator '%s' has unknown type '%s'",
+						token_to_str(argument->var_decl.name, arena), iterator->name.str(arena), "TODO"
+					);
+					return false;
+				}
+			}
+
+			if(iterator->scope_index <= 0) {
+				iterator->scope_index = make_scope(scope_arr);
+			}
+			s_scope* scope_before = &scope_arr->get(data->get_last());
+			int iterator_index = scope_before->iterator_arr.add(node, arena);
+			data->add(iterator->scope_index);
+			s_scope* scope_after = &scope_arr->get(data->get_last());
+
+			s_type_check_context temp_context = context;
+			temp_context.inside_iterator = true;
+			if(!type_check_statement(node->iterator.body, reporter, data, arena, temp_context, scope_arr)) {
+				scope_before->iterator_arr.remove_and_shift(iterator_index);
+				data->pop();
+				return false;
+			}
+
+			data->pop();
+			node->type_checked = true;
+			return true;
+
+		} break;
+
 
 		invalid_default_case;
 	}
@@ -467,13 +511,13 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_i
 				node->nfor.generated_iterators = true;
 				if(node->nfor.expr->var_type->type == e_node_array) {
 					assert(!node->nfor.next_expr);
-					if(node->nfor.iterator_name.len <= 0) {
-						node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 8, .at = "it_index"};
-						node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
-					}
-					else {
+					if(node->nfor.iterator_name.len > 0) {
 						char* str = alloc_str(arena, "%s_index", node->nfor.iterator_name.str(arena));
 						node->nfor.iterator_index_name = {.type = e_token_identifier, .len = (int)strlen(str), .at = str};
+					}
+					else {
+						node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 8, .at = "it_index"};
+						node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
 					}
 					s_node iterator_index = statement_str_to_node(alloc_str(arena, "int %s;", node->nfor.iterator_index_name.str(arena)), reporter, arena);
 					iterator_index.dont_generate = true;
@@ -621,8 +665,11 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_i
 			// if(node->var_decl.type->ntype.is_const) {
 			// 	node->dont_generate = true;
 			// }
-			if(!add_var_to_scope(data, node, reporter, arena, scope_arr)) {
-				return false;
+			// @TODO(tkap, 28/09/2024): We only want this for "declare int i" type of thing
+			if(!context.inside_iterator_arguments) {
+				if(!add_var_to_scope(data, node, reporter, arena, scope_arr)) {
+					return false;
+				}
 			}
 			node->type_checked = true;
 			return true;
@@ -830,6 +877,13 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 						break;
 					}
 
+					s_node* iterator = get_iterator_by_name(node->token.str(arena), data, scope_arr);
+					if(iterator) {
+						success = true;
+						node->var_type = iterator;
+						break;
+					}
+
 					s_node* nenum = get_enum_by_name(node->token.str(arena), data, scope_arr);
 					if(nenum) {
 						node->var_type = nenum;
@@ -961,11 +1015,14 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 			if(!type_check_expr(node->left, reporter, data, arena, context, scope_arr)) {
 				return false;
 			}
-			if(node->left->temp_var_decl->func_decl.is_method && node->left->type != e_node_member_access) {
-				reporter->fatal(
-					node->token.file, node->token.line, "bad func call TODO"
-				);
-				return false;
+			b8 is_iterator = node->left->var_type->type == e_node_iterator;
+			if(!is_iterator) {
+				if(node->left->temp_var_decl->func_decl.is_method && node->left->type != e_node_member_access) {
+					reporter->fatal(
+						node->token.file, node->token.line, "bad func call TODO"
+					);
+					return false;
+				}
 			}
 			int decl_arg_count = get_func_argument_count(node->left);
 			if(node->func_call.argument_count != decl_arg_count) {
@@ -982,13 +1039,18 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 				temp.inside_sizeof = true;
 			}
 			s_node* decl_arg = null;
-			if(node->left->temp_var_decl->type == e_node_func_decl) {
-				decl_arg = node->left->temp_var_decl->func_decl.arguments;
+			if(is_iterator) {
+				decl_arg = node->left->var_type->iterator.arguments;
 			}
-			else if(node->left->temp_var_decl->var_type->type == e_node_func_ptr) {
-				decl_arg = node->left->temp_var_decl->var_type->func_ptr.arguments;
+			else {
+				if(node->left->temp_var_decl->type == e_node_func_decl) {
+					decl_arg = node->left->temp_var_decl->func_decl.arguments;
+				}
+				else if(node->left->temp_var_decl->var_type->type == e_node_func_ptr) {
+					decl_arg = node->left->temp_var_decl->var_type->func_ptr.arguments;
+				}
+				invalid_else;
 			}
-			invalid_else;
 
 			b8 found_var_args = false;
 			for_node(call_arg, node->func_call.arguments) {
@@ -1005,20 +1067,36 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 						temp2.expected_literal_type = decl_arg->var_type;
 					}
 				}
-				if(!type_check_expr(call_arg, reporter, data, arena, temp2, scope_arr)) {
-					return false;
-				}
 
-				// @Note(tkap, 24/02/2024): If we haven't found var args, then we should check that the call argument and the decl argument types are compatible
-				if(!found_var_args && !is_sizeof) {
-					if(!can_type_a_be_converted_to_b(call_arg->var_type, decl_arg->var_type)) {
-						reporter->fatal(call_arg->token.file, call_arg->token.line, "bad type TODO");
+				// @TODO(tkap, 28/09/2024): We actually just want to ignore the ones with "declare" in the argument, not all arguments
+				if(!is_iterator) {
+					if(!type_check_expr(call_arg, reporter, data, arena, temp2, scope_arr)) {
 						return false;
 					}
-					decl_arg = decl_arg->next;
-				}
 
+					// @Note(tkap, 24/02/2024): If we haven't found var args, then we should check that the call argument and the decl argument types are compatible
+					if(!found_var_args && !is_sizeof) {
+						if(!can_type_a_be_converted_to_b(call_arg->var_type, decl_arg->var_type)) {
+							reporter->fatal(call_arg->token.file, call_arg->token.line, "bad type TODO");
+							return false;
+						}
+						decl_arg = decl_arg->next;
+					}
+				}
 			}
+
+			// if(is_iterator) {
+			// 	s_node* next = node->next;
+			// 	s_node* next2 = node->next->next;
+			// 	node->func_call.body = next;
+			// 	next->next = null;
+			// 	node->next = next2;
+
+			// 	node->left->var_type->iterator.
+			// 	*node = node->left->var_type;
+
+			// }
+
 			node->var_type = node->left->var_type;
 			// @TODO(tkap, 10/02/2024): check that function exists
 			node->type_checked = true;
@@ -1283,6 +1361,15 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 			node->var_type = alloc_node(*node->left->var_type, arena);
 			node->var_type->pointer_level += 1;
 			// node->var_type = node->left->var_type;
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_yield: {
+			if(!context.inside_iterator) {
+				reporter->fatal(node->token.file, node->token.line, "Can't use 'yield' outside iterators");
+				return false;
+			}
 			node->type_checked = true;
 			return true;
 		} break;
@@ -1632,13 +1719,26 @@ func t_get_imports* get_imports(t_scope_index_arr* data, s_lin_arena* arena, t_s
 
 func s_node* get_func_by_name(char* name, t_scope_index_arr* data, t_scope_arr* scope_arr)
 {
-
 	for(int index_i = data->count - 1; index_i >= 0; index_i -= 1) {
 		s_scope* scope = &scope_arr->get(data->get(index_i));
 		for(int nfunc_i = 0; nfunc_i < scope->funcs.count; nfunc_i += 1) {
 			s_node* nfunc = scope->funcs[nfunc_i];
 			if(nfunc->func_decl.name.equals(name)) {
 				return nfunc;
+			}
+		}
+	}
+	return null;
+}
+
+func s_node* get_iterator_by_name(char* name, t_scope_index_arr* data, t_scope_arr* scope_arr)
+{
+	for(int index_i = data->count - 1; index_i >= 0; index_i -= 1) {
+		s_scope* scope = &scope_arr->get(data->get(index_i));
+		for(int iterator_i = 0; iterator_i < scope->iterator_arr.count; iterator_i += 1) {
+			s_node* iterator = scope->iterator_arr[iterator_i];
+			if(iterator->iterator.name.equals(name)) {
+				return iterator;
 			}
 		}
 	}
@@ -1984,7 +2084,10 @@ func s_tokenizer quick_tokenizer(char* str)
 
 func int get_func_argument_count(s_node* node)
 {
-	if(node->var_type->type == e_node_func_ptr) {
+	if(node->var_type->type == e_node_iterator) {
+		return node->var_type->iterator.argument_count;
+	}
+	else if(node->var_type->type == e_node_func_ptr) {
 		return node->var_type->func_ptr.argument_count;
 	}
 	else if(node->temp_var_decl->type == e_node_func_decl) {

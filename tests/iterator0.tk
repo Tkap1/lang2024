@@ -1,15 +1,14 @@
 
 
 
-iterator for_even_only($name)
+iterator for_even_only(int i)
 {
-	for $name: 10 {
-		if $name % 2 == 0 {
+	for i: 10 {
+		// if i % 2 == 0 {
 			yield;
-		}
+		// }
 	}
 }
-
 
 external_func int printf(char*, ...);
 func int main()

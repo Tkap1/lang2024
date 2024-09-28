@@ -8,6 +8,8 @@ struct s_type_check_context
 	s_node* wanted_type;
 	int subscript_level;
 	b8 inside_sizeof;
+	b8 inside_iterator; // @Fixme(tkap, 28/09/2024): useless?
+	b8 inside_iterator_arguments;
 };
 
 struct s_get_struct_member
@@ -76,3 +78,4 @@ func s_node make_identifier_node(char* str);
 func s_tokenizer quick_tokenizer(char* str);
 func int get_func_argument_count(s_node* node);
 func int make_scope(t_scope_arr* scope_arr);
+func s_node* get_iterator_by_name(char* name, t_scope_index_arr* data, t_scope_arr* scope_arr);
