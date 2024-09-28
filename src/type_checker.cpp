@@ -175,21 +175,23 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 	}
 
 	s_scope* scope = *data->get(0);
-	foreach_val(node_i, node, scope->structs) {
+	if(scope->structs.count > 0) {
+		foreach_val(node_i, node, scope->structs) {
 
-		s_node* dupe = get_struct_by_name_except(node->token.str(arena), node, data);
-		if(dupe) {
-			reporter->fatal(dupe->token.file, dupe->token.line, "Duplicate struct name '%s'", dupe->token.str(arena));
-			return null;
-		}
+			s_node* dupe = get_struct_by_name_except(node->token.str(arena), node, data);
+			if(dupe) {
+				reporter->fatal(dupe->token.file, dupe->token.line, "Duplicate struct name '%s'", dupe->token.str(arena));
+				return null;
+			}
 
-		// @Note(tkap, 10/02/2024): Check duplicate struct members
-		for_node(member, node->nstruct.members) {
-			for_node(other_member, node->nstruct.members) {
-				if(member == other_member) { continue; }
-				if(member->var_decl.name.equals(other_member->var_decl.name)) {
-					reporter->fatal(other_member->var_decl.name.file, other_member->var_decl.name.line, "Duplicate struct member name '%s' on struct '%s'", member->var_decl.name.str(arena), node->token.str(arena));
-					return null;
+			// @Note(tkap, 10/02/2024): Check duplicate struct members
+			for_node(member, node->nstruct.members) {
+				for_node(other_member, node->nstruct.members) {
+					if(member == other_member) { continue; }
+					if(member->var_decl.name.equals(other_member->var_decl.name)) {
+						reporter->fatal(other_member->var_decl.name.file, other_member->var_decl.name.line, "Duplicate struct member name '%s' on struct '%s'", member->var_decl.name.str(arena), node->token.str(arena));
+						return null;
+					}
 				}
 			}
 		}
@@ -1496,7 +1498,7 @@ func b8 add_var_to_scope(t_scope_arr* data, s_node* var, s_error_reporter* repor
 		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
 	}
 	s_scope* scope1 = *scope2;
-	scope1->vars.add(var);
+	scope1->vars.add(var, arena);
 	return true;
 }
 
@@ -1512,7 +1514,7 @@ func b8 add_func_pointer_to_scope(t_scope_arr* data, s_node* func_ptr, s_error_r
 		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
 	}
 	s_scope* scope1 = *scope2;
-	scope1->func_ptrs.add(func_ptr);
+	scope1->func_ptrs.add(func_ptr, arena);
 	return true;
 }
 
@@ -1532,7 +1534,7 @@ func b8 add_import_to_scope(t_scope_arr* data, s_node* import, s_error_reporter*
 		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
 	}
 	s_scope* scope1 = *scope2;
-	scope1->imports.add(import);
+	scope1->imports.add(import, arena);
 	return true;
 }
 
@@ -1543,7 +1545,7 @@ func void add_struct_to_scope(t_scope_arr* data, s_node* nstruct, s_lin_arena* a
 		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
 	}
 	s_scope* scope1 = *scope2;
-	scope1->structs.add(nstruct);
+	scope1->structs.add(nstruct, arena);
 }
 
 func void add_enum_to_scope(t_scope_arr* data, s_node* nenum, s_lin_arena* arena)
@@ -1553,7 +1555,7 @@ func void add_enum_to_scope(t_scope_arr* data, s_node* nenum, s_lin_arena* arena
 		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
 	}
 	s_scope* scope1 = *scope2;
-	scope1->enums.add(nenum);
+	scope1->enums.add(nenum, arena);
 }
 
 func void add_data_enum_to_scope(t_scope_arr* data, s_node* data_enum, s_lin_arena* arena)
@@ -1563,7 +1565,7 @@ func void add_data_enum_to_scope(t_scope_arr* data, s_node* data_enum, s_lin_are
 		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
 	}
 	s_scope* scope1 = *scope2;
-	scope1->data_enums.add(data_enum);
+	scope1->data_enums.add(data_enum, arena);
 }
 
 func void add_func_to_scope(t_scope_arr* data, s_node* nfunc, s_lin_arena* arena)
@@ -1573,7 +1575,7 @@ func void add_func_to_scope(t_scope_arr* data, s_node* nfunc, s_lin_arena* arena
 		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
 	}
 	s_scope* scope1 = *scope2;
-	scope1->funcs.add(nfunc);
+	scope1->funcs.add(nfunc, arena);
 }
 
 func void add_type_to_scope(t_scope_arr* data, s_node* type, s_lin_arena* arena)
@@ -1583,7 +1585,7 @@ func void add_type_to_scope(t_scope_arr* data, s_node* type, s_lin_arena* arena)
 		*scope2 = (s_scope*)arena->alloc_zero(sizeof(s_scope));
 	}
 	s_scope* scope1 = *scope2;
-	scope1->types.add(type);
+	scope1->types.add(type, arena);
 }
 
 func s_node* get_struct_by_name_except(char* name, s_node* exclude, t_scope_arr* data)
@@ -1592,9 +1594,11 @@ func s_node* get_struct_by_name_except(char* name, s_node* exclude, t_scope_arr*
 		s_scope** scope2 = data->get(scope2_i);
 		if(*scope2) {
 			s_scope* scope1 = *scope2;
-			foreach_val(nstruct_i, nstruct, scope1->structs) {
-				if(nstruct != exclude && nstruct->token.equals(name)) {
-					return nstruct;
+			if(scope1->structs.count > 0) {
+				foreach_val(nstruct_i, nstruct, scope1->structs) {
+					if(nstruct != exclude && nstruct->token.equals(name)) {
+						return nstruct;
+					}
 				}
 			}
 		}
@@ -1609,9 +1613,11 @@ func s_node* get_type_by_name(char* name, t_scope_arr* data)
 		s_scope** scope2 = data->get(scope2_i);
 		if(*scope2) {
 			s_scope* scope1 = *scope2;
-			foreach_val(type_i, type, scope1->types) {
-				if(strcmp(type->basic_type.name, name) == 0) {
-					return type;
+			if(scope1->types.count > 0) {
+				foreach_val(type_i, type, scope1->types) {
+					if(strcmp(type->basic_type.name, name) == 0) {
+						return type;
+					}
 				}
 			}
 		}
@@ -1620,9 +1626,11 @@ func s_node* get_type_by_name(char* name, t_scope_arr* data)
 		s_scope** scope2 = data->get(scope2_i);
 		if(*scope2) {
 			s_scope* scope1 = *scope2;
-			foreach_val(type_i, type, scope1->func_ptrs) {
-				if(type->func_ptr.name.equals(name)) {
-					return type;
+			if(scope1->func_ptrs.count > 0) {
+				foreach_val(type_i, type, scope1->func_ptrs) {
+					if(type->func_ptr.name.equals(name)) {
+						return type;
+					}
 				}
 			}
 		}
@@ -1636,7 +1644,8 @@ func s_node* get_type_by_id(e_type id, t_scope_arr* data)
 		s_scope** scope2 = data->get(scope2_i);
 		if(*scope2) {
 			s_scope* scope1 = *scope2;
-			foreach_val(type_i, type, scope1->types) {
+			for(int type_i = 0; type_i < scope1->types.count; type_i += 1) {
+				s_node* type = scope1->types[type_i];
 				if(type->basic_type.id == id) {
 					return type;
 				}
@@ -1652,10 +1661,12 @@ func s_node* get_var_by_name(char* name, t_scope_arr* data)
 		s_scope** scope2 = data->get(scope2_i);
 		if(*scope2) {
 			s_scope* scope1 = *scope2;
-			foreach_val(var_i, var, scope1->vars) {
-				assert(var->type == e_node_var_decl);
-				if(var->var_decl.name.equals(name)) {
-					return var;
+			if(scope1->vars.count > 0) {
+				foreach_val(var_i, var, scope1->vars) {
+					assert(var->type == e_node_var_decl);
+					if(var->var_decl.name.equals(name)) {
+						return var;
+					}
 				}
 			}
 		}
@@ -1670,8 +1681,10 @@ func t_get_imports* get_imports(t_scope_arr* data, s_lin_arena* arena)
 		s_scope** scope2 = data->get(scope2_i);
 		if(*scope2) {
 			s_scope* scope1 = *scope2;
-			foreach_val(import_i, import, scope1->imports) {
-				result->add(import);
+			if(scope1->imports.count > 0) {
+				foreach_val(import_i, import, scope1->imports) {
+					result->add(import);
+				}
 			}
 		}
 	}
@@ -1684,10 +1697,12 @@ func s_node* get_func_by_name(char* name, t_scope_arr* data)
 		s_scope** scope2 = data->get(scope2_i);
 		if(*scope2) {
 			s_scope* scope1 = *scope2;
-			foreach_val(nfunc_i, nfunc, scope1->funcs) {
-				assert(nfunc->type == e_node_func_decl);
-				if(nfunc->func_decl.name.equals(name)) {
-					return nfunc;
+			if(scope1->funcs.count > 0) {
+				foreach_val(nfunc_i, nfunc, scope1->funcs) {
+					assert(nfunc->type == e_node_func_decl);
+					if(nfunc->func_decl.name.equals(name)) {
+						return nfunc;
+					}
 				}
 			}
 		}
@@ -1701,10 +1716,12 @@ func s_node* get_enum_by_name(char* name, t_scope_arr* data)
 		s_scope** scope2 = data->get(scope2_i);
 		if(*scope2) {
 			s_scope* scope1 = *scope2;
-			foreach_val(nenum_i, nenum, scope1->enums) {
-				assert(nenum->type == e_node_enum);
-				if(nenum->token.equals(name)) {
-					return nenum;
+			if(scope1->enums.count > 0) {
+				foreach_val(nenum_i, nenum, scope1->enums) {
+					assert(nenum->type == e_node_enum);
+					if(nenum->token.equals(name)) {
+						return nenum;
+					}
 				}
 			}
 		}
@@ -1718,10 +1735,12 @@ func s_node* get_data_enum_by_name(char* name, t_scope_arr* data)
 		s_scope** scope2 = data->get(scope2_i);
 		if(*scope2) {
 			s_scope* scope1 = *scope2;
-			foreach_val(nenum_i, nenum, scope1->data_enums) {
-				assert(nenum->type == e_node_data_enum);
-				if(nenum->token.equals(name)) {
-					return nenum;
+			if(scope1->data_enums.count > 0) {
+				foreach_val(nenum_i, nenum, scope1->data_enums) {
+					assert(nenum->type == e_node_data_enum);
+					if(nenum->token.equals(name)) {
+						return nenum;
+					}
 				}
 			}
 		}
@@ -1891,7 +1910,8 @@ func b8 type_check_arithmetic(s_node* node, s_error_reporter* reporter, t_scope_
 			s_scope** scope2 = data->get(scope2_i);
 			if(*scope2) {
 				s_scope* scope1 = *scope2;
-				foreach_val(nfunc_i, nfunc, scope1->funcs) {
+				for(int nfunc_i = 0; nfunc_i < scope1->funcs.count; nfunc_i += 1) {
+					s_node* nfunc = scope1->funcs[nfunc_i];
 					assert(nfunc->type == e_node_func_decl);
 					if(nfunc->func_decl.is_external) { continue; }
 					if(nfunc->func_decl.argument_count != 2) { continue; }

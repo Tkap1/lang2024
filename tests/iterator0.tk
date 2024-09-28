@@ -1,0 +1,21 @@
+
+
+
+iterator for_even_only($name)
+{
+	for $name: 10 {
+		if $name % 2 == 0 {
+			yield;
+		}
+	}
+}
+
+
+external_func int printf(char*, ...);
+func int main()
+{
+	for_even_only(it) {
+		printf("%i\n", it);
+	}
+	return 42;
+}

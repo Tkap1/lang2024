@@ -125,14 +125,14 @@ struct s_node;
 
 struct s_scope
 {
-	s_sarray<s_node*, 128> structs;
-	s_sarray<s_node*, 128> funcs;
-	s_sarray<s_node*, 128> enums;
-	s_sarray<s_node*, 128> data_enums;
-	s_sarray<s_node*, 128> types;
-	s_sarray<s_node*, 256> vars;
-	s_sarray<s_node*, 128> imports;
-	s_sarray<s_node*, 128> func_ptrs;
+	s_dynamic_array<s_node*> structs;
+	s_dynamic_array<s_node*> funcs;
+	s_dynamic_array<s_node*> enums;
+	s_dynamic_array<s_node*> data_enums;
+	s_dynamic_array<s_node*> types;
+	s_dynamic_array<s_node*> vars;
+	s_dynamic_array<s_node*> imports;
+	s_dynamic_array<s_node*> func_ptrs;
 };
 
 struct s_node
