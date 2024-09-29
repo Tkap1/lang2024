@@ -319,6 +319,7 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_code_gen_c
 				temp_context.var_decl_to_add.name = iterator_name;
 				temp_context.var_decl_to_add.index = iterator_index_name;
 				temp_context.var_decl_to_add.node = node->simple_for.expr;
+				temp_context.var_decl_to_add.is_ptr = node->simple_for.loop_by_ptr;
 			}
 			else {
 				node_to_c_str(node->simple_for.expr, builder, context, arena);
@@ -367,7 +368,13 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_code_gen_c
 				s_code_gen_context temp_context = context;
 				context.var_decl_to_add.name = zero;
 				builder->add_tabs("%s", get_name(temp_context.var_decl_to_add.node->var_type, arena));
+				if(temp_context.var_decl_to_add.is_ptr) {
+					builder->add("*");
+				}
 				builder->add(" %s = ", temp_context.var_decl_to_add.name.str(arena));
+				if(temp_context.var_decl_to_add.is_ptr) {
+					builder->add("&");
+				}
 				node_to_c_str(temp_context.var_decl_to_add.node, builder, context, arena);
 				builder->add_line("[%s];", context.var_decl_to_add.index.str(arena));
 			}
@@ -533,7 +540,9 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 				}
 				else {
 					node_to_c_str(node->left, builder, context, arena);
-					if(node->left->temp_var_decl && node->left->temp_var_decl->pointer_level > 0) {
+					// @TODO(tkap, 29/09/2024): I commented this out, it could totally break something
+					// if(node->left->temp_var_decl && node->left->temp_var_decl->pointer_level > 0) {
+					if(node->left->var_type->pointer_level > 0) {
 						builder->add("->");
 					}
 					else {

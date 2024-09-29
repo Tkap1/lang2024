@@ -1008,12 +1008,17 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 			iterator_name = make_identifier_token("it");
 			iterator_index_name = make_identifier_token("it_index");
 		}
+		b8 loop_by_ptr = false;
+		if(tokenizer.consume_token(e_token_address_of, reporter)) {
+			loop_by_ptr = true;
+		}
 
 		s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
 		if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after 'for'"); }
 		tokenizer = pr.tokenizer;
 
 		if(tokenizer.consume_token(e_token_dot_dot, reporter)) {
+			assert(!loop_by_ptr); // @TODO(tkap, 29/09/2024): probably should be an error
 			result.node.type = e_node_range_for;
 			result.node.range_for.lower_bound = alloc_node(pr.node, arena);
 			pr = parse_expression(tokenizer, reporter, 0, arena);
@@ -1027,6 +1032,7 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 		else {
 			result.node.type = e_node_simple_for;
 			result.node.simple_for.expr = alloc_node(pr.node, arena);
+			result.node.simple_for.loop_by_ptr = loop_by_ptr;
 		}
 
 		pr = parse_statement(tokenizer, reporter, arena);

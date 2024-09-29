@@ -288,6 +288,9 @@ func void run_tests()
 		{"iterator0", true},
 		{"iterator1", true},
 		{"for_member_access2", true},
+		{"for_loop_array_by_ptr", true},
+		{"for_loop_array_by_ptr2", true},
+		{"for_loop_array_by_ptr3", true},
 	};
 
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {

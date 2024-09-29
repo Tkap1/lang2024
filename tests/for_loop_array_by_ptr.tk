@@ -1,0 +1,13 @@
+
+
+func int main()
+{
+	int[32] arr;
+	arr[1] = 0;
+	for &arr {
+		if it_index == 1 {
+			*it = 42;
+		}
+	}
+	return arr[1];
+}

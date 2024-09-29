@@ -822,7 +822,7 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 					}
 
 					{
-						s_node* for_var = get_for_loop_var_by_name(node->token.str(arena), data, context, scope_arr);
+						s_node* for_var = get_for_loop_var_by_name(node->token.str(arena), data, context, scope_arr, arena);
 						if(for_var) {
 							node->var_type = for_var;
 							success = true;
@@ -1666,7 +1666,7 @@ func s_node* get_var_by_name(char* name, t_scope_index_arr* data, t_scope_arr* s
 	return null;
 }
 
-func s_node* get_for_loop_var_by_name(char* name, t_scope_index_arr* data, s_type_check_context context, t_scope_arr* scope_arr)
+func s_node* get_for_loop_var_by_name(char* name, t_scope_index_arr* data, s_type_check_context context, t_scope_arr* scope_arr, s_lin_arena* arena)
 {
 	for(int for_i = context.for_loop_arr.count - 1; for_i >= 0; for_i -= 1) {
 		s_node* nfor = context.for_loop_arr[for_i];
@@ -1674,9 +1674,17 @@ func s_node* get_for_loop_var_by_name(char* name, t_scope_index_arr* data, s_typ
 			case e_node_simple_for: {
 				if(nfor->simple_for.iterator_name.equals(name)) {
 					if(nfor->simple_for.expr->var_type->type == e_node_array) {
+						if(nfor->simple_for.loop_by_ptr) {
+							s_node* temp = alloc_node(*nfor->simple_for.expr->var_type->left->var_type, arena);
+							temp->pointer_level += 1;
+							return temp;
+						}
+						else {
 						return nfor->simple_for.expr->var_type->left->var_type;
+						}
 					}
 					else {
+						assert(!nfor->simple_for.loop_by_ptr);
 						return nfor->simple_for.expr->var_type;
 					}
 				}
@@ -2006,7 +2014,7 @@ func b8 can_thing_be_added_to_scope(s_token name, t_scope_index_arr* data, s_err
 		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a type with that name already exists", name.str(arena));
 		return false;
 	}
-	if(get_for_loop_var_by_name(name.str(arena), data, context, scope_arr)) {
+	if(get_for_loop_var_by_name(name.str(arena), data, context, scope_arr, arena)) {
 		reporter->fatal(name.file, name.line, "Duplicate variable name '%s'", name.str(arena));
 		return false;
 	}

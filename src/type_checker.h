@@ -80,4 +80,4 @@ func s_tokenizer quick_tokenizer(char* str);
 func int get_func_argument_count(s_node* node);
 func int make_scope(t_scope_arr* scope_arr);
 func s_node* get_iterator_by_name(char* name, t_scope_index_arr* data, t_scope_arr* scope_arr);
-func s_node* get_for_loop_var_by_name(char* name, t_scope_index_arr* data, s_type_check_context context, t_scope_arr* scope_arr);
+func s_node* get_for_loop_var_by_name(char* name, t_scope_index_arr* data, s_type_check_context context, t_scope_arr* scope_arr, s_lin_arena* arena);

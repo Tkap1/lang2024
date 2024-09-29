@@ -1,4 +1,6 @@
 
+could we get rid of temp_var_decl?
+
 add a way to iterate by ptr
 
 why do we have node_to_c_str? couldn't we do generate_expression?

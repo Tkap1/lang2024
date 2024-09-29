@@ -9,6 +9,7 @@ struct s_identifier_replacement
 
 struct s_code_gen_var_decl
 {
+	b8 is_ptr;
 	s_token name;
 	s_token index;
 	s_node* node;

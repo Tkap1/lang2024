@@ -1,0 +1,17 @@
+
+struct s_foo
+{
+	int x;
+}
+
+func int main()
+{
+	s_foo[32] arr;
+	arr[1].x = 0;
+	for &arr {
+		if it_index == 1 {
+			it.x = 42;
+		}
+	}
+	return arr[1].x;
+}

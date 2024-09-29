@@ -263,6 +263,7 @@ struct s_node
 
 		struct
 		{
+			b8 loop_by_ptr;
 			s_token iterator_index_name;
 			s_token iterator_name;
 			s_node* expr;
