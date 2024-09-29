@@ -7,6 +7,13 @@ struct s_identifier_replacement
 	s_token replacement;
 };
 
+struct s_code_gen_var_decl
+{
+	s_token name;
+	s_token index;
+	s_node* node;
+};
+
 struct s_code_gen_context
 {
 	b8 is_func_arg;
@@ -14,6 +21,7 @@ struct s_code_gen_context
 	b8 is_data_enum_struct_access;
 	s_node* yield_replacement;
 	s_identifier_replacement identifier_replacement;
+	s_code_gen_var_decl var_decl_to_add;
 };
 
 global constexpr int c_builder_size = 10 * c_mb;

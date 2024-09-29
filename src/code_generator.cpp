@@ -296,22 +296,50 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_code_gen_c
 			generate_statement(node->nwhile.body, builder, context, arena);
 		} break;
 
-		case e_node_for: {
-			char* iterator_name = node->nfor.iterator_index_name.str(arena);
+		case e_node_simple_for: {
+			s_token iterator_name = node->simple_for.iterator_name;
+			s_token iterator_index_name = node->simple_for.iterator_index_name;
 			if(context.identifier_replacement.active && context.identifier_replacement.to_be_replaced.equals(iterator_name)) {
-				iterator_name = token_to_str(context.identifier_replacement.replacement, arena);
+				iterator_name = context.identifier_replacement.replacement;
+				if(iterator_index_name.len > 0) {
+					iterator_index_name = make_identifier_token(alloc_str(arena, "%s_index", iterator_name.str(arena)));
+				}
 			}
-			builder->add_tabs("for(int %s = ", iterator_name);
-			if(node->nfor.lower_bound) {
-				node_to_c_str(node->nfor.lower_bound, builder, context, arena);
+			if(iterator_index_name.len <= 0) {
+				iterator_index_name = iterator_name;
+			}
+			char* iterator_index_name_str = iterator_index_name.str(arena);
+
+			builder->add_tabs("for(int %s = 0; ", iterator_index_name_str);
+			builder->add("%s < ", iterator_index_name_str);
+			s_code_gen_context temp_context = context;
+			if(node->simple_for.expr->var_type->type == e_node_array) {
+				node_to_c_str(node->simple_for.expr->var_type->array.size_expr, builder, context, arena);
+				assert(!iterator_name.equals(iterator_index_name));
+				temp_context.var_decl_to_add.name = iterator_name;
+				temp_context.var_decl_to_add.index = iterator_index_name;
+				temp_context.var_decl_to_add.node = node->simple_for.expr;
 			}
 			else {
-				builder->add("0");
+				node_to_c_str(node->simple_for.expr, builder, context, arena);
 			}
-			builder->add("; %s < ", iterator_name);
-			node_to_c_str(node->nfor.upper_bound, builder, context, arena);
-			builder->add_line("; %s += 1)", iterator_name);
-			generate_statement(node->nfor.body, builder, context, arena);
+			builder->add_line("; %s += 1)", iterator_index_name_str);
+			generate_statement(node->simple_for.body, builder, temp_context, arena);
+		} break;
+
+		case e_node_range_for: {
+			s_token iterator_name = node->range_for.iterator_name;
+			if(context.identifier_replacement.active && context.identifier_replacement.to_be_replaced.equals(iterator_name)) {
+				iterator_name = context.identifier_replacement.replacement;
+			}
+			char* iterator_name_str = iterator_name.str(arena);
+
+			builder->add_tabs("for(int %s = ", iterator_name_str);
+			node_to_c_str(node->range_for.lower_bound, builder, context, arena);
+			builder->add("; %s < ", iterator_name_str);
+			node_to_c_str(node->range_for.upper_bound, builder, context, arena);
+			builder->add_line("; %s += 1)", iterator_name_str);
+			generate_statement(node->range_for.body, builder, context, arena);
 		} break;
 
 		case e_node_continue: {
@@ -335,6 +363,14 @@ func void generate_statement(s_node* node, t_code_builder* builder, s_code_gen_c
 
 		case e_node_compound: {
 			builder->push_scope();
+			if(context.var_decl_to_add.name.len > 0) {
+				s_code_gen_context temp_context = context;
+				context.var_decl_to_add.name = zero;
+				builder->add_tabs("%s", get_name(temp_context.var_decl_to_add.node->var_type, arena));
+				builder->add(" %s = ", temp_context.var_decl_to_add.name.str(arena));
+				node_to_c_str(temp_context.var_decl_to_add.node, builder, context, arena);
+				builder->add_line("[%s];", context.var_decl_to_add.index.str(arena));
+			}
 			for_node(statement, node->compound.statements) {
 				generate_statement(statement, builder, context, arena);
 			}

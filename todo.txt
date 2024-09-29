@@ -1,4 +1,10 @@
 
+add a way to iterate by ptr
+
+why do we have node_to_c_str? couldn't we do generate_expression?
+
+get rid of dont_generate?
+
 maybe get rid of external_func? we know if it's external because it doesn't have a body? unless we can have functions without a body for whatever reason
 	in the future
 

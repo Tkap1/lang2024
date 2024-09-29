@@ -996,26 +996,37 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 
 	if(tokenizer.consume_token("for", reporter)) {
 
-		result.node.type = e_node_for;
+		s_token iterator_name = zero;
+		s_token iterator_index_name = zero;
 		s_tokenizer copy = tokenizer;
 		if(copy.consume_token(e_token_identifier, &token, reporter) && copy.consume_token(e_token_colon, reporter)) {
 			tokenizer = copy;
-			result.node.nfor.iterator_name = token;
+			iterator_name = token;
+			iterator_index_name = make_identifier_token(alloc_str(arena, "%s_index", token.str(arena)));
+		}
+		else {
+			iterator_name = make_identifier_token("it");
+			iterator_index_name = make_identifier_token("it_index");
 		}
 
 		s_parse_result pr = parse_expression(tokenizer, reporter, 0, arena);
 		if(!pr.success) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after 'for'"); }
-		result.node.nfor.expr = alloc_node(pr.node, arena);
 		tokenizer = pr.tokenizer;
 
 		if(tokenizer.consume_token(e_token_dot_dot, reporter)) {
+			result.node.type = e_node_range_for;
+			result.node.range_for.lower_bound = alloc_node(pr.node, arena);
 			pr = parse_expression(tokenizer, reporter, 0, arena);
 			if(!pr.success) {
 				reporter->fatal(tokenizer.file, tokenizer.line, "Expected expression after '..'");
 				return result;
 			}
-			result.node.nfor.next_expr = alloc_node(pr.node, arena);
+			result.node.range_for.upper_bound = alloc_node(pr.node, arena);
 			tokenizer = pr.tokenizer;
+		}
+		else {
+			result.node.type = e_node_simple_for;
+			result.node.simple_for.expr = alloc_node(pr.node, arena);
 		}
 
 		pr = parse_statement(tokenizer, reporter, arena);
@@ -1023,8 +1034,16 @@ func s_parse_result parse_statement(s_tokenizer tokenizer, s_error_reporter* rep
 			reporter->fatal(tokenizer.file, tokenizer.line, "Expected '{' after 'for'");
 		}
 		tokenizer = pr.tokenizer;
-		result.node.nfor.body = alloc_node(pr.node, arena);
-
+		if(result.node.type == e_node_simple_for) {
+			result.node.simple_for.body = alloc_node(pr.node, arena);
+			result.node.simple_for.iterator_name = iterator_name;
+			result.node.simple_for.iterator_index_name = iterator_index_name;
+		}
+		else if(result.node.type == e_node_range_for) {
+			result.node.range_for.body = alloc_node(pr.node, arena);
+			result.node.range_for.iterator_name = iterator_name;
+		}
+		invalid_else;
 		goto success;
 	}
 

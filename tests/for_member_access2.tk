@@ -1,0 +1,15 @@
+
+
+struct s_foo
+{
+	int x;
+}
+
+func int main()
+{
+	s_foo[32] foo_arr;
+	for foo_arr {
+		it.x;
+	}
+	return 42;
+}

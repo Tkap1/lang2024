@@ -1,11 +1,8 @@
 
 
-
 func int main()
 {
-	int[32] foo;
-	for foo {
-		it;
+	for 5 {
 		it_index;
 	}
 	return 42;

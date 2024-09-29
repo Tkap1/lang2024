@@ -496,89 +496,44 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_i
 			return true;
 		} break;
 
-		case e_node_for: {
-			if(!type_check_expr(node->nfor.expr, reporter, data, arena, context, scope_arr)) {
+		case e_node_simple_for: {
+			if(!type_check_expr(node->simple_for.expr, reporter, data, arena, context, scope_arr)) {
 				return false;
 			}
-			if(node->nfor.next_expr && !type_check_expr(node->nfor.next_expr, reporter, data, arena, context, scope_arr)) {
+			if(node->simple_for.expr->var_type->type != e_node_array) {
+				node->simple_for.iterator_index_name = zero;
+			}
+			if(!can_thing_be_added_to_scope(node->simple_for.iterator_name, data, reporter, context, arena, scope_arr)) {
+				return false;
+			}
+			if(node->simple_for.iterator_index_name.len > 0 && !can_thing_be_added_to_scope(node->simple_for.iterator_index_name, data, reporter, context, arena, scope_arr)) {
 				return false;
 			}
 
-			assert(node->nfor.expr->var_type);
-			assert(node->nfor.body);
+			context.for_loop_arr.add(node);
+			if(!type_check_statement(node->simple_for.body, reporter, data, arena, context, scope_arr)) {
+				return false;
+			}
+			node->type_checked = true;
+			return true;
+		} break;
 
-			if(!node->nfor.generated_iterators) {
-				node->nfor.generated_iterators = true;
-				if(node->nfor.expr->var_type->type == e_node_array) {
-					assert(!node->nfor.next_expr);
-					if(node->nfor.iterator_name.len > 0) {
-						char* str = alloc_str(arena, "%s_index", node->nfor.iterator_name.str(arena));
-						node->nfor.iterator_index_name = {.type = e_token_identifier, .len = (int)strlen(str), .at = str};
-					}
-					else {
-						node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 8, .at = "it_index"};
-						node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
-					}
-					s_node iterator_index = statement_str_to_node(alloc_str(arena, "int %s;", node->nfor.iterator_index_name.str(arena)), reporter, arena);
-					iterator_index.dont_generate = true;
-					iterator_index.var_decl.name.file = node->nfor.expr->token.file;
-					iterator_index.var_decl.name.line = node->nfor.expr->token.line;
-					iterator_index.token.file = node->nfor.expr->token.file;
-					iterator_index.token.line = node->nfor.expr->token.line;
-
-					s_node iterator = zero;
-					s_node value = zero;
-					s_node subscript_expr = zero;
-					subscript_expr.type = e_node_identifier;
-					subscript_expr.token = node->nfor.iterator_index_name;
-					value.type = e_node_subscript;
-					value.left = node->nfor.expr;
-					value.right = alloc_node(subscript_expr, arena);
-					iterator.type = e_node_var_decl;
-					// @TODO(tkap, 20/02/2024): This only works for 1d arrays!
-					iterator.var_decl.type = node->nfor.expr->var_type->left->var_type;
-					iterator.var_decl.name = node->nfor.iterator_name;
-					iterator.var_decl.value = alloc_node(value, arena);
-					iterator.var_decl.name.file = node->nfor.expr->token.file;
-					iterator.var_decl.name.line = node->nfor.expr->token.line;
-					iterator.token.file = node->nfor.expr->token.file;
-					iterator.token.line = node->nfor.expr->token.line;
-					node->nfor.upper_bound = node->nfor.expr->var_type->array.size_expr;
-
-					s_node* temp_statement = node->nfor.body->compound.statements;
-					iterator.next = temp_statement;
-					iterator_index.next = alloc_node(iterator, arena);
-					node->nfor.body->compound.statements = alloc_node(iterator_index, arena);
-				}
-				else {
-					if(node->nfor.iterator_name.len <= 0) {
-						node->nfor.iterator_index_name = {.type = e_token_identifier, .len = 2, .at = "it"};
-						node->nfor.iterator_name = {.type = e_token_identifier, .len = 2, .at = "it"};
-					}
-					else {
-						node->nfor.iterator_index_name = node->nfor.iterator_name;
-					}
-					s_node iterator_index = statement_str_to_node(alloc_str(arena, "int %s;", node->nfor.iterator_index_name.str(arena)), reporter, arena);
-					iterator_index.dont_generate = true;
-					s_node* temp_statement = node->nfor.body->compound.statements;
-					iterator_index.next = temp_statement;
-					iterator_index.var_decl.name.file = node->nfor.expr->token.file;
-					iterator_index.var_decl.name.line = node->nfor.expr->token.line;
-					iterator_index.token.file = node->nfor.expr->token.file;
-					iterator_index.token.line = node->nfor.expr->token.line;
-					node->nfor.body->compound.statements = alloc_node(iterator_index, arena);
-					// @TODO(tkap, 23/02/2024): This is garbage. Just set this in the parser, should be easy.
-					if(node->nfor.next_expr) {
-						node->nfor.upper_bound = node->nfor.next_expr;
-						node->nfor.lower_bound = node->nfor.expr;
-					}
-					else {
-						node->nfor.upper_bound = node->nfor.expr;
-					}
-				}
+		case e_node_range_for: {
+			// @TODO(tkap, 29/09/2024): Make sure that this is a number and that it is the same? as upper bound
+			if(!type_check_expr(node->range_for.lower_bound, reporter, data, arena, context, scope_arr)) {
+				return false;
+			}
+			// @TODO(tkap, 29/09/2024): Make sure that this is a number
+			if(!type_check_expr(node->range_for.upper_bound, reporter, data, arena, context, scope_arr)) {
+				return false;
 			}
 
-			if(!type_check_statement(node->nfor.body, reporter, data, arena, context, scope_arr)) {
+			if(!can_thing_be_added_to_scope(node->range_for.iterator_name, data, reporter, context, arena, scope_arr)) {
+				return false;
+			}
+
+			context.for_loop_arr.add(node);
+			if(!type_check_statement(node->range_for.body, reporter, data, arena, context, scope_arr)) {
 				return false;
 			}
 			node->type_checked = true;
@@ -665,7 +620,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_i
 			// if(node->var_decl.type->ntype.is_const) {
 			// 	node->dont_generate = true;
 			// }
-			if(!add_var_to_scope(data, node, reporter, arena, scope_arr)) {
+			if(!add_var_to_scope(data, node, reporter, context, arena, scope_arr)) {
 				return false;
 			}
 			node->type_checked = true;
@@ -704,7 +659,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_i
 					return false;
 				}
 			}
-			if(!add_func_pointer_to_scope(data, node, reporter, arena, scope_arr)) {
+			if(!add_func_pointer_to_scope(data, node, reporter, context ,arena, scope_arr)) {
 				return false;
 			}
 			node->type_checked = true;
@@ -716,7 +671,7 @@ func b8 type_check_statement(s_node* node, s_error_reporter* reporter, t_scope_i
 				return false;
 			}
 			if(node->left->var_type->type == e_node_struct) {
-				if(!add_import_to_scope(data, node->left, reporter, arena, scope_arr)) {
+				if(!add_import_to_scope(data, node->left, reporter, context, arena, scope_arr)) {
 					return false;
 				}
 			}
@@ -865,6 +820,16 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 
 						break;
 					}
+
+					{
+						s_node* for_var = get_for_loop_var_by_name(node->token.str(arena), data, context, scope_arr);
+						if(for_var) {
+							node->var_type = for_var;
+							success = true;
+							break;
+						}
+					}
+
 					s_node* nfunc = get_func_by_name(node->token.str(arena), data, scope_arr);
 					if(nfunc) {
 						assert(nfunc->var_type);
@@ -1082,7 +1047,9 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 						}
 					}
 				}
-				decl_arg = decl_arg->next;
+				if(!is_sizeof) {
+					decl_arg = decl_arg->next;
+				}
 			}
 
 			if(is_iterator) {
@@ -1562,11 +1529,11 @@ func s_maybe<s_node> get_compile_time_value(s_node* node, t_scope_index_arr* dat
 	return zero;
 }
 
-func b8 add_var_to_scope(t_scope_index_arr* data, s_node* var, s_error_reporter* reporter, s_lin_arena* arena, t_scope_arr* scope_arr)
+func b8 add_var_to_scope(t_scope_index_arr* data, s_node* var, s_error_reporter* reporter, s_type_check_context context, s_lin_arena* arena, t_scope_arr* scope_arr)
 {
 	assert(var->type == e_node_var_decl);
 	s_token token = var->var_decl.name;
-	if(!can_thing_be_added_to_scope(token, data, reporter, arena, scope_arr)) {
+	if(!can_thing_be_added_to_scope(token, data, reporter, context, arena, scope_arr)) {
 		return false;
 	}
 	s_scope* scope = &scope_arr->get(data->get_last());
@@ -1574,11 +1541,11 @@ func b8 add_var_to_scope(t_scope_index_arr* data, s_node* var, s_error_reporter*
 	return true;
 }
 
-func b8 add_func_pointer_to_scope(t_scope_index_arr* data, s_node* func_ptr, s_error_reporter* reporter, s_lin_arena* arena, t_scope_arr* scope_arr)
+func b8 add_func_pointer_to_scope(t_scope_index_arr* data, s_node* func_ptr, s_error_reporter* reporter, s_type_check_context context, s_lin_arena* arena, t_scope_arr* scope_arr)
 {
 	assert(func_ptr->type == e_node_func_ptr);
 	s_token token = func_ptr->func_ptr.name;
-	if(!can_thing_be_added_to_scope(token, data, reporter, arena, scope_arr)) {
+	if(!can_thing_be_added_to_scope(token, data, reporter, context, arena, scope_arr)) {
 		return false;
 	}
 	s_scope* scope = &scope_arr->get(data->get_last());
@@ -1586,14 +1553,14 @@ func b8 add_func_pointer_to_scope(t_scope_index_arr* data, s_node* func_ptr, s_e
 	return true;
 }
 
-func b8 add_import_to_scope(t_scope_index_arr* data, s_node* import, s_error_reporter* reporter, s_lin_arena* arena, t_scope_arr* scope_arr)
+func b8 add_import_to_scope(t_scope_index_arr* data, s_node* import, s_error_reporter* reporter, s_type_check_context context, s_lin_arena* arena, t_scope_arr* scope_arr)
 {
 	// @Hack(tkap, 20/02/2024): Also temporary
 	assert(import->var_type->type == e_node_struct);
 
 	t_flat_struct_members members = get_flat_array_of_struct_members(import->var_type);
 	foreach_val(member_i, member, members) {
-		if(!can_thing_be_added_to_scope(member->var_decl.name, data, reporter, arena, scope_arr)) {
+		if(!can_thing_be_added_to_scope(member->var_decl.name, data, reporter, context, arena, scope_arr)) {
 			return false;
 		}
 	}
@@ -1693,6 +1660,37 @@ func s_node* get_var_by_name(char* name, t_scope_index_arr* data, t_scope_arr* s
 			if(var->var_decl.name.equals(name)) {
 				return var;
 			}
+		}
+	}
+
+	return null;
+}
+
+func s_node* get_for_loop_var_by_name(char* name, t_scope_index_arr* data, s_type_check_context context, t_scope_arr* scope_arr)
+{
+	for(int for_i = context.for_loop_arr.count - 1; for_i >= 0; for_i -= 1) {
+		s_node* nfor = context.for_loop_arr[for_i];
+		switch(nfor->type) {
+			case e_node_simple_for: {
+				if(nfor->simple_for.iterator_name.equals(name)) {
+					if(nfor->simple_for.expr->var_type->type == e_node_array) {
+						return nfor->simple_for.expr->var_type->left->var_type;
+					}
+					else {
+						return nfor->simple_for.expr->var_type;
+					}
+				}
+				else if(nfor->simple_for.iterator_index_name.equals(name)) {
+					return get_type_by_id(e_type_s32, data, scope_arr);
+					break;
+				}
+			} break;
+			case e_node_range_for: {
+				if(nfor->range_for.iterator_name.equals(name)) {
+					return nfor->range_for.lower_bound->var_type;
+				}
+			} break;
+			invalid_default_case;
 		}
 	}
 
@@ -1982,7 +1980,7 @@ func b8 type_check_arithmetic(s_node* node, s_error_reporter* reporter, t_scope_
 }
 
 // @TODO(tkap, 20/02/2024): Better errors. This assumes that we only call this from add_var_to_scope
-func b8 can_thing_be_added_to_scope(s_token name, t_scope_index_arr* data, s_error_reporter* reporter, s_lin_arena* arena, t_scope_arr* scope_arr)
+func b8 can_thing_be_added_to_scope(s_token name, t_scope_index_arr* data, s_error_reporter* reporter, s_type_check_context context, s_lin_arena* arena, t_scope_arr* scope_arr)
 {
 	if(get_var_by_name(name.str(arena), data, scope_arr)) {
 		reporter->fatal(name.file, name.line, "Duplicate variable name '%s'", name.str(arena));
@@ -2008,6 +2006,11 @@ func b8 can_thing_be_added_to_scope(s_token name, t_scope_index_arr* data, s_err
 		reporter->fatal(name.file, name.line, "Cannot declare variable '%s' because a type with that name already exists", name.str(arena));
 		return false;
 	}
+	if(get_for_loop_var_by_name(name.str(arena), data, context, scope_arr)) {
+		reporter->fatal(name.file, name.line, "Duplicate variable name '%s'", name.str(arena));
+		return false;
+	}
+
 	arena->push();
 	t_get_imports* imports = get_imports(data, arena, scope_arr);
 	for(int import_i = 0; import_i < imports->count; import_i++) {

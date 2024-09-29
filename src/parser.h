@@ -59,7 +59,8 @@ enum e_node
 	e_node_address_of,
 	e_node_logic_or,
 	e_node_logic_and,
-	e_node_for,
+	e_node_simple_for,
+	e_node_range_for,
 	e_node_struct_literal,
 	e_node_comparison,
 	e_node_not_equals,
@@ -74,7 +75,6 @@ enum e_node
 	e_node_data_enum_member,
 	e_node_func_ptr,
 	e_node_array_literal,
-	e_node_for_range,
 	e_node_var_args,
 	e_node_auto_cast,
 	e_node_iterator,
@@ -263,17 +263,19 @@ struct s_node
 
 		struct
 		{
-			b8 generated_iterators;
 			s_token iterator_index_name;
 			s_token iterator_name;
 			s_node* expr;
-			s_node* next_expr; // @TODO(tkap, 23/02/2024): better name
 			s_node* body;
+		} simple_for;
 
-			// @TODO(tkap, 23/02/2024): Get rid of expr and next expr? Just use these two. And set them at parsing time, not in typecheck
+		struct
+		{
+			s_token iterator_name;
+			s_node* body;
 			s_node* lower_bound;
 			s_node* upper_bound;
-		} nfor;
+		} range_for;
 
 		struct
 		{

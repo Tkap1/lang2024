@@ -5,4 +5,5 @@ func int main()
 		for 5 {
 		}
 	}
+	return 42;
 }
