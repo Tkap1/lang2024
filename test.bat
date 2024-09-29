@@ -1,3 +1,3 @@
 @echo off
 cls
-lang.exe test
+lang.exe test %*

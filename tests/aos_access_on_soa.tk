@@ -1,0 +1,16 @@
+
+
+struct s_enemy_arr
+{
+	int[32] a;
+	int[32] b;
+}
+
+func int main()
+{
+	s_enemy_arr enemy_arr;
+	soa_view foo = enemy_arr[0];
+	foo.a = 21;
+	foo.b = 21;
+	return foo.a + foo.b;
+}

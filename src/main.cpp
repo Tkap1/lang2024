@@ -37,10 +37,12 @@ int main(int argc, char** argv)
 	b8 build_dll = false;
 	char output_name[1024] = zero;
 	char input_name[1024] = zero;
+	b8 should_run_tests = false;
+	b8 run_only_last_test = false;
+	b8 multi_thread_tests = true;
 	for(int i = 0; i < argc; i++) {
 		if(strcmp(argv[i], "test") == 0) {
-			run_tests();
-			return 0;
+			should_run_tests = true;
 		}
 		else if(strcmp(argv[i], "dll") == 0) {
 			build_dll = true;
@@ -51,6 +53,16 @@ int main(int argc, char** argv)
 		else if(strncmp(argv[i], "out:", 4) == 0) {
 			strcpy(output_name, argv[i] + 4);
 		}
+		else if(strncmp(argv[i], "last_test_only", 14) == 0) {
+			run_only_last_test = true;
+		}
+		else if(strncmp(argv[i], "no_multi_thread", 18) == 0) {
+			multi_thread_tests = false;
+		}
+	}
+	if(should_run_tests) {
+		run_tests(run_only_last_test, multi_thread_tests);
+		return 0;
 	}
 	if(!input_name[0]) {
 		strcpy(input_name, "main.tk");
@@ -207,7 +219,7 @@ global volatile int g_success_count = 0;
 global volatile int g_fail_count = 0;
 global volatile HANDLE g_mutex;
 global volatile HANDLE g_hstdout;
-func void run_tests()
+func void run_tests(b8 run_only_last_test, b8 multi_thread_tests)
 {
 
 	g_mutex = CreateMutex(null, false, null);
@@ -291,6 +303,7 @@ func void run_tests()
 		{"for_loop_array_by_ptr", true},
 		{"for_loop_array_by_ptr2", true},
 		{"for_loop_array_by_ptr3", true},
+		{"aos_access_on_soa", true},
 	};
 
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
@@ -305,14 +318,25 @@ func void run_tests()
 
 	s_thread_data thread_data[array_count(test_data)] = zero;
 
-	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
-		thread_data[test_i].arena = alloc_arena(20 * c_mb);
-		thread_data[test_i].test = test_data[test_i];
-		CreateThread(null, 0, run_a_test, (void*)&thread_data[test_i], 0, null);
-		// run_a_test(&thread_data[test_i]);
+	int test_start_index = 0;
+	int target_test_completed_count = array_count(test_data);
+	if(run_only_last_test) {
+		test_start_index = array_count(test_data) - 1;
+		target_test_completed_count = 1;
 	}
 
-	while(g_tests_done != array_count(test_data)) { Sleep(10); }
+	for(int test_i = test_start_index; test_i < array_count(test_data); test_i++) {
+		thread_data[test_i].arena = alloc_arena(20 * c_mb);
+		thread_data[test_i].test = test_data[test_i];
+		if(multi_thread_tests) {
+			CreateThread(null, 0, run_a_test, (void*)&thread_data[test_i], 0, null);
+		}
+		else {
+			run_a_test(&thread_data[test_i]);
+		}
+	}
+
+	while(g_tests_done != target_test_completed_count) { Sleep(10); }
 
 	for(int test_i = 0; test_i < array_count(test_data); test_i++) {
 		s_test test = test_data[test_i];
