@@ -282,6 +282,7 @@ func void run_tests(b8 run_only_last_test, b8 multi_thread_tests)
 		{"sizeof5", true, 12},
 		{"sizeof6", true, 4},
 		{"sizeof7", true, 128},
+		{"sizeof8", true, 4},
 		{"operator_overload4", true},
 		{"dereference4", true},
 		{"array_literal", true},

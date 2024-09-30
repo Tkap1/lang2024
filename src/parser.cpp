@@ -768,6 +768,10 @@ func s_parse_result parse_expression(s_tokenizer tokenizer, s_error_reporter* re
 				}
 
 				if(!tokenizer.consume_token(e_token_close_paren, reporter)) { reporter->fatal(tokenizer.file, tokenizer.line, "Expected ')'"); }
+
+				if(result.node.left->type == e_node_identifier && result.node.left->token.equals("sizeof")) {
+					result.node.type = e_node_sizeof;
+				}
 			}
 
 			else if(operator_pr.operator_data.node_type == e_node_subscript) {

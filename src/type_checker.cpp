@@ -133,17 +133,14 @@ func s_node* type_check_ast(s_node* ast, s_error_reporter* reporter, s_lin_arena
 		add_type_to_scope(data, alloc_node(node, arena), arena, &scope_arr);
 	}
 
-
 	{
-		s_node* node = alloc_node(zero, arena);
-		node->func_decl.is_external = true;
-		node->func_decl.argument_count = 1;
-		node->type = e_node_func_decl;
-		node->func_decl.name = {.type = e_token_identifier, .len = 6, .at = "sizeof"};
-		node->func_decl.return_type = get_type_by_id(e_type_u64, data, &scope_arr);
-		b8 result = type_check_func_decl(node, reporter, data, arena, zero, &scope_arr);
-		assert(result);
-		add_func_to_scope(data, node, arena, &scope_arr);
+		s_node node = zero;
+		node.type = e_node_type;
+		node.token = {.type = e_token_identifier, .len = 8, .at = "soa_view"};
+		node.basic_type.name = "soa_view";
+		node.basic_type.id = e_type_soa_view;
+		node.size_in_bytes = 0;
+		add_type_to_scope(data, alloc_node(node, arena), arena, &scope_arr);
 	}
 
 	while(true) {
@@ -996,10 +993,6 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 				return false;
 			}
 			s_type_check_context temp = context;
-			b8 is_sizeof = node->left->type == e_node_identifier && node->left->token.equals("sizeof");
-			if(is_sizeof) {
-				temp.inside_sizeof = true;
-			}
 			s_node* decl_arg = null;
 			if(is_iterator) {
 				decl_arg = node->left->var_type->iterator.arguments;
@@ -1016,13 +1009,12 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 
 			b8 found_var_args = false;
 			for_node(call_arg, node->func_call.arguments) {
-				assert(decl_arg || is_sizeof);
-				if(!is_sizeof && decl_arg->type == e_node_var_args) {
+				if(decl_arg->type == e_node_var_args) {
 					found_var_args = true;
 				}
 
 				s_type_check_context temp2 = temp;
-				if(!found_var_args && !is_sizeof) {
+				if(!found_var_args) {
 					// @Note(tkap, 28/09/2024): Skip the first argument if this is an iterator
 					if(!is_iterator || call_arg != node->func_call.arguments) {
 						assert(decl_arg->var_type);
@@ -1040,16 +1032,14 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 					}
 
 					// @Note(tkap, 24/02/2024): If we haven't found var args, then we should check that the call argument and the decl argument types are compatible
-					if(!found_var_args && !is_sizeof) {
+					if(!found_var_args) {
 						if(!can_type_a_be_converted_to_b(call_arg->var_type, decl_arg->var_type)) {
 							reporter->fatal(call_arg->token.file, call_arg->token.line, "bad type TODO");
 							return false;
 						}
 					}
 				}
-				if(!is_sizeof) {
-					decl_arg = decl_arg->next;
-				}
+				decl_arg = decl_arg->next;
 			}
 
 			if(is_iterator) {
@@ -1063,6 +1053,22 @@ func b8 type_check_expr(s_node* node, s_error_reporter* reporter, t_scope_index_
 
 			node->var_type = node->left->var_type;
 			// @TODO(tkap, 10/02/2024): check that function exists
+			node->type_checked = true;
+			return true;
+		} break;
+
+		case e_node_sizeof: {
+			assert(node->func_call.argument_count == 1);
+
+			s_type_check_context temp_context = context;
+			temp_context.inside_sizeof = true;
+			if(!type_check_expr(node->func_call.arguments, reporter, data, arena, temp_context, scope_arr)) {
+				return false;
+			}
+
+			// @TODO(tkap, 30/09/2024): maybe not the best type
+			node->var_type = get_type_by_id(e_type_s32, data, scope_arr);
+
 			node->type_checked = true;
 			return true;
 		} break;

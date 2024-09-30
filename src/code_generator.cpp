@@ -608,6 +608,12 @@ func void node_to_c_str(s_node* node, t_code_builder* builder, s_code_gen_contex
 			}
 		} break;
 
+		case e_node_sizeof: {
+			builder->add("sizeof(");
+			node_to_c_str(node->func_call.arguments, builder, context, arena);
+			builder->add(")");
+		} break;
+
 		case e_node_modulo: {
 			builder->add("(");
 			node_to_c_str(node->left, builder, context, arena);

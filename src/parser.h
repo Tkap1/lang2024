@@ -22,6 +22,7 @@ enum e_type
 	e_type_f64,
 	e_type_b8,
 	e_type_b32,
+	e_type_soa_view,
 };
 
 
@@ -80,6 +81,7 @@ enum e_node
 	e_node_iterator,
 	e_node_yield,
 	e_node_iterator_call,
+	e_node_sizeof,
 };
 
 enum e_context
